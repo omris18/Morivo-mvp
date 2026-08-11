@@ -1,0 +1,34 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    function signedIn() { return request.auth != null; }
+
+    match /users/{uid} {
+      allow read, write: if signedIn() && request.auth.uid == uid;
+    }
+
+    match /experiences/{experienceId} {
+      allow create: if signedIn() && request.resource.data.ownerUid == request.auth.uid;
+      allow read, update, delete: if signedIn() && (
+        resource.data.ownerUid == request.auth.uid ||
+        exists(/databases/$(database)/documents/experiences/$(experienceId)/participants/$(request.auth.uid))
+      );
+
+      match /participants/{uid} {
+        allow read: if signedIn();
+        allow create, update: if signedIn() && request.auth.uid == uid;
+      }
+
+      match /events/{eventId} {
+        allow read: if signedIn();
+        allow create: if signedIn();
+      }
+    }
+
+    match /publicExperiences/{joinCode} {
+      allow read: if signedIn();
+      allow create, update: if signedIn() && request.resource.data.ownerUid == request.auth.uid;
+      allow delete: if signedIn() && resource.data.ownerUid == request.auth.uid;
+    }
+  }
+}
