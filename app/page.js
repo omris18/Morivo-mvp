@@ -30,17 +30,17 @@ export default function Home(){
  const [user,setUser]=useState(null);
  const [experiences,setExperiences]=useState([]);
  const [experience,setExperience]=useState({
-  id: null,
-  name: "",
-  type: "",
-  location: "",
-  people: 0,
-  story: "",
-  flow: [],
-  status: "draft",
-  joinCode: ""
-});
- const [activeId,setActiveId]=useState(null);
+    id: null,
+    name: "",
+    type: "",
+    location: "",
+    people: 0,
+    story: "",
+    flow: [],
+    status: "draft",
+    joinCode: ""
+  });
+  const [activeId,setActiveId]=useState(null);
 
  useEffect(()=>{
    if(!firebaseConfigured) return;
