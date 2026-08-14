@@ -29,6 +29,10 @@ service cloud.firestore {
         allow create: if signedIn() && request.resource.data.uid == request.auth.uid;
         allow update, delete: if signedIn() && resource.data.uid == request.auth.uid;
       }
+      match /progress/{uid} {
+        allow read: if signedIn();
+        allow create, update: if signedIn() && request.auth.uid == uid;
+      }
     }
 
     match /publicExperiences/{joinCode} {
