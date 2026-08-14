@@ -1,9 +1,10 @@
-# Morivo MVP v4 — Experience Builder
-- New Experience is now blank by default.
-- No Thailand content or preset missions.
-- Add mission types from Studio.
-- Edit title, instructions, reward and points.
-- Reorder and delete missions.
-- Participant preview remains live.
-- v3 Journey Engine, Firebase realtime, Storage and Memory remain intact.
-No Firebase/Vercel configuration changes are required.
+# Morivo MVP v4.1 — Blank Experience Fix
+
+Fix:
+- The root app state no longer initializes from the Thailand DEMO object.
+- Create Experience starts with a genuinely blank experience.
+- No preset Thailand text or missions are injected into a new experience.
+
+Everything from v4 remains: Journey Engine, realtime sync, Storage/media, Memory Engine and Experience Builder.
+
+Deploy by replacing the existing GitHub files. No Firebase Rules or Vercel environment changes are required.
