@@ -2,27 +2,9 @@
 import {useEffect,useState} from "react";
 import { firebaseConfigured } from "../lib/firebase";
 import { subscribeEvents, subscribeParticipants } from "../lib/morivoData";
-
+import { subscribeMedia } from "../lib/mediaData";
 export default function Runtime({experience,setView}){
- const [people,setPeople]=useState([]);
- const [feed,setFeed]=useState([]);
- useEffect(()=>{
-   if(!firebaseConfigured || !experience.id || experience.id==="thailand-demo"){
-     setPeople([{name:"Omri",points:640},{name:"Tair",points:590},{name:"Maya",points:520},{name:"Ido",points:480}]);
-     setFeed(["Maya completed a photo mission","Team Sadeh unlocked a puzzle piece"]);return;
-   }
-   const a=subscribeParticipants(experience.id,setPeople);
-   const b=subscribeEvents(experience.id,rows=>setFeed(rows.map(x=>x.text)));
-   return ()=>{a();b()};
- },[experience.id]);
- return <section className="grid2">
-  <div className="panel">
-   <div className="tag">Morivo Runtime · Realtime</div><h2>Run the experience live.</h2>
-   <div className="join"><div><small>Join code</small><b>{experience.joinCode||"Publish first"}</b></div></div>
-   <h3>Participants</h3><div className="people">{people.map((p,i)=><div key={p.id||i}><b>{p.name}</b><span>{p.points||0} pts</span></div>)}</div>
-   <h3>Live activity</h3><div className="feed">{feed.map((x,i)=><div key={i}>{x}</div>)}</div>
-   <div className="actions"><button onClick={()=>setView("studio")}>Back to Studio</button><button className="primary" onClick={()=>setView("participant")}>Participant Mode</button></div>
-  </div>
-  <div className="panel"><div className="tag">Organizer preview</div><div className="phone"><h3>{experience.flow?.[1]?.title||"Mission"}</h3><p>{experience.flow?.[1]?.text}</p><div className="mission">Realtime progress</div></div></div>
- </section>
+ const [people,setPeople]=useState([]);const [feed,setFeed]=useState([]);const [media,setMedia]=useState([]);
+ useEffect(()=>{if(!firebaseConfigured||!experience.id||experience.id==="thailand-demo"){setPeople([{name:"Omri",points:640},{name:"Tair",points:590},{name:"Maya",points:520},{name:"Ido",points:480}]);setFeed(["Maya completed a photo mission","Team Sadeh unlocked a puzzle piece"]);setMedia([]);return;} const a=subscribeParticipants(experience.id,setPeople);const b=subscribeEvents(experience.id,rows=>setFeed(rows.map(x=>x.text)));const c=subscribeMedia(experience.id,setMedia);return()=>{a();b();c()}},[experience.id]);
+ return <section><div className="grid2"><div className="panel"><div className="tag">Morivo Runtime · Realtime</div><h2>Run the experience live.</h2><div className="join"><div><small>Join code</small><b>{experience.joinCode||"Publish first"}</b></div></div><h3>Participants</h3><div className="people">{people.map((p,i)=><div key={p.id||i}><b>{p.name}</b><span>{p.points||0} pts</span></div>)}</div><h3>Live activity</h3><div className="feed">{feed.map((x,i)=><div key={i}>{x}</div>)}</div><div className="actions"><button onClick={()=>setView("studio")}>Back to Studio</button><button className="primary" onClick={()=>setView("participant")}>Participant Mode</button></div></div><div className="panel"><div className="tag">Organizer preview</div><div className="phone"><h3>{experience.flow?.[1]?.title||"Mission"}</h3><p>{experience.flow?.[1]?.text}</p><div className="mission">Realtime progress</div></div></div></div><div className="panel" style={{marginTop:18}}><div className="tag">Live Media Gallery</div><h2 style={{fontSize:34}}>Photos appear here the moment participants upload them.</h2>{media.length===0?<p>No photos uploaded yet.</p>:<div className="mediaGrid">{media.map(item=><figure className="mediaCard" key={item.id}><img src={item.downloadURL} alt={item.missionTitle||"Experience photo"}/><figcaption><b>{item.missionTitle||"Mission"}</b><span>{item.participantName||"Participant"}</span></figcaption></figure>)}</div>}</div></section>
 }
