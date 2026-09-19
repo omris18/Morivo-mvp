@@ -42,6 +42,12 @@ export default function Home(){
     joinCode: ""
   });
   const [activeId,setActiveId]=useState(null);
+  const [deepLinkCode,setDeepLinkCode]=useState("");
+
+ useEffect(()=>{
+   const q=new URLSearchParams(window.location.search).get("join");
+   if(q){ setDeepLinkCode(q.toUpperCase()); setView("participant"); }
+ },[]);
 
  useEffect(()=>{
    if(!firebaseConfigured) return;
@@ -66,7 +72,7 @@ export default function Home(){
    setView("studio");
  }
 
- const props={experience,setExperience,setView,user,experiences,setExperiences,activeId,setActiveId,openExperience};
+ const props={experience,setExperience,setView,user,experiences,setExperiences,activeId,setActiveId,openExperience,deepLinkCode};
  const Screen=useMemo(()=>({
    dashboard:<Dashboard {...props}/>,
    ai:<AICreator {...props}/>,

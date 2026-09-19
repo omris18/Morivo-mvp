@@ -3,11 +3,12 @@ import {useEffect,useState} from "react";
 import {firebaseConfigured} from "../lib/firebase";
 import {ensureUser,joinExperienceByCode,subscribeExperience,subscribeMyProgress,initializeProgress,completeJourneyMission} from "../lib/morivoData";
 import {uploadMissionPhoto} from "../lib/mediaData";
-export default function Participant({experience,setExperience,setView,setActiveId}){
- const [code,setCode]=useState(experience.joinCode||""),[name,setName]=useState("Guest"),[joined,setJoined]=useState(false),[eid,setEid]=useState(experience.id),[uid,setUid]=useState("");
+export default function Participant({experience,setExperience,setView,setActiveId,deepLinkCode}){
+ const [code,setCode]=useState(deepLinkCode||experience.joinCode||""),[name,setName]=useState("Guest"),[joined,setJoined]=useState(false),[eid,setEid]=useState(experience.id),[uid,setUid]=useState("");
  const [prog,setProg]=useState({completedMissionIds:[],currentMissionIndex:0,points:0}),[file,setFile]=useState(null),[busy,setBusy]=useState(false),[pct,setPct]=useState(0);
  const [quizAnswer,setQuizAnswer]=useState(null);
  const [bump,setBump]=useState(false);
+ useEffect(()=>{if(deepLinkCode)setCode(deepLinkCode)},[deepLinkCode]);
  useEffect(()=>{if(firebaseConfigured&&eid&&eid!=="thailand-demo")return subscribeExperience(eid,x=>x&&setExperience(x))},[eid]);
  useEffect(()=>{if(firebaseConfigured&&joined&&eid&&uid){initializeProgress(eid,uid);return subscribeMyProgress(eid,uid,setProg)}},[joined,eid,uid]);
  const flow=experience.flow||[], idx=Math.min(prog.currentMissionIndex||0,Math.max(flow.length-1,0)), mission=flow[idx], finished=flow.length>0&&(prog.completedMissionIds||[]).length>=flow.length;

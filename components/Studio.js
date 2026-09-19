@@ -93,6 +93,7 @@ export default function Studio({ experience, setExperience, setView }) {
 
   function remove() {
     if (!atom) return;
+    if (!window.confirm(`Delete "${atom.title || "this mission"}"? This can't be undone.`)) return;
 
     const nextFlow = flow.filter((x) => x.id !== atom.id);
 
@@ -102,6 +103,17 @@ export default function Studio({ experience, setExperience, setView }) {
     });
 
     setSelected(nextFlow[0]?.id || null);
+  }
+
+  function duplicate() {
+    if (!atom) return;
+
+    const copy = { ...atom, id: `${atom.type}-${Date.now()}` };
+    const index = flow.findIndex((x) => x.id === atom.id);
+    const nextFlow = [...flow.slice(0, index + 1), copy, ...flow.slice(index + 1)];
+
+    persist({ ...experience, flow: nextFlow });
+    setSelected(copy.id);
   }
 
   async function publish() {
@@ -209,6 +221,7 @@ export default function Studio({ experience, setExperience, setView }) {
             <div className="actions">
               <button onClick={() => move(-1)}>↑ Move</button>
               <button onClick={() => move(1)}>↓ Move</button>
+              <button onClick={duplicate}>⧉ Duplicate</button>
               <button onClick={remove}>Delete</button>
             </div>
           </div>
