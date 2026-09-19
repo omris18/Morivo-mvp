@@ -1,6 +1,6 @@
 const items=[
-["dashboard","⌂","Dashboard"],["create","＋","Create"],["studio","✦","Studio"],
-["runtime","▶","Runtime"],["participant","◉","Participant"],["memory","▣","Memory"]
+ ["dashboard","⌂","Dashboard"],["ai","✨","Morivo AI"],["create","＋","Create"],["studio","✦","Studio"],
+ ["runtime","▶","Runtime"],["participant","◉","Participant"],["memory","▣","Memory"]
 ];
 export default function Sidebar({view,setView}){
  return <aside className="sidebar">

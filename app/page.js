@@ -69,6 +69,7 @@ export default function Home(){
  const props={experience,setExperience,setView,user,experiences,setExperiences,activeId,setActiveId,openExperience};
  const Screen=useMemo(()=>({
    dashboard:<Dashboard {...props}/>,
+   ai:<AICreator {...props}/>,
    create:<CreateExperience {...props}/>,
    studio:<Studio {...props}/>,
    runtime:<Runtime {...props}/>,
