@@ -29,33 +29,38 @@ Respond with STRICT JSON only, no markdown fencing, no commentary, matching exac
 
 "type" must be one of: ${MISSION_TYPES.join(", ")}. "points" is an integer between 50 and 200. Do not include an "id" field, the app assigns those.`;
 
+const GEMINI_MODELS = ["gemini-2.5-flash", "gemini-2.0-flash", "gemini-flash-latest", "gemini-1.5-flash"];
+
 async function suggestHotel({ location, prompt, people, duration, lang }) {
-  try {
-    const hotelPrompt = `Suggest one specific, realistic accommodation option in or near "${location}" that would suit this group: "${prompt}"${people ? ` (${people} people)` : ""}${duration ? `, staying for ${duration}` : ""}. Respond in 2-3 sentences, in the same language as the group description above (detect it automatically), naming a real type of place or area and explaining briefly why it fits this specific group. Be practical and specific, not generic travel-blog language. Do not use markdown.`;
-    const res = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${geminiApiKey.value().trim()}`, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ contents: [{ parts: [{ text: hotelPrompt }] }] }),
-    });
-    if (!res.ok) {
-      console.error("Gemini hotel suggestion HTTP error", res.status, await res.text());
-      return null;
+  const hotelPrompt = `Suggest one specific, realistic accommodation option in or near "${location}" that would suit this group: "${prompt}"${people ? ` (${people} people)` : ""}${duration ? `, staying for ${duration}` : ""}. Respond in 2-3 sentences, in the same language as the group description above (detect it automatically), naming a real type of place or area and explaining briefly why it fits this specific group. Be practical and specific, not generic travel-blog language. Do not use markdown.`;
+
+  for (const model of GEMINI_MODELS) {
+    try {
+      const res = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${geminiApiKey.value().trim()}`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ contents: [{ parts: [{ text: hotelPrompt }] }] }),
+      });
+      if (!res.ok) {
+        console.error(`Gemini hotel suggestion HTTP error (model ${model})`, res.status, await res.text());
+        continue;
+      }
+      const json = await res.json();
+      const text = json?.candidates?.[0]?.content?.parts?.[0]?.text;
+      if (!text || !text.trim()) continue;
+      return {
+        id: `story-${Date.now()}-hotel`,
+        type: "story",
+        title: lang === "he" ? "היכן להתארח" : "Where to Stay",
+        text: text.trim().slice(0, 600),
+        reward: "",
+        points: 0,
+      };
+    } catch (err) {
+      console.error(`Gemini hotel suggestion failed (model ${model})`, err);
     }
-    const json = await res.json();
-    const text = json?.candidates?.[0]?.content?.parts?.[0]?.text;
-    if (!text || !text.trim()) return null;
-    return {
-      id: `story-${Date.now()}-hotel`,
-      type: "story",
-      title: lang === "he" ? "היכן להתארח" : "Where to Stay",
-      text: text.trim().slice(0, 600),
-      reward: "",
-      points: 0,
-    };
-  } catch (err) {
-    console.error("Gemini hotel suggestion failed", err);
-    return null;
   }
+  return null;
 }
 
 exports.generateExperience = onCall({ secrets: [openaiApiKey, geminiApiKey], cors: true, timeoutSeconds: 60 }, async (request) => {
