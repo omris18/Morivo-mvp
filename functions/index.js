@@ -36,56 +36,81 @@ function bookingSearchUrl(name, location) {
   return `https://www.booking.com/searchresults.html?ss=${encodeURIComponent(q)}`;
 }
 
-async function suggestHotel({ location, prompt, people, duration, lang }) {
-  const hotelPrompt = `Suggest 2 to 3 specific, realistic accommodation options in or near "${location}" that would suit this group: "${prompt}"${people ? ` (${people} people)` : ""}${duration ? `, staying for ${duration}` : ""}. For each option give a real, findable hotel/accommodation name or a specific well-known area, and a 1-2 sentence reason it fits this exact group - practical and specific, not generic travel-blog language. Write in the same language as the group description above (detect it automatically). Respond with STRICT JSON only, no markdown fencing, no commentary, matching exactly this shape: {"options":[{"name":"hotel or area name","why":"1-2 sentence reason"}]}`;
+function mapsSearchUrl(name, location) {
+  const q = [name, location].filter(Boolean).join(" ");
+  return `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(q)}`;
+}
 
+async function askGeminiJSON(promptText, label) {
   for (const model of GEMINI_MODELS) {
     try {
       const res = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${geminiApiKey.value().trim()}`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          contents: [{ parts: [{ text: hotelPrompt }] }],
+          contents: [{ parts: [{ text: promptText }] }],
           generationConfig: { responseMimeType: "application/json" },
         }),
       });
       if (!res.ok) {
-        console.error(`Gemini hotel suggestion HTTP error (model ${model})`, res.status, await res.text());
+        console.error(`Gemini ${label} HTTP error (model ${model})`, res.status, await res.text());
         continue;
       }
       const json = await res.json();
       const raw = json?.candidates?.[0]?.content?.parts?.[0]?.text;
       if (!raw) continue;
-
-      let options;
       try {
-        options = JSON.parse(raw).options;
+        return JSON.parse(raw);
       } catch {
         continue;
       }
-      if (!Array.isArray(options) || options.length === 0) continue;
-
-      const lines = options.slice(0, 3).map((o, i) => {
-        const name = String(o?.name || "").trim().slice(0, 100);
-        const why = String(o?.why || "").trim().slice(0, 220);
-        if (!name) return null;
-        return `${i + 1}. ${name}${why ? ` — ${why}` : ""}\n${bookingSearchUrl(name, location)}`;
-      }).filter(Boolean);
-      if (!lines.length) continue;
-
-      return {
-        id: `story-${Date.now()}-hotel`,
-        type: "story",
-        title: lang === "he" ? "היכן להתארח" : "Where to Stay",
-        text: lines.join("\n\n").slice(0, 1200),
-        reward: "",
-        points: 0,
-      };
     } catch (err) {
-      console.error(`Gemini hotel suggestion failed (model ${model})`, err);
+      console.error(`Gemini ${label} request failed (model ${model})`, err);
     }
   }
   return null;
+}
+
+function optionsToMissionText(options, max, urlFor, location) {
+  const lines = options.slice(0, max).map((o, i) => {
+    const name = String(o?.name || "").trim().slice(0, 100);
+    const why = String(o?.why || "").trim().slice(0, 220);
+    if (!name) return null;
+    return `${i + 1}. ${name}${why ? ` — ${why}` : ""}\n${urlFor(name, location)}`;
+  }).filter(Boolean);
+  return lines.length ? lines.join("\n\n") : null;
+}
+
+async function suggestHotel({ location, prompt, people, duration, lang }) {
+  const hotelPrompt = `Suggest 2 to 3 specific, realistic accommodation options in or near "${location}" that would suit this group: "${prompt}"${people ? ` (${people} people)` : ""}${duration ? `, staying for ${duration}` : ""}. For each option give a real, findable hotel/accommodation name or a specific well-known area, and a 1-2 sentence reason it fits this exact group - practical and specific, not generic travel-blog language. Write in the same language as the group description above (detect it automatically). Respond with STRICT JSON only, no markdown fencing, no commentary, matching exactly this shape: {"options":[{"name":"hotel or area name","why":"1-2 sentence reason"}]}`;
+  const data = await askGeminiJSON(hotelPrompt, "hotel suggestion");
+  if (!Array.isArray(data?.options) || !data.options.length) return null;
+  const text = optionsToMissionText(data.options, 3, bookingSearchUrl, location);
+  if (!text) return null;
+  return {
+    id: `story-${Date.now()}-hotel`,
+    type: "story",
+    title: lang === "he" ? "היכן להתארח" : "Where to Stay",
+    text: text.slice(0, 1200),
+    reward: "",
+    points: 0,
+  };
+}
+
+async function suggestAttractions({ location, prompt, people, duration, lang }) {
+  const attrPrompt = `Suggest 3 to 4 specific, real attractions or activities in or near "${location}" that would suit this group: "${prompt}"${people ? ` (${people} people)` : ""}${duration ? `, over ${duration}` : ""}. For each, give a real, findable attraction or activity name and a 1-2 sentence reason it fits this exact group - their ages, interests, and any dietary/religious/accessibility needs mentioned - practical and specific, not generic travel-blog language. Write in the same language as the group description above (detect it automatically). Respond with STRICT JSON only, no markdown fencing, no commentary, matching exactly this shape: {"options":[{"name":"attraction or activity name","why":"1-2 sentence reason"}]}`;
+  const data = await askGeminiJSON(attrPrompt, "attraction suggestion");
+  if (!Array.isArray(data?.options) || !data.options.length) return null;
+  const text = optionsToMissionText(data.options, 4, mapsSearchUrl, location);
+  if (!text) return null;
+  return {
+    id: `story-${Date.now()}-attractions`,
+    type: "story",
+    title: lang === "he" ? "מה לעשות" : "Things to Do",
+    text: text.slice(0, 1400),
+    reward: "",
+    points: 0,
+  };
 }
 
 exports.generateExperience = onCall({ secrets: [openaiApiKey, geminiApiKey], cors: true, timeoutSeconds: 60 }, async (request) => {
@@ -112,6 +137,7 @@ exports.generateExperience = onCall({ secrets: [openaiApiKey, geminiApiKey], cor
   ].filter(Boolean).join("\n");
 
   const hotelMissionPromise = (needsHotel && location) ? suggestHotel({ location, prompt, people, duration, lang }) : Promise.resolve(null);
+  const attractionsMissionPromise = (multiDay && location) ? suggestAttractions({ location, prompt, people, duration, lang }) : Promise.resolve(null);
 
   let completion;
   try {
@@ -151,10 +177,11 @@ exports.generateExperience = onCall({ secrets: [openaiApiKey, geminiApiKey], cor
       points: Number.isFinite(Number(m.points)) ? Math.max(50, Math.min(200, Math.round(Number(m.points)))) : 100,
     }));
 
-  const hotelMission = await hotelMissionPromise;
+  const [hotelMission, attractionsMission] = await Promise.all([hotelMissionPromise, attractionsMissionPromise]);
+  const extras = [hotelMission, attractionsMission].filter(Boolean);
 
   return {
     name: String(data.name || prompt).slice(0, 120),
-    flow: hotelMission ? [hotelMission, ...flow] : flow,
+    flow: extras.length ? [...extras, ...flow] : flow,
   };
 });
