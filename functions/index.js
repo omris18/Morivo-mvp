@@ -32,7 +32,7 @@ exports.generateExperience = onCall({ secrets: [openaiApiKey], cors: true, timeo
     throw new HttpsError("invalid-argument", "A description of the experience is required.");
   }
 
-  const client = new OpenAI({ apiKey: openaiApiKey.value() });
+  const client = new OpenAI({ apiKey: openaiApiKey.value().trim() });
 
   const userPrompt = [
     `Description: ${prompt}`,
