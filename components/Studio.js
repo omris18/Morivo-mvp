@@ -4,11 +4,13 @@ import { useEffect, useState } from "react";
 import { firebaseConfigured } from "../lib/firebase";
 import { publishExperienceRemote, updateExperienceRemote } from "../lib/morivoData";
 import LinkifiedText from "./LinkifiedText";
+import { getCurrentPosition } from "../lib/geo";
 
 export default function Studio({ experience, setExperience, setView }) {
   const flow = experience.flow || [];
   const [selected, setSelected] = useState(flow[0]?.id || null);
   const [saving, setSaving] = useState(false);
+  const [locating, setLocating] = useState(false);
 
   const atom = flow.find((x) => x.id === selected) || null;
 
@@ -55,6 +57,18 @@ export default function Studio({ experience, setExperience, setView }) {
     );
 
     persist({ ...experience, flow: nextFlow });
+  }
+
+  async function setCheckpointHere() {
+    setLocating(true);
+    try {
+      const { lat, lng } = await getCurrentPosition();
+      patch({ lat, lng });
+    } catch (e) {
+      alert(e.message);
+    } finally {
+      setLocating(false);
+    }
   }
 
   function add(type) {
@@ -205,6 +219,34 @@ export default function Studio({ experience, setExperience, setView }) {
               value={atom.text || ""}
               onChange={(e) => patch({ text: e.target.value })}
             />
+
+            {atom.type === "map" && (
+              <div className="gpsCheckpoint">
+                <label>GPS checkpoint</label>
+                {Number.isFinite(atom.lat) && Number.isFinite(atom.lng) ? (
+                  <p className="gpsStatus">
+                    📍 Set at {atom.lat.toFixed(5)}, {atom.lng.toFixed(5)}
+                  </p>
+                ) : (
+                  <p className="gpsStatus">No location set yet - participants can tap through freely until you set one.</p>
+                )}
+                <div className="fieldRow">
+                  <div>
+                    <button type="button" disabled={locating} onClick={setCheckpointHere}>
+                      {locating ? "Locating…" : "📍 Use my current location"}
+                    </button>
+                  </div>
+                  <div>
+                    <label>Radius (meters)</label>
+                    <input
+                      type="number"
+                      value={atom.radius || 150}
+                      onChange={(e) => patch({ radius: Number(e.target.value) })}
+                    />
+                  </div>
+                </div>
+              </div>
+            )}
 
             <label>Reward</label>
             <input

@@ -5,11 +5,13 @@ import {ensureUser,joinExperienceByCode,subscribeExperience,subscribeMyProgress,
 import {uploadMissionPhoto} from "../lib/mediaData";
 import {computeBadges} from "../lib/badges";
 import LinkifiedText from "./LinkifiedText";
+import {distanceMeters,getCurrentPosition} from "../lib/geo";
 export default function Participant({experience,setExperience,setView,setActiveId,deepLinkCode}){
  const [code,setCode]=useState(deepLinkCode||experience.joinCode||""),[name,setName]=useState("Guest"),[joined,setJoined]=useState(false),[eid,setEid]=useState(experience.id),[uid,setUid]=useState("");
  const [prog,setProg]=useState({completedMissionIds:[],currentMissionIndex:0,points:0}),[file,setFile]=useState(null),[busy,setBusy]=useState(false),[pct,setPct]=useState(0);
  const [quizAnswer,setQuizAnswer]=useState(null);
  const [noteText,setNoteText]=useState("");
+ const [locStatus,setLocStatus]=useState(null);
  const [bump,setBump]=useState(false);
  const [messages,setMessages]=useState([]),[dismissed,setDismissed]=useState([]);
  useEffect(()=>{if(deepLinkCode)setCode(deepLinkCode)},[deepLinkCode]);
@@ -19,10 +21,12 @@ export default function Participant({experience,setExperience,setView,setActiveI
  const latestMessage=messages.find(m=>!dismissed.includes(m.id));
  const flow=experience.flow||[], idx=Math.min(prog.currentMissionIndex||0,Math.max(flow.length-1,0)), mission=flow[idx], finished=flow.length>0&&(prog.completedMissionIds||[]).length>=flow.length;
  const badges=computeBadges(prog,flow);
- useEffect(()=>{setQuizAnswer(null);setNoteText("")},[idx]);
+ useEffect(()=>{setQuizAnswer(null);setNoteText("");setLocStatus(null)},[idx]);
+ const hasCheckpoint=mission&&Number.isFinite(mission.lat)&&Number.isFinite(mission.lng);
+ async function checkLocation(){setLocStatus("checking");try{const {lat,lng}=await getCurrentPosition();const d=distanceMeters(lat,lng,mission.lat,mission.lng);setLocStatus({distance:d,within:d<=(mission.radius||150)})}catch(e){alert(e.message);setLocStatus(null)}}
  useEffect(()=>{if(!prog.points)return;setBump(true);const t=setTimeout(()=>setBump(false),450);return()=>clearTimeout(t)},[prog.points]);
  async function join(){try{if(firebaseConfigured){const u=await ensureUser();setUid(u.uid);const id=await joinExperienceByCode(code,name);setEid(id);setActiveId(id)}else setUid("demo");setJoined(true)}catch(e){alert(e.message)}}
- async function complete(){if(!mission)return;const isMedia=mission.type==="photo"||mission.type==="video";if(isMedia&&!file)return alert(`Choose a ${mission.type} first`);if(mission.type==="quiz"&&!quizAnswer)return alert("Choose an answer first");if(mission.type==="note"&&!noteText.trim())return alert("Write something first");setBusy(true);try{
+ async function complete(){if(!mission)return;const isMedia=mission.type==="photo"||mission.type==="video";if(isMedia&&!file)return alert(`Choose a ${mission.type} first`);if(mission.type==="quiz"&&!quizAnswer)return alert("Choose an answer first");if(mission.type==="note"&&!noteText.trim())return alert("Write something first");if(mission.type==="map"&&hasCheckpoint&&!(locStatus&&locStatus.within))return alert("Get to the checkpoint and tap \"Check my location\" first.");setBusy(true);try{
    if(isMedia&&firebaseConfigured)await uploadMissionPhoto({experienceId:eid,mission,file,participantName:name,onProgress:setPct});
    if(mission.type==="note"&&firebaseConfigured)await saveMissionAnswer(eid,mission,noteText.trim(),name);
    if(firebaseConfigured)await completeJourneyMission(eid,mission,idx,name);else setProg(p=>({completedMissionIds:[...p.completedMissionIds,mission.id],currentMissionIndex:idx+1,points:p.points+(mission.points||100)}));
@@ -35,7 +39,7 @@ export default function Participant({experience,setExperience,setView,setActiveI
  {finished?<div className="finishCard viewFade" key="finish"><div className="confetti">{Array.from({length:16}).map((_,i)=><span key={i}></span>)}</div><div className="finishIcon">🏆</div><h2>Experience complete.</h2><p>Your memories are waiting.</p>{badges.length>0&&<div className="badgeRow">{badges.map(b=><div className="badge" key={b.id} title={b.label}><span>{b.icon}</span><small>{b.label}</small></div>)}</div>}<button className="primary" onClick={()=>setView("memory")}>Open Memory Book</button></div>:mission&&<div className="phone journeyPhone viewFade" key={mission.id}><div className="missionType">{mission.type}</div><h3>{mission.title}</h3><p><LinkifiedText text={mission.text}/></p>
  {mission.type==="photo"&&<label className="uploadBox"><span>📸 Choose a photo</span><input type="file" accept="image/*" capture="environment" onChange={e=>setFile(e.target.files?.[0]||null)}/></label>}
  {mission.type==="video"&&<label className="uploadBox"><span>🎥 Choose a video</span><input type="file" accept="video/*" capture="environment" onChange={e=>setFile(e.target.files?.[0]||null)}/></label>}
- {mission.type==="quiz"&&<div className="choiceGrid">{["A","B","C"].map(opt=><button key={opt} className={quizAnswer===opt?"selected":""} onClick={()=>setQuizAnswer(opt)}>{opt}</button>)}</div>}{mission.type==="map"&&<div className="mapMock">📍<span>Location checkpoint</span></div>}{mission.type==="puzzle"&&<div className="puzzleMock">🧩</div>}
+ {mission.type==="quiz"&&<div className="choiceGrid">{["A","B","C"].map(opt=><button key={opt} className={quizAnswer===opt?"selected":""} onClick={()=>setQuizAnswer(opt)}>{opt}</button>)}</div>}{mission.type==="map"&&(hasCheckpoint?<div className="mapMock gpsReal">📍<span>{locStatus==="checking"?"Checking your location…":locStatus?.within?"✅ You've arrived!":locStatus?`${Math.round(locStatus.distance)}m away — keep going`:"Get to the checkpoint, then check in"}</span><button type="button" disabled={locStatus==="checking"} onClick={checkLocation}>📍 Check my location</button></div>:<div className="mapMock">📍<span>Location checkpoint</span></div>)}{mission.type==="puzzle"&&<div className="puzzleMock">🧩</div>}
  {mission.type==="note"&&<textarea className="noteInput" placeholder="Write your memory…" value={noteText} onChange={e=>setNoteText(e.target.value)}/>}
  {busy&&(mission.type==="photo"||mission.type==="video")&&<div className="uploadProgress"><div style={{width:`${pct}%`}}></div><span>{pct}%</span></div>}<div className="mission">Reward: {mission.reward||`${mission.points||100} points`}</div><button className="primary" disabled={busy} onClick={complete}>{busy?"Saving…":"Complete & Continue"}</button></div>}</>}
  <div className="actions centerActions"><button onClick={()=>setView("runtime")}>Organizer Runtime</button></div></section>
