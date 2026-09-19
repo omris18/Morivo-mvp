@@ -22,6 +22,10 @@ Respond with STRICT JSON only, no markdown fencing, no commentary, matching exac
 "type" must be one of: ${MISSION_TYPES.join(", ")}. "points" is an integer between 50 and 200. Do not include an "id" field, the app assigns those.`;
 
 exports.generateExperience = onCall({ secrets: [openaiApiKey], cors: true, timeoutSeconds: 60 }, async (request) => {
+  if (!request.auth) {
+    throw new HttpsError("unauthenticated", "Sign in (even anonymously) before generating an experience.");
+  }
+
   const { prompt, type, location, duration, people, lang } = request.data || {};
 
   if (!prompt || !String(prompt).trim()) {
