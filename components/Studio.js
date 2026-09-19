@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import { firebaseConfigured } from "../lib/firebase";
 import { publishExperienceRemote, updateExperienceRemote } from "../lib/morivoData";
+import LinkifiedText from "./LinkifiedText";
 
 export default function Studio({ experience, setExperience, setView }) {
   const flow = experience.flow || [];
@@ -242,7 +243,7 @@ export default function Studio({ experience, setExperience, setView }) {
         {atom ? (
           <div className="phone">
             <h3>{atom.title}</h3>
-            <p>{atom.text || "Your instruction will appear here."}</p>
+            <p>{atom.text ? <LinkifiedText text={atom.text} /> : "Your instruction will appear here."}</p>
 
             <div className="mission">
               {atom.reward

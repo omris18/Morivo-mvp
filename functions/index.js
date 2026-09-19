@@ -31,28 +31,53 @@ Respond with STRICT JSON only, no markdown fencing, no commentary, matching exac
 
 const GEMINI_MODELS = ["gemini-3.6-flash", "gemini-2.5-flash", "gemini-2.0-flash", "gemini-flash-latest", "gemini-1.5-flash"];
 
+function bookingSearchUrl(name, location) {
+  const q = [name, location].filter(Boolean).join(" ");
+  return `https://www.booking.com/searchresults.html?ss=${encodeURIComponent(q)}`;
+}
+
 async function suggestHotel({ location, prompt, people, duration, lang }) {
-  const hotelPrompt = `Suggest one specific, realistic accommodation option in or near "${location}" that would suit this group: "${prompt}"${people ? ` (${people} people)` : ""}${duration ? `, staying for ${duration}` : ""}. Respond in 2-3 sentences, in the same language as the group description above (detect it automatically), naming a real type of place or area and explaining briefly why it fits this specific group. Be practical and specific, not generic travel-blog language. Do not use markdown.`;
+  const hotelPrompt = `Suggest 2 to 3 specific, realistic accommodation options in or near "${location}" that would suit this group: "${prompt}"${people ? ` (${people} people)` : ""}${duration ? `, staying for ${duration}` : ""}. For each option give a real, findable hotel/accommodation name or a specific well-known area, and a 1-2 sentence reason it fits this exact group - practical and specific, not generic travel-blog language. Write in the same language as the group description above (detect it automatically). Respond with STRICT JSON only, no markdown fencing, no commentary, matching exactly this shape: {"options":[{"name":"hotel or area name","why":"1-2 sentence reason"}]}`;
 
   for (const model of GEMINI_MODELS) {
     try {
       const res = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${geminiApiKey.value().trim()}`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ contents: [{ parts: [{ text: hotelPrompt }] }] }),
+        body: JSON.stringify({
+          contents: [{ parts: [{ text: hotelPrompt }] }],
+          generationConfig: { responseMimeType: "application/json" },
+        }),
       });
       if (!res.ok) {
         console.error(`Gemini hotel suggestion HTTP error (model ${model})`, res.status, await res.text());
         continue;
       }
       const json = await res.json();
-      const text = json?.candidates?.[0]?.content?.parts?.[0]?.text;
-      if (!text || !text.trim()) continue;
+      const raw = json?.candidates?.[0]?.content?.parts?.[0]?.text;
+      if (!raw) continue;
+
+      let options;
+      try {
+        options = JSON.parse(raw).options;
+      } catch {
+        continue;
+      }
+      if (!Array.isArray(options) || options.length === 0) continue;
+
+      const lines = options.slice(0, 3).map((o, i) => {
+        const name = String(o?.name || "").trim().slice(0, 100);
+        const why = String(o?.why || "").trim().slice(0, 220);
+        if (!name) return null;
+        return `${i + 1}. ${name}${why ? ` — ${why}` : ""}\n${bookingSearchUrl(name, location)}`;
+      }).filter(Boolean);
+      if (!lines.length) continue;
+
       return {
         id: `story-${Date.now()}-hotel`,
         type: "story",
         title: lang === "he" ? "היכן להתארח" : "Where to Stay",
-        text: text.trim().slice(0, 600),
+        text: lines.join("\n\n").slice(0, 1200),
         reward: "",
         points: 0,
       };
