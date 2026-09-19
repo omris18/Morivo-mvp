@@ -6,7 +6,7 @@ export default function Dashboard({experience,experiences,setView,openExperience
      <h1>Build moments people will <span>remember.</span></h1>
      <p>Create, run and preserve interactive experiences from one workspace.</p>
      <div className="actions">
-       <button className="primary" onClick={()=>setView("create")}>＋ Create Experience</button>
+       <button onClick={()=>setView("ai")}>✦ Create with Morivo AI</button><button className="primary" onClick={()=>setView("create")}>＋ Create Experience</button>
      </div>
    </div>
    <div className="kpis">
