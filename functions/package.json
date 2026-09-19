@@ -1,0 +1,11 @@
+{
+  "name": "functions",
+  "description": "Morivo Cloud Functions",
+  "engines": { "node": "20" },
+  "main": "index.js",
+  "dependencies": {
+    "firebase-functions": "^6.1.0",
+    "openai": "^4.68.0"
+  },
+  "private": true
+}
