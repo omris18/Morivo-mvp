@@ -1,0 +1,7 @@
+<?xml version='1.0' encoding='utf-8'?>
+<resources>
+    <string name="app_name">Morivo</string>
+    <string name="title_activity_main">Morivo</string>
+    <string name="package_name">com.morivo.app</string>
+    <string name="custom_url_scheme">com.morivo.app</string>
+</resources>
