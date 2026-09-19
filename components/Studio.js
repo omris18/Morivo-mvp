@@ -182,7 +182,7 @@ export default function Studio({ experience, setExperience, setView }) {
               >
                 <small>{item.type}</small>
                 <b>{item.title}</b>
-                <span>{item.text || "No participant instruction yet"}</span>
+                <span>{item.text ? (item.text.length > 90 ? item.text.slice(0, 90) + "…" : item.text) : "No participant instruction yet"}</span>
               </button>
 
               {index < flow.length - 1 && (
