@@ -4,6 +4,15 @@ import {httpsCallable} from "firebase/functions";
 import {firebaseConfigured,functions} from "../lib/firebase";
 import {createExperienceRemote,ensureUser} from "../lib/morivoData";
 
+const TYPE_OPTIONS={
+ en:["Family Trip","Birthday","Team Building","School","Museum"],
+ he:["טיול משפחתי","יום הולדת","גיבוש צוות","בית ספר","מוזיאון"]
+};
+const DURATION_OPTIONS={
+ en:["30 minutes","1 hour","2-3 hours","Half day (4-5 hours)","Full day","Multi-day"],
+ he:["30 דקות","שעה","2-3 שעות","חצי יום (4-5 שעות)","יום שלם","כמה ימים"]
+};
+
 const COPY={
  en:{tag:"Morivo AI",title:"Describe the experience. Morivo builds the journey.",desc:"Tell us who it is for, where it happens and what you want them to feel.",prompt:"Describe your experience",type:"Experience type",location:"Location",duration:"Duration",people:"Participants",build:"Build my experience",blank:"Start blank instead",thinking:["Understanding the people…","Finding the story…","Designing the route…","Creating missions…","Balancing rewards…","Assembling your experience…"],ready:"Your first draft is ready."},
  he:{tag:"Morivo AI",title:"תארו את החוויה. Morivo יבנה את המסע.",desc:"ספרו לנו למי החוויה, איפה היא מתקיימת ומה הייתם רוצים שהם ירגישו.",prompt:"תיאור החוויה",type:"סוג החוויה",location:"מיקום",duration:"משך",people:"משתתפים",build:"בנו לי חוויה",blank:"התחלה מחוויה ריקה",thinking:["לומד את האנשים…","מוצא את הסיפור…","מתכנן את המסלול…","יוצר משימות…","מאזן תגמולים…","מרכיב את החוויה…"],ready:"הטיוטה הראשונה מוכנה."}
@@ -68,8 +77,8 @@ export default function AICreator({setExperience,setView,setActiveId,user}){
    <div className="aiTop"><div className="tag">{t.tag}</div><div className="langSwitch"><button className={lang==="en"?"active":""} onClick={()=>setLang("en")}>EN</button><button className={lang==="he"?"active":""} onClick={()=>setLang("he")}>עברית</button></div></div>
    <h1>{t.title}</h1><p>{t.desc}</p>
    <label>{t.prompt}</label><textarea className="aiPrompt" value={form.prompt} onChange={e=>setForm({...form,prompt:e.target.value})}/>
-   <div className="fieldRow"><div><label>{t.type}</label><input value={form.type} onChange={e=>setForm({...form,type:e.target.value})}/></div><div><label>{t.location}</label><input value={form.location} onChange={e=>setForm({...form,location:e.target.value})}/></div></div>
-   <div className="fieldRow"><div><label>{t.duration}</label><input value={form.duration} onChange={e=>setForm({...form,duration:e.target.value})}/></div><div><label>{t.people}</label><input type="number" value={form.people} onChange={e=>setForm({...form,people:e.target.value})}/></div></div>
+   <div className="fieldRow"><div><label>{t.type}</label><select value={form.type} onChange={e=>setForm({...form,type:e.target.value})}><option value=""></option>{TYPE_OPTIONS[lang].map(x=><option key={x} value={x}>{x}</option>)}</select></div><div><label>{t.location}</label><input value={form.location} onChange={e=>setForm({...form,location:e.target.value})}/></div></div>
+   <div className="fieldRow"><div><label>{t.duration}</label><select value={form.duration} onChange={e=>setForm({...form,duration:e.target.value})}><option value=""></option>{DURATION_OPTIONS[lang].map(x=><option key={x} value={x}>{x}</option>)}</select></div><div><label>{t.people}</label><input type="number" value={form.people} onChange={e=>setForm({...form,people:e.target.value})}/></div></div>
    <div className="actions"><button onClick={()=>setView("create")}>{t.blank}</button><button className="primary aiBuildButton" onClick={build}>✦ {t.build}</button></div>
   </div>
   <div className="panel aiPromise"><div className="constellation"><span>📍</span><span>📸</span><span>❓</span><span>🧩</span><span>🏆</span><span>📖</span></div><h2>One description.<br/>A complete journey.</h2><p>Morivo turns context into chapters, missions, rewards and memories — then opens everything in Studio for you to edit.</p></div>
