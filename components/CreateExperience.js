@@ -3,9 +3,10 @@ import {useState} from "react";
 import { firebaseConfigured } from "../lib/firebase";
 import { createExperienceRemote, ensureUser } from "../lib/morivoData";
 
-export default function CreateExperience({setExperience,setView,user,setActiveId}){
+export default function CreateExperience({setExperience,setView,user,setActiveId,t}){
  const [form,setForm]=useState({name:"",type:"",location:"",people:"",story:""});
  const [thinking,setThinking]=useState(false);
+ const c=t.create;
  async function create(){
    setThinking(true);
    const data={...form,people:Number(form.people||0),flow:[]};
@@ -23,19 +24,19 @@ export default function CreateExperience({setExperience,setView,user,setActiveId
  }
  return <section className="grid2">
   <div className="panel">
-   <div className="tag">Create with Morivo AI</div><h2>Tell me about them.</h2>
-   <label>Experience name</label><input value={form.name} onChange={e=>setForm({...form,name:e.target.value})}/>
-   <label>Type</label><select value={form.type} onChange={e=>setForm({...form,type:e.target.value})}><option value=""></option><option>Family Trip</option><option>Birthday</option><option>Team Building</option><option>School</option><option>Museum</option></select>
-   <label>Location</label><input value={form.location} onChange={e=>setForm({...form,location:e.target.value})}/>
-   <label>Participants</label><input type="number" value={form.people} onChange={e=>setForm({...form,people:+e.target.value})}/>
-   <label>Describe the people and experience</label><textarea value={form.story} onChange={e=>setForm({...form,story:e.target.value})}/>
-   <div className="actions"><button onClick={()=>setView("dashboard")}>Cancel</button><button className="primary" onClick={create} disabled={thinking}>{thinking?"Building…":"Create Blank Experience"}</button></div>
+   <div className="tag">{c.tag}</div><h2>{c.title}</h2>
+   <label>{c.name}</label><input value={form.name} onChange={e=>setForm({...form,name:e.target.value})}/>
+   <label>{c.type}</label><select value={form.type} onChange={e=>setForm({...form,type:e.target.value})}><option value=""></option><option>{c.typeFamilyTrip}</option><option>{c.typeBirthday}</option><option>{c.typeTeamBuilding}</option><option>{c.typeSchool}</option><option>{c.typeMuseum}</option></select>
+   <label>{c.location}</label><input value={form.location} onChange={e=>setForm({...form,location:e.target.value})}/>
+   <label>{c.participants}</label><input type="number" value={form.people} onChange={e=>setForm({...form,people:+e.target.value})}/>
+   <label>{c.describe}</label><textarea value={form.story} onChange={e=>setForm({...form,story:e.target.value})}/>
+   <div className="actions"><button onClick={()=>setView("dashboard")}>{c.cancel}</button><button className="primary" onClick={create} disabled={thinking}>{thinking?c.building:c.createBlank}</button></div>
   </div>
   <div className="panel thinking">
     {thinking ? <>
       <div className="spinner"></div>
-      <h3>Morivo is building your experience…</h3>
-      <p>Creating your blank experience.</p>
+      <h3>{c.buildingTitle}</h3>
+      <p>{c.buildingSub}</p>
     </> : <div className="phone blankPreview">
       {form.name && <h3>{form.name}</h3>}
       {form.location && <p>{form.location}</p>}

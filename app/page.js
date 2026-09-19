@@ -13,6 +13,7 @@ import Account from "../components/Account";
 import { firebaseConfigured, auth } from "../lib/firebase";
 import { onAuthStateChanged } from "firebase/auth";
 import { ensureUser, subscribeExperiences, subscribeExperience, completeGoogleRedirect } from "../lib/morivoData";
+import { STRINGS, getDir } from "../lib/i18n";
 
 const DEMO={
  id:"thailand-demo", name:"Thailand Family Adventure", type:"Family Trip",
@@ -45,6 +46,15 @@ export default function Home(){
   });
   const [activeId,setActiveId]=useState(null);
   const [deepLinkCode,setDeepLinkCode]=useState("");
+  const [lang,setLang]=useState("en");
+
+ useEffect(()=>{
+   const saved=window.localStorage?.getItem("morivo_lang");
+   if(saved && STRINGS[saved]) setLang(saved);
+ },[]);
+ useEffect(()=>{
+   try{ window.localStorage?.setItem("morivo_lang", lang); }catch{}
+ },[lang]);
 
  useEffect(()=>{
    const q=new URLSearchParams(window.location.search).get("join");
@@ -77,7 +87,9 @@ export default function Home(){
    setView("studio");
  }
 
- const props={experience,setExperience,setView,user,experiences,setExperiences,activeId,setActiveId,openExperience,deepLinkCode};
+ const t=STRINGS[lang];
+ const dir=getDir(lang);
+ const props={experience,setExperience,setView,user,experiences,setExperiences,activeId,setActiveId,openExperience,deepLinkCode,lang,setLang,t,dir};
  const Screen=useMemo(()=>({
    dashboard:<Dashboard {...props}/>,
    ai:<AICreator {...props}/>,
@@ -86,12 +98,21 @@ export default function Home(){
    runtime:<Runtime {...props}/>,
    participant:<Participant {...props}/>,
    memory:<Memory {...props}/>
- })[view],[view,experience,experiences,user,activeId]);
+ })[view],[view,experience,experiences,user,activeId,lang]);
 
- return <div className="appShell">
-   <Sidebar view={view} setView={setView}/>
+ return <div className="appShell" dir={dir}>
+   <Sidebar view={view} setView={setView} t={t}/>
    <main className="content">
-     <div className="topBar"><FirebaseStatus/><Account user={user}/></div>
+     <div className="topBar">
+       <FirebaseStatus t={t}/>
+       <div className="topBarRight">
+         <div className="langSwitchGlobal">
+           <button className={lang==="en"?"active":""} onClick={()=>setLang("en")}>EN</button>
+           <button className={lang==="he"?"active":""} onClick={()=>setLang("he")}>עברית</button>
+         </div>
+         <Account user={user} t={t}/>
+       </div>
+     </div>
      <div className="viewFade" key={view}>{Screen}</div>
    </main>
  </div>;

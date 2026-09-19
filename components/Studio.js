@@ -7,7 +7,8 @@ import { publishExperienceRemote, updateExperienceRemote } from "../lib/morivoDa
 import LinkifiedText from "./LinkifiedText";
 import { getCurrentPosition } from "../lib/geo";
 
-export default function Studio({ experience, setExperience, setView }) {
+export default function Studio({ experience, setExperience, setView, t }) {
+  const s = t.studio;
   const flow = experience.flow || [];
   const [selected, setSelected] = useState(flow[0]?.id || null);
   const [saving, setSaving] = useState(false);
@@ -76,7 +77,7 @@ export default function Studio({ experience, setExperience, setView }) {
 
   async function reviseWithAI() {
     if (!revisePrompt.trim()) return;
-    if (!flow.length) return alert("Add at least one mission first.");
+    if (!flow.length) return alert(s.addAtLeastOneMission);
     setRevising(true);
     try {
       const revise = httpsCallable(functions, "reviseExperience");
@@ -94,9 +95,9 @@ export default function Studio({ experience, setExperience, setView }) {
     const newAtom = {
       id: `${type}-${Date.now()}`,
       type,
-      title: `New ${type}`,
+      title: s.newMissionTitle(type),
       text: "",
-      reward: "100 points",
+      reward: `100 ${s.pointsSuffix}`,
       points: 100,
     };
 
@@ -127,7 +128,7 @@ export default function Studio({ experience, setExperience, setView }) {
 
   function remove() {
     if (!atom) return;
-    if (!window.confirm(`Delete "${atom.title || "this mission"}"? This can't be undone.`)) return;
+    if (!window.confirm(s.confirmDelete(atom.title))) return;
 
     const nextFlow = flow.filter((x) => x.id !== atom.id);
 
@@ -152,7 +153,7 @@ export default function Studio({ experience, setExperience, setView }) {
 
   async function publish() {
     if (!flow.length) {
-      alert("Add at least one mission before publishing.");
+      alert(s.addAtLeastOneMission);
       return;
     }
 
@@ -163,7 +164,7 @@ export default function Studio({ experience, setExperience, setView }) {
         joinCode: "MORIVO26",
       });
 
-      alert("Published in demo mode: MORIVO26");
+      alert(s.publishedDemo("MORIVO26"));
       return;
     }
 
@@ -175,17 +176,17 @@ export default function Studio({ experience, setExperience, setView }) {
       joinCode: code,
     });
 
-    alert(`Published. Join code: ${code}`);
+    alert(s.published(code));
   }
 
   return (
     <section className="grid2">
       <div className="panel">
         <div className="tag">
-          Morivo Studio · {saving ? "Saving…" : "Saved"}
+          {s.savingTag} · {saving ? s.saving : s.saved}
         </div>
 
-        <h2>{experience.name || "Untitled Experience"}</h2>
+        <h2>{experience.name || s.untitled}</h2>
 
         <div className="atomBar">
           {["photo", "video", "map", "quiz", "puzzle", "note", "reward", "story", "nfc"].map(
@@ -200,14 +201,14 @@ export default function Studio({ experience, setExperience, setView }) {
         {firebaseConfigured && flow.length > 0 && (
           <div className="reviseBar">
             <input
-              placeholder='Revise with AI — e.g. "make it funnier" or "suitable for younger children"'
+              placeholder={s.revisePlaceholder}
               value={revisePrompt}
               onChange={(e) => setRevisePrompt(e.target.value)}
               onKeyDown={(e) => e.key === "Enter" && reviseWithAI()}
               disabled={revising}
             />
             <button disabled={revising || !revisePrompt.trim()} onClick={reviseWithAI}>
-              {revising ? "Revising…" : "✨ Revise"}
+              {revising ? s.revising : s.revise}
             </button>
           </div>
         )}
@@ -215,8 +216,8 @@ export default function Studio({ experience, setExperience, setView }) {
         <div className="flow">
           {!flow.length && (
             <div className="emptyBuilder">
-              <b>Your journey is empty.</b>
-              <span>Add the first mission from the Mission Library above.</span>
+              <b>{s.emptyTitle}</b>
+              <span>{s.emptySub}</span>
             </div>
           )}
 
@@ -230,7 +231,7 @@ export default function Studio({ experience, setExperience, setView }) {
               >
                 <small>{item.type}</small>
                 <b>{item.title}</b>
-                <span>{item.text ? (item.text.length > 90 ? item.text.slice(0, 90) + "…" : item.text) : "No participant instruction yet"}</span>
+                <span>{item.text ? (item.text.length > 90 ? item.text.slice(0, 90) + "…" : item.text) : s.noInstructionYet}</span>
               </button>
 
               {index < flow.length - 1 && (
@@ -242,13 +243,13 @@ export default function Studio({ experience, setExperience, setView }) {
 
         {atom && (
           <div className="inspector">
-            <label>Title</label>
+            <label>{s.title}</label>
             <input
               value={atom.title || ""}
               onChange={(e) => patch({ title: e.target.value })}
             />
 
-            <label>Participant instruction</label>
+            <label>{s.instruction}</label>
             <textarea
               value={atom.text || ""}
               onChange={(e) => patch({ text: e.target.value })}
@@ -256,22 +257,22 @@ export default function Studio({ experience, setExperience, setView }) {
 
             {atom.type === "map" && (
               <div className="gpsCheckpoint">
-                <label>GPS checkpoint</label>
+                <label>{s.gpsCheckpoint}</label>
                 {Number.isFinite(atom.lat) && Number.isFinite(atom.lng) ? (
                   <p className="gpsStatus">
-                    📍 Set at {atom.lat.toFixed(5)}, {atom.lng.toFixed(5)}
+                    {s.gpsSetAt} {atom.lat.toFixed(5)}, {atom.lng.toFixed(5)}
                   </p>
                 ) : (
-                  <p className="gpsStatus">No location set yet - participants can tap through freely until you set one.</p>
+                  <p className="gpsStatus">{s.gpsNotSet}</p>
                 )}
                 <div className="fieldRow">
                   <div>
                     <button type="button" disabled={locating} onClick={setCheckpointHere}>
-                      {locating ? "Locating…" : "📍 Use my current location"}
+                      {locating ? s.locating : s.useMyLocation}
                     </button>
                   </div>
                   <div>
-                    <label>Radius (meters)</label>
+                    <label>{s.radius}</label>
                     <input
                       type="number"
                       value={atom.radius || 150}
@@ -282,13 +283,13 @@ export default function Studio({ experience, setExperience, setView }) {
               </div>
             )}
 
-            <label>Reward</label>
+            <label>{s.reward}</label>
             <input
               value={atom.reward || ""}
               onChange={(e) => patch({ reward: e.target.value })}
             />
 
-            <label>Points (max 500)</label>
+            <label>{s.points}</label>
             <input
               type="number"
               min="0"
@@ -298,43 +299,43 @@ export default function Studio({ experience, setExperience, setView }) {
             />
 
             <div className="actions">
-              <button onClick={() => move(-1)}>↑ Move</button>
-              <button onClick={() => move(1)}>↓ Move</button>
-              <button onClick={duplicate}>⧉ Duplicate</button>
-              <button onClick={remove}>Delete</button>
+              <button onClick={() => move(-1)}>↑ {s.move}</button>
+              <button onClick={() => move(1)}>↓ {s.move}</button>
+              <button onClick={duplicate}>{s.duplicate}</button>
+              <button onClick={remove}>{s.delete}</button>
             </div>
           </div>
         )}
 
         <div className="actions">
-          <button onClick={() => setView("dashboard")}>Dashboard</button>
-          <button onClick={() => setView("runtime")}>Runtime</button>
+          <button onClick={() => setView("dashboard")}>{s.dashboardBtn}</button>
+          <button onClick={() => setView("runtime")}>{s.runtimeBtn}</button>
           <button className="primary" onClick={publish}>
-            Publish Experience
+            {s.publish}
           </button>
         </div>
       </div>
 
       <div className="panel">
-        <div className="tag">Live participant preview</div>
+        <div className="tag">{s.liveParticipantPreview}</div>
 
         {atom ? (
           <div className="phone">
             <h3>{atom.title}</h3>
-            <p>{atom.text ? <LinkifiedText text={atom.text} /> : "Your instruction will appear here."}</p>
+            <p>{atom.text ? <LinkifiedText text={atom.text} /> : s.instructionPlaceholder}</p>
 
             <div className="mission">
               {atom.reward
-                ? `Reward: ${atom.reward}`
-                : `${atom.points || 100} points`}
+                ? `${s.rewardPrefix} ${atom.reward}`
+                : `${atom.points || 100} ${s.pointsSuffix}`}
             </div>
 
-            <button className="primary">Complete Mission</button>
+            <button className="primary">{s.completeMission}</button>
           </div>
         ) : (
           <div className="emptyBuilder">
-            <b>No mission selected.</b>
-            <span>Add a mission to see participant preview.</span>
+            <b>{s.noMissionSelected}</b>
+            <span>{s.addMissionToSee}</span>
           </div>
         )}
       </div>

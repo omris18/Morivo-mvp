@@ -1,5 +1,5 @@
 "use client";
-import {useEffect,useMemo,useState} from "react";
+import {useEffect,useState} from "react";
 import {httpsCallable} from "firebase/functions";
 import {firebaseConfigured,functions} from "../lib/firebase";
 import {createExperienceRemote,ensureUser} from "../lib/morivoData";
@@ -17,11 +17,6 @@ const DAY_OPTIONS={
  he:["יום אחד","יומיים","3 ימים","4 ימים","5 ימים","6 ימים","שבוע (7 ימים)","8-14 ימים","15+ ימים"]
 };
 
-const COPY={
- en:{tag:"Morivo AI",title:"Describe the experience. Morivo builds the journey.",desc:"Tell us who it is for, where it happens and what you want them to feel.",prompt:"Describe your experience",type:"Experience type",location:"Location",duration:"Duration",days:"Trip length",people:"Participants",hotel:"Already booked a hotel?",build:"Build my experience",blank:"Start blank instead",thinking:["Understanding the people…","Finding the story…","Designing the route…","Creating missions…","Balancing rewards…","Assembling your experience…"],ready:"Your first draft is ready."},
- he:{tag:"Morivo AI",title:"תארו את החוויה. Morivo יבנה את המסע.",desc:"ספרו לנו למי החוויה, איפה היא מתקיימת ומה הייתם רוצים שהם ירגישו.",prompt:"תיאור החוויה",type:"סוג החוויה",location:"מיקום",duration:"משך",days:"אורך הטיול",people:"משתתפים",hotel:"כבר הזמנתם מלון?",build:"בנו לי חוויה",blank:"התחלה מחוויה ריקה",thinking:["לומד את האנשים…","מוצא את הסיפור…","מתכנן את המסלול…","יוצר משימות…","מאזן תגמולים…","מרכיב את החוויה…"],ready:"הטיוטה הראשונה מוכנה."}
-};
-
 function generateDraft(f){
  const subject=f.prompt.trim()||"your experience";
  const loc=f.location.trim();
@@ -36,16 +31,16 @@ function generateDraft(f){
  ];
 }
 
-export default function AICreator({setExperience,setView,setActiveId,user}){
- const [lang,setLang]=useState("en"),[form,setForm]=useState({prompt:"",type:"",location:"",duration:"",people:"",hotelBooked:false}),[building,setBuilding]=useState(false),[step,setStep]=useState(0);
- const t=COPY[lang];
+export default function AICreator({setExperience,setView,setActiveId,user,lang,t,dir}){
+ const a=t.aiCreator;
+ const [form,setForm]=useState({prompt:"",type:"",location:"",duration:"",people:"",hotelBooked:false}),[building,setBuilding]=useState(false),[step,setStep]=useState(0);
  const isFamilyTrip=form.type===TYPE_OPTIONS.en[0]||form.type===TYPE_OPTIONS.he[0];
- useEffect(()=>{if(!building)return;const id=setInterval(()=>setStep(x=>Math.min(x+1,t.thinking.length-1)),900);return()=>clearInterval(id)},[building,lang]);
+ useEffect(()=>{if(!building)return;const id=setInterval(()=>setStep(x=>Math.min(x+1,a.thinking.length-1)),900);return()=>clearInterval(id)},[building,lang]);
  async function build(){
-  if(!form.prompt.trim())return alert(lang==="he"?"כתבו כמה מילים על החוויה":"Describe the experience first");
-  if(!firebaseConfigured)return alert(lang==="he"?"AI אמיתי דורש חיבור ל-Firebase. כרגע האפליקציה במצב Demo (בדקי את המשתנים ב-Vercel/.env.local).":"Real AI requires a Firebase connection. The app is currently in Demo mode (check your Vercel/.env.local environment variables).");
+  if(!form.prompt.trim())return alert(a.describeFirst);
+  if(!firebaseConfigured)return alert(a.needsFirebase);
   setBuilding(true);setStep(0);
-  const minWait=new Promise(r=>setTimeout(r,Math.max(4200,t.thinking.length*700)));
+  const minWait=new Promise(r=>setTimeout(r,Math.max(4200,a.thinking.length*700)));
   let flow,name,usedAI=false,aiError=null;
   try{
    await ensureUser();
@@ -67,10 +62,10 @@ export default function AICreator({setExperience,setView,setActiveId,user}){
    const u=user||await ensureUser(),id=await createExperienceRemote(u.uid,data);
    setExperience({...data,id,ownerUid:u.uid});setActiveId(id);
    setView("studio");
-   if(aiError)alert((lang==="he"?"שימו לב: ה-AI האמיתי לא הגיב, נוצרה טיוטה גנרית במקום.\n\nסיבת הכשל: ":"Note: the real AI didn't respond, a generic placeholder draft was used instead.\n\nFailure reason: ")+aiError);
+   if(aiError)alert(a.aiFailedNote+aiError);
   }catch(e){alert(e.message);setBuilding(false)}
  }
- if(building)return <section className={"aiThinking "+(lang==="he"?"rtl":"")} dir={lang==="he"?"rtl":"ltr"}>
+ if(building)return <section className="aiThinking" dir={dir}>
    <div className="thinkingWorld">
     <svg className="thinkingLines" viewBox="0 0 600 540" preserveAspectRatio="none">
      <defs>
@@ -90,18 +85,18 @@ export default function AICreator({setExperience,setView,setActiveId,user}){
     <div className="orb orb1">📍</div><div className="orb orb2">📸</div><div className="orb orb3">🧩</div><div className="orb orb4">🏆</div><div className="orb orb5">📖</div>
     <div className="bookBuild"><span></span><span></span><span></span></div>
    </div>
-   <div className="thinkingCopy"><div className="tag">{t.tag}</div><h1>{t.thinking[step]}</h1><p>{form.prompt}</p><div className="thinkingSteps">{t.thinking.map((x,i)=><i className={i<=step?"on":""} key={x}></i>)}</div></div>
+   <div className="thinkingCopy"><div className="tag">{a.tag}</div><h1>{a.thinking[step]}</h1><p>{form.prompt}</p><div className="thinkingSteps">{a.thinking.map((x,i)=><i className={i<=step?"on":""} key={x}></i>)}</div></div>
   </section>;
- return <section className={"aiCreate grid2 "+(lang==="he"?"rtl":"")} dir={lang==="he"?"rtl":"ltr"}>
+ return <section className="aiCreate grid2" dir={dir}>
   <div className="panel">
-   <div className="aiTop"><div className="tag">{t.tag}</div><div className="langSwitch"><button className={lang==="en"?"active":""} onClick={()=>setLang("en")}>EN</button><button className={lang==="he"?"active":""} onClick={()=>setLang("he")}>עברית</button></div></div>
-   <h1>{t.title}</h1><p>{t.desc}</p>
-   <label>{t.prompt}</label><textarea className="aiPrompt" value={form.prompt} onChange={e=>setForm({...form,prompt:e.target.value})}/>
-   <div className="fieldRow"><div><label>{t.type}</label><select value={form.type} onChange={e=>setForm({...form,type:e.target.value})}><option value=""></option>{TYPE_OPTIONS[lang].map(x=><option key={x} value={x}>{x}</option>)}</select></div><div><label>{t.location}</label><input value={form.location} onChange={e=>setForm({...form,location:e.target.value})}/></div></div>
-   <div className="fieldRow"><div><label>{isFamilyTrip?t.days:t.duration}</label><select value={form.duration} onChange={e=>setForm({...form,duration:e.target.value})}><option value=""></option>{(isFamilyTrip?DAY_OPTIONS:DURATION_OPTIONS)[lang].map(x=><option key={x} value={x}>{x}</option>)}</select></div><div><label>{t.people}</label><input type="number" value={form.people} onChange={e=>setForm({...form,people:e.target.value})}/></div></div>
-   {isFamilyTrip&&<label className="hotelCheck"><input type="checkbox" checked={form.hotelBooked} onChange={e=>setForm({...form,hotelBooked:e.target.checked})}/> {t.hotel}</label>}
-   <div className="actions"><button onClick={()=>setView("create")}>{t.blank}</button><button className="primary aiBuildButton" onClick={build}>✦ {t.build}</button></div>
+   <div className="aiTop"><div className="tag">{a.tag}</div></div>
+   <h1>{a.title}</h1><p>{a.desc}</p>
+   <label>{a.prompt}</label><textarea className="aiPrompt" value={form.prompt} onChange={e=>setForm({...form,prompt:e.target.value})}/>
+   <div className="fieldRow"><div><label>{a.type}</label><select value={form.type} onChange={e=>setForm({...form,type:e.target.value})}><option value=""></option>{TYPE_OPTIONS[lang].map(x=><option key={x} value={x}>{x}</option>)}</select></div><div><label>{a.location}</label><input value={form.location} onChange={e=>setForm({...form,location:e.target.value})}/></div></div>
+   <div className="fieldRow"><div><label>{isFamilyTrip?a.days:a.duration}</label><select value={form.duration} onChange={e=>setForm({...form,duration:e.target.value})}><option value=""></option>{(isFamilyTrip?DAY_OPTIONS:DURATION_OPTIONS)[lang].map(x=><option key={x} value={x}>{x}</option>)}</select></div><div><label>{a.people}</label><input type="number" value={form.people} onChange={e=>setForm({...form,people:e.target.value})}/></div></div>
+   {isFamilyTrip&&<label className="hotelCheck"><input type="checkbox" checked={form.hotelBooked} onChange={e=>setForm({...form,hotelBooked:e.target.checked})}/> {a.hotel}</label>}
+   <div className="actions"><button onClick={()=>setView("create")}>{a.blank}</button><button className="primary aiBuildButton" onClick={build}>✦ {a.build}</button></div>
   </div>
-  <div className="panel aiPromise"><div className="constellation"><span>📍</span><span>📸</span><span>❓</span><span>🧩</span><span>🏆</span><span>📖</span></div><h2>One description.<br/>A complete journey.</h2><p>Morivo turns context into chapters, missions, rewards and memories — then opens everything in Studio for you to edit.</p></div>
+  <div className="panel aiPromise"><div className="constellation"><span>📍</span><span>📸</span><span>❓</span><span>🧩</span><span>🏆</span><span>📖</span></div><h2>{a.promiseTitle1}<br/>{a.promiseTitle2}</h2><p>{a.promiseDesc}</p></div>
  </section>
 }

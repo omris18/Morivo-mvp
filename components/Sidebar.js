@@ -1,13 +1,11 @@
-const items=[
- ["dashboard","⌂","Dashboard"],["ai","✨","Morivo AI"],["create","＋","Create"],["studio","✦","Studio"],
- ["runtime","▶","Runtime"],["participant","◉","Participant"],["memory","▣","Memory"]
-];
-export default function Sidebar({view,setView}){
+const items=["dashboard","ai","create","studio","runtime","participant","memory"];
+const icons={dashboard:"⌂",ai:"✨",create:"＋",studio:"✦",runtime:"▶",participant:"◉",memory:"▣"};
+export default function Sidebar({view,setView,t}){
  return <aside className="sidebar">
-   <div className="brand">◆ Morivo</div>
-   <div className="tag">Experience OS</div>
-   <nav>{items.map(([id,icon,label])=><button key={id} onClick={()=>setView(id)} className={view===id?"active":""}>
-    <span>{icon}</span>{label}
+   <div className="brand">◆ {t.brand}</div>
+   <div className="tag">{t.brandTag}</div>
+   <nav>{items.map(id=><button key={id} onClick={()=>setView(id)} className={view===id?"active":""}>
+    <span>{icons[id]}</span>{t.nav[id]}
    </button>)}</nav>
  </aside>
 }

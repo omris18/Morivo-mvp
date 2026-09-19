@@ -1,9 +1,9 @@
 "use client";
 import { firebaseConfigured } from "../lib/firebase";
 
-export default function FirebaseStatus(){
+export default function FirebaseStatus({t}){
   return <div className={firebaseConfigured ? "firebaseStatus connected" : "firebaseStatus"}>
     <span className="dot"></span>
-    {firebaseConfigured ? "Firebase connected · Realtime mode" : "Demo mode · Firebase not connected"}
+    {firebaseConfigured ? t.firebaseConnected : t.firebaseDemo}
   </div>
 }
