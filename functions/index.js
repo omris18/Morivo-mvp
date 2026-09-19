@@ -1,6 +1,10 @@
 const { onCall, HttpsError } = require("firebase-functions/v2/https");
 const { defineSecret } = require("firebase-functions/params");
 const OpenAI = require("openai");
+const admin = require("firebase-admin");
+
+if (!admin.apps.length) admin.initializeApp();
+const db = admin.firestore();
 
 const openaiApiKey = defineSecret("OPENAI_API_KEY");
 const geminiApiKey = defineSecret("GEMINI_API_KEY");
@@ -184,4 +188,93 @@ exports.generateExperience = onCall({ secrets: [openaiApiKey, geminiApiKey], cor
     name: String(data.name || prompt).slice(0, 120),
     flow: extras.length ? [...extras, ...flow] : flow,
   };
+});
+
+exports.generateMemoryStory = onCall({ secrets: [openaiApiKey], cors: true, timeoutSeconds: 60 }, async (request) => {
+  if (!request.auth) {
+    throw new HttpsError("unauthenticated", "Sign in before generating a story.");
+  }
+
+  const { experienceId } = request.data || {};
+  if (!experienceId) {
+    throw new HttpsError("invalid-argument", "experienceId is required.");
+  }
+
+  const expRef = db.collection("experiences").doc(experienceId);
+  const expSnap = await expRef.get();
+  if (!expSnap.exists) {
+    throw new HttpsError("not-found", "Experience not found.");
+  }
+  const experience = expSnap.data();
+  if (experience.ownerUid !== request.auth.uid) {
+    throw new HttpsError("permission-denied", "Only the experience owner can generate its story.");
+  }
+
+  const [mediaSnap, answersSnap] = await Promise.all([
+    expRef.collection("media").get(),
+    expRef.collection("answers").get(),
+  ]);
+
+  const flow = experience.flow || [];
+  const chapters = flow.map((m) => {
+    const photos = mediaSnap.docs.filter((d) => d.data().missionId === m.id);
+    const quotes = answersSnap.docs.filter((d) => d.data().missionId === m.id);
+    return {
+      title: m.title,
+      type: m.type,
+      photoCount: photos.length,
+      photoBy: [...new Set(photos.map((d) => d.data().participantName).filter(Boolean))],
+      quotes: quotes.map((d) => ({ text: d.data().text, by: d.data().participantName })),
+    };
+  }).filter((c) => c.photoCount > 0 || c.quotes.length > 0);
+
+  if (!chapters.length) {
+    throw new HttpsError("failed-precondition", "No memories have been collected yet - nothing to write about.");
+  }
+
+  const chaptersText = chapters.map((c, i) =>
+    `${i + 1}. "${c.title}" (${c.type})` +
+    (c.photoCount ? ` - ${c.photoCount} photo/video captured${c.photoBy.length ? ` by ${c.photoBy.join(", ")}` : ""}` : "") +
+    (c.quotes.length ? `\n   Quotes: ${c.quotes.map((q) => `"${q.text}" — ${q.by || "a participant"}`).join(" | ")}` : "")
+  ).join("\n");
+
+  const client = new OpenAI({ apiKey: openaiApiKey.value().trim() });
+  const prompt = `You write warm, specific retellings of real interactive experiences for an app called Morivo. Given the experience's name, its original intent, and what actually happened chapter by chapter (real photo/video counts, who captured them, and real quotes participants wrote), write a flowing 3 to 5 paragraph narrative retelling of the experience as it actually happened. Reference the real chapters, real quotes and real people by name where given - do not invent details the input doesn't support. Write in the same language as the text below (detect it automatically). Respond with STRICT JSON only, no markdown fencing, no commentary, matching exactly this shape: {"story": "the narrative text"}
+
+Experience name: ${experience.name || ""}
+Original intent: ${experience.story || ""}
+
+What happened, chapter by chapter:
+${chaptersText}`;
+
+  let completion;
+  try {
+    completion = await client.chat.completions.create({
+      model: "gpt-4o-mini",
+      messages: [{ role: "user", content: prompt }],
+      response_format: { type: "json_object" },
+      temperature: 0.85,
+    });
+  } catch (err) {
+    console.error("OpenAI memory story request failed", err);
+    throw new HttpsError("unavailable", "The AI service failed to respond. Please try again.");
+  }
+
+  let story;
+  try {
+    story = JSON.parse(completion.choices[0].message.content).story;
+  } catch (err) {
+    throw new HttpsError("internal", "The AI returned data in an unexpected format.");
+  }
+  if (!story || !String(story).trim()) {
+    throw new HttpsError("internal", "The AI didn't return a story.");
+  }
+
+  const finalStory = String(story).trim().slice(0, 4000);
+  await expRef.update({
+    memoryStory: finalStory,
+    memoryStoryGeneratedAt: admin.firestore.FieldValue.serverTimestamp(),
+  });
+
+  return { story: finalStory };
 });

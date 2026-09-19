@@ -1,6 +1,7 @@
 "use client";
 import {useEffect,useMemo,useState} from "react";
-import { firebaseConfigured } from "../lib/firebase";
+import { httpsCallable } from "firebase/functions";
+import { firebaseConfigured, functions } from "../lib/firebase";
 import { subscribeMedia } from "../lib/mediaData";
 import { subscribeAnswers, subscribeAllProgress } from "../lib/morivoData";
 function MediaThumb({m}){
@@ -8,8 +9,9 @@ function MediaThumb({m}){
   ? <video src={m.downloadURL} controls muted/>
   : <img src={m.downloadURL} alt={m.missionTitle||"Memory"}/>;
 }
-export default function Memory({experience,setView}){
+export default function Memory({experience,setExperience,setView}){
  const [open,setOpen]=useState(false);
+ const [writing,setWriting]=useState(false);
  const [media,setMedia]=useState([]),[answers,setAnswers]=useState([]),[progress,setProgress]=useState([]);
  useEffect(()=>{if(!firebaseConfigured||!experience.id||experience.id==="thailand-demo"){setMedia([]);setAnswers([]);setProgress([]);return}
   const a=subscribeMedia(experience.id,setMedia),b=subscribeAnswers(experience.id,setAnswers),c=subscribeAllProgress(experience.id,setProgress);return()=>{a();b();c()}},[experience.id]);
@@ -22,8 +24,18 @@ export default function Memory({experience,setView}){
  })).filter(c=>c.photos.length||c.quotes.length),[flow,media,answers]);
 
  const finishers=progress.filter(p=>flow.length&&(p.currentMissionIndex||0)>=flow.length).length;
+ const canWriteStory=firebaseConfigured&&experience.id&&experience.id!=="thailand-demo"&&chapters.length>0;
 
- return <section className="grid2"><div className="panel"><div className="tag">Memory Engine · Live Media</div><h2>The experience ends. The story stays.</h2><div className={"book "+(open?"open":"")} onClick={()=>setOpen(!open)}><div className="cover"><small>Morivo Memory Book</small><h3>{experience.name}</h3><p>Memories made together</p></div><div className="spread memorySpread"><div><h3>Our Story</h3><p>{experience.story}</p></div><div className="realPhotoGrid">{media.slice(0,4).map(m=><MediaThumb m={m} key={m.id}/>)}{media.length===0&&<><span></span><span></span><span></span><span></span></>}</div></div></div><div className="actions"><button className="primary" onClick={()=>setOpen(!open)}>{open?"Close Book":"Open Book"}</button><button onClick={()=>setView("runtime")}>Back to Runtime</button></div>
+ async function writeStory(){
+   setWriting(true);
+   try{
+     const fn=httpsCallable(functions,"generateMemoryStory");
+     const result=await fn({experienceId:experience.id});
+     setExperience?.({...experience,memoryStory:result.data.story});
+   }catch(e){alert(e.message)}finally{setWriting(false)}
+ }
+
+ return <section className="grid2"><div className="panel"><div className="tag">Memory Engine · Live Media</div><h2>The experience ends. The story stays.</h2><div className={"book "+(open?"open":"")} onClick={()=>setOpen(!open)}><div className="cover"><small>Morivo Memory Book</small><h3>{experience.name}</h3><p>Memories made together</p></div><div className="spread memorySpread"><div><h3>Our Story</h3><p>{experience.memoryStory||experience.story}</p></div><div className="realPhotoGrid">{media.slice(0,4).map(m=><MediaThumb m={m} key={m.id}/>)}{media.length===0&&<><span></span><span></span><span></span><span></span></>}</div></div></div><div className="actions"><button className="primary" onClick={()=>setOpen(!open)}>{open?"Close Book":"Open Book"}</button>{canWriteStory&&<button disabled={writing} onClick={e=>{e.stopPropagation();writeStory()}}>{writing?"Writing…":experience.memoryStory?"✨ Rewrite with AI":"✨ Write Our Story with AI"}</button>}<button onClick={()=>setView("runtime")}>Back to Runtime</button></div>
 
  {chapters.length>0&&<div className="chapters"><div className="tag">Chapters</div>{chapters.map(c=><div className="chapter" key={c.mission.id}><h4>{c.mission.title}</h4>{c.photos.length>0&&<div className="chapterPhotos">{c.photos.map(p=><MediaThumb m={p} key={p.id}/>)}</div>}{c.quotes.map(q=><p className="chapterQuote" key={q.id}>"{q.text}" <small>— {q.participantName}</small></p>)}</div>)}</div>}
  </div>
