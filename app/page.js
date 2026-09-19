@@ -81,7 +81,7 @@ export default function Home(){
    <Sidebar view={view} setView={setView}/>
    <main className="content">
      <FirebaseStatus/>
-     {Screen}
+     <div className="viewFade" key={view}>{Screen}</div>
    </main>
  </div>;
 }

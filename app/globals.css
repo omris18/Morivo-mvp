@@ -8,3 +8,28 @@
 .blankPreview{min-height:420px;background:linear-gradient(180deg,#11283d,#09131f)}
 
 .aiCreate h1,.thinkingCopy h1{font:500 44px Georgia,serif;line-height:1.04}.aiPrompt{min-height:180px;font-size:17px;line-height:1.5}.aiTop{display:flex;justify-content:space-between;align-items:center}.langSwitch{display:flex;gap:4px}.langSwitch button{padding:6px 9px;font-size:10px}.langSwitch .active{background:#7d5cff;color:#fff}.aiPromise{min-height:580px;display:flex;flex-direction:column;justify-content:center;overflow:hidden;position:relative}.aiPromise h2{font:500 35px Georgia,serif}.constellation{height:260px;position:relative}.constellation:before,.constellation:after{content:"";position:absolute;inset:50% 10%;height:1px;background:linear-gradient(90deg,transparent,#7d5cff,#5fcdf8,transparent);transform:rotate(-13deg)}.constellation span{position:absolute;width:54px;height:54px;border-radius:50%;display:grid;place-items:center;background:#102238;border:1px solid rgba(255,255,255,.13);box-shadow:0 0 30px rgba(125,92,255,.12)}.constellation span:nth-child(1){left:5%;top:55%}.constellation span:nth-child(2){left:25%;top:25%}.constellation span:nth-child(3){left:43%;top:62%}.constellation span:nth-child(4){left:60%;top:20%}.constellation span:nth-child(5){left:76%;top:52%}.constellation span:nth-child(6){left:88%;top:18%}.aiThinking{min-height:76vh;display:grid;grid-template-columns:1.2fr .8fr;align-items:center;gap:40px}.thinkingWorld{height:540px;position:relative;overflow:hidden;border-radius:32px;background:radial-gradient(circle at 50% 50%,rgba(125,92,255,.14),transparent 45%),linear-gradient(145deg,#07121e,#0c1d30)}.route{position:absolute;width:75%;height:200px;border:2px solid rgba(95,205,248,.35);border-color:rgba(95,205,248,.35) transparent transparent transparent;border-radius:50%;animation:routePulse 2.4s ease-in-out infinite}.route1{left:8%;top:34%;transform:rotate(12deg)}.route2{left:20%;top:52%;transform:rotate(-18deg);animation-delay:.5s}.orb{position:absolute;width:62px;height:62px;border-radius:50%;display:grid;place-items:center;background:#102238;border:1px solid rgba(255,255,255,.15);font-size:24px;animation:floatOrb 3s ease-in-out infinite}.orb1{left:12%;top:24%}.orb2{left:30%;top:55%;animation-delay:.4s}.orb3{left:49%;top:28%;animation-delay:.8s}.orb4{left:66%;top:55%;animation-delay:1.2s}.orb5{left:80%;top:22%;animation-delay:1.6s}.bookBuild{position:absolute;left:42%;bottom:45px;width:120px;height:80px;perspective:400px}.bookBuild span{position:absolute;inset:0;border-radius:5px;background:rgba(239,193,134,.18);border:1px solid rgba(239,193,134,.45);transform-origin:left;animation:pageTurn 2.8s ease-in-out infinite}.bookBuild span:nth-child(2){animation-delay:.4s}.bookBuild span:nth-child(3){animation-delay:.8s}.thinkingCopy h1{min-height:105px}.thinkingCopy p{color:#9eaabd}.thinkingSteps{display:flex;gap:6px;margin-top:25px}.thinkingSteps i{width:28px;height:3px;background:#243247;border-radius:4px;transition:.5s}.thinkingSteps i.on{background:#7d5cff}.rtl{text-align:right}.rtl .actions{justify-content:flex-start}@keyframes floatOrb{50%{transform:translateY(-12px) scale(1.04);box-shadow:0 0 35px rgba(125,92,255,.2)}}@keyframes routePulse{50%{opacity:.35;transform:scale(1.03) rotate(12deg)}}@keyframes pageTurn{0%,20%{transform:rotateY(0)}55%,100%{transform:rotateY(-150deg)}}@media(max-width:800px){.aiThinking,.aiCreate{grid-template-columns:1fr}.thinkingWorld{height:380px}.aiCreate h1,.thinkingCopy h1{font-size:34px}.aiPromise{min-height:420px}}
+
+/* Interaction & motion polish: press feedback, view transitions, small celebratory moments */
+button{transition:transform .15s ease, background-color .15s ease, border-color .15s ease, box-shadow .15s ease, filter .15s ease, opacity .15s ease;cursor:pointer}
+button:active{transform:scale(.96)}
+.sidebar button{transition:background-color .2s ease, color .2s ease, transform .15s ease}
+.sidebar button:active{transform:scale(.97)}
+.primary,.actions .primary,.phone .primary{box-shadow:0 4px 18px rgba(125,92,255,.32)}
+.primary:hover,.actions .primary:hover,.phone .primary:hover{transform:translateY(-1px);box-shadow:0 6px 24px rgba(125,92,255,.42)}
+.primary:active,.actions .primary:active,.phone .primary:active{transform:translateY(0) scale(.96);box-shadow:0 2px 10px rgba(125,92,255,.28);filter:brightness(.94)}
+.flowNode{transition:outline-color .2s ease, transform .15s ease;animation:nodeIn .3s ease both}
+.flowNode:active{transform:scale(.98)}
+.experienceRow button:active,.choiceGrid button:active{transform:scale(.94)}
+.choiceGrid button{transition:transform .15s ease, background-color .15s ease, border-color .15s ease}
+.journeyDot span{transition:background-color .3s ease}
+.journeyDot.done span{animation:dotPop .35s ease}
+.pointsBadge{transition:transform .2s ease}
+.pointsBadge.bump{animation:pointsBump .45s ease}
+.viewFade{animation:viewFadeIn .35s ease both}
+@keyframes viewFadeIn{from{opacity:0;transform:translateY(10px)}to{opacity:1;transform:translateY(0)}}
+@keyframes nodeIn{from{opacity:0;transform:scale(.92)}to{opacity:1;transform:scale(1)}}
+@keyframes dotPop{0%{transform:scale(.7)}55%{transform:scale(1.2)}100%{transform:scale(1)}}
+@keyframes pointsBump{0%{transform:scale(1)}40%{transform:scale(1.22)}100%{transform:scale(1)}}
+.experienceRow{transition:background-color .2s ease, padding-left .2s ease}
+.experienceRow:hover{background:rgba(255,255,255,.03);padding-left:6px}
+@media (prefers-reduced-motion: reduce){*{animation-duration:.001ms !important;animation-iteration-count:1 !important;transition-duration:.001ms !important}}
