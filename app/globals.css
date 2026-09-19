@@ -32,6 +32,7 @@ button:active{transform:scale(.96)}
 @keyframes pointsBump{0%{transform:scale(1)}40%{transform:scale(1.22)}100%{transform:scale(1)}}
 .experienceRow{transition:background-color .2s ease, padding-left .2s ease}
 .experienceRow:hover{background:rgba(255,255,255,.03);padding-left:6px}
+.actions button,.atomBar button,.phone button,.sidebar button,.experienceRow button{min-height:44px}
 .finishCard{position:relative;overflow:hidden}
 .confetti{position:absolute;inset:0;pointer-events:none;overflow:hidden}
 .confetti span{position:absolute;top:-12px;width:7px;height:13px;opacity:0;animation-duration:1.7s;animation-timing-function:ease-in;animation-fill-mode:forwards;border-radius:2px}
