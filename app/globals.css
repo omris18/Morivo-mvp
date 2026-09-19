@@ -32,4 +32,31 @@ button:active{transform:scale(.96)}
 @keyframes pointsBump{0%{transform:scale(1)}40%{transform:scale(1.22)}100%{transform:scale(1)}}
 .experienceRow{transition:background-color .2s ease, padding-left .2s ease}
 .experienceRow:hover{background:rgba(255,255,255,.03);padding-left:6px}
+.finishCard{position:relative;overflow:hidden}
+.confetti{position:absolute;inset:0;pointer-events:none;overflow:hidden}
+.confetti span{position:absolute;top:-12px;width:7px;height:13px;opacity:0;animation-duration:1.7s;animation-timing-function:ease-in;animation-fill-mode:forwards;border-radius:2px}
+.confetti span:nth-child(4n+1){background:#7d5cff}
+.confetti span:nth-child(4n+2){background:#efc186}
+.confetti span:nth-child(4n+3){background:#59d39a}
+.confetti span:nth-child(4n){background:#62cdf7}
+.confetti span:nth-child(1){left:4%;animation-delay:0ms}
+.confetti span:nth-child(2){left:11%;animation-delay:80ms}
+.confetti span:nth-child(3){left:18%;animation-delay:40ms}
+.confetti span:nth-child(4){left:25%;animation-delay:160ms}
+.confetti span:nth-child(5){left:33%;animation-delay:20ms}
+.confetti span:nth-child(6){left:40%;animation-delay:120ms}
+.confetti span:nth-child(7){left:47%;animation-delay:60ms}
+.confetti span:nth-child(8){left:55%;animation-delay:180ms}
+.confetti span:nth-child(9){left:62%;animation-delay:10ms}
+.confetti span:nth-child(10){left:69%;animation-delay:140ms}
+.confetti span:nth-child(11){left:76%;animation-delay:70ms}
+.confetti span:nth-child(12){left:83%;animation-delay:200ms}
+.confetti span:nth-child(13){left:89%;animation-delay:100ms}
+.confetti span:nth-child(14){left:95%;animation-delay:30ms}
+.confetti span:nth-child(15){left:58%;animation-delay:150ms}
+.confetti span:nth-child(16){left:15%;animation-delay:110ms}
+.confetti span:nth-child(odd){animation-name:confettiFallLeft}
+.confetti span:nth-child(even){animation-name:confettiFallRight}
+@keyframes confettiFallLeft{0%{opacity:1;transform:translateY(0) rotate(0deg)}100%{opacity:0;transform:translateY(220px) rotate(-280deg)}}
+@keyframes confettiFallRight{0%{opacity:1;transform:translateY(0) rotate(0deg)}100%{opacity:0;transform:translateY(220px) rotate(280deg)}}
 @media (prefers-reduced-motion: reduce){*{animation-duration:.001ms !important;animation-iteration-count:1 !important;transition-duration:.001ms !important}}
