@@ -6,6 +6,7 @@ import {uploadMissionPhoto} from "../lib/mediaData";
 import {computeBadges} from "../lib/badges";
 import LinkifiedText from "./LinkifiedText";
 import {distanceMeters,getCurrentPosition} from "../lib/geo";
+import {enablePushNotifications,pushSupported} from "../lib/push";
 export default function Participant({experience,setExperience,setView,setActiveId,deepLinkCode}){
  const [code,setCode]=useState(deepLinkCode||experience.joinCode||""),[name,setName]=useState("Guest"),[joined,setJoined]=useState(false),[eid,setEid]=useState(experience.id),[uid,setUid]=useState("");
  const [prog,setProg]=useState({completedMissionIds:[],currentMissionIndex:0,points:0}),[file,setFile]=useState(null),[busy,setBusy]=useState(false),[pct,setPct]=useState(0);
@@ -14,6 +15,7 @@ export default function Participant({experience,setExperience,setView,setActiveI
  const [locStatus,setLocStatus]=useState(null);
  const [bump,setBump]=useState(false);
  const [messages,setMessages]=useState([]),[dismissed,setDismissed]=useState([]);
+ const [pushState,setPushState]=useState("idle");
  useEffect(()=>{if(deepLinkCode)setCode(deepLinkCode)},[deepLinkCode]);
  useEffect(()=>{if(firebaseConfigured&&eid&&eid!=="thailand-demo")return subscribeExperience(eid,x=>x&&setExperience(x))},[eid]);
  useEffect(()=>{if(firebaseConfigured&&joined&&eid&&uid){initializeProgress(eid,uid);return subscribeMyProgress(eid,uid,setProg)}},[joined,eid,uid]);
@@ -26,6 +28,7 @@ export default function Participant({experience,setExperience,setView,setActiveI
  async function checkLocation(){setLocStatus("checking");try{const {lat,lng}=await getCurrentPosition();const d=distanceMeters(lat,lng,mission.lat,mission.lng);setLocStatus({distance:d,within:d<=(mission.radius||150)})}catch(e){alert(e.message);setLocStatus(null)}}
  useEffect(()=>{if(!prog.points)return;setBump(true);const t=setTimeout(()=>setBump(false),450);return()=>clearTimeout(t)},[prog.points]);
  async function join(){try{if(firebaseConfigured){const u=await ensureUser();setUid(u.uid);const id=await joinExperienceByCode(code,name);setEid(id);setActiveId(id)}else setUid("demo");setJoined(true)}catch(e){alert(e.message)}}
+ async function enableNotifications(){setPushState("asking");try{await enablePushNotifications(eid,uid);setPushState("on")}catch(e){alert(e.message);setPushState("idle")}}
  async function complete(){if(!mission)return;const isMedia=mission.type==="photo"||mission.type==="video";if(isMedia&&!file)return alert(`Choose a ${mission.type} first`);if(mission.type==="quiz"&&!quizAnswer)return alert("Choose an answer first");if(mission.type==="note"&&!noteText.trim())return alert("Write something first");if(mission.type==="map"&&hasCheckpoint&&!(locStatus&&locStatus.within))return alert("Get to the checkpoint and tap \"Check my location\" first.");setBusy(true);try{
    if(isMedia&&firebaseConfigured)await uploadMissionPhoto({experienceId:eid,mission,file,participantName:name,onProgress:setPct});
    if(mission.type==="note"&&firebaseConfigured)await saveMissionAnswer(eid,mission,noteText.trim(),name);
@@ -34,6 +37,7 @@ export default function Participant({experience,setExperience,setView,setActiveI
  }catch(e){alert(e.message)}finally{setBusy(false)}}
  return <section className="panel narrow"><div className="tag">Participant Journey</div>{!joined?<><h2>Join an experience.</h2><label>Your name</label><input value={name} onChange={e=>setName(e.target.value)}/><label>Join code</label><input value={code} onChange={e=>setCode(e.target.value.toUpperCase())}/><div className="actions centerActions"><button className="primary" onClick={join}>Join Experience</button></div></>:<>
  <div className="participantHeader"><div><small>{experience.name}</small><h2>{finished?"Journey complete":`Mission ${idx+1} of ${flow.length}`}</h2></div><div className={"pointsBadge "+(bump?"bump":"")}>{prog.points||0}<small>PTS</small></div></div>
+ {firebaseConfigured&&pushSupported&&pushState!=="on"&&<button className="pushEnable" disabled={pushState==="asking"} onClick={enableNotifications}>🔔 {pushState==="asking"?"Asking…":"Enable notifications"}</button>}
  {latestMessage&&<div className="orgMessage"><span>📣 {latestMessage.text}</span><button onClick={()=>setDismissed(d=>[...d,latestMessage.id])}>✕</button></div>}
  <div className="journeyRail">{flow.map((m,i)=>{const done=(prog.completedMissionIds||[]).includes(m.id),active=!finished&&i===idx;return <div className={"journeyDot "+(done?"done":active?"active":"locked")} key={m.id}><span>{done?"✓":active?i+1:"🔒"}</span><small>{m.title}</small></div>})}</div>
  {finished?<div className="finishCard viewFade" key="finish"><div className="confetti">{Array.from({length:16}).map((_,i)=><span key={i}></span>)}</div><div className="finishIcon">🏆</div><h2>Experience complete.</h2><p>Your memories are waiting.</p>{badges.length>0&&<div className="badgeRow">{badges.map(b=><div className="badge" key={b.id} title={b.label}><span>{b.icon}</span><small>{b.label}</small></div>)}</div>}<button className="primary" onClick={()=>setView("memory")}>Open Memory Book</button></div>:mission&&<div className="phone journeyPhone viewFade" key={mission.id}><div className="missionType">{mission.type}</div><h3>{mission.title}</h3><p><LinkifiedText text={mission.text}/></p>

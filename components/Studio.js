@@ -1,7 +1,8 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { firebaseConfigured } from "../lib/firebase";
+import { httpsCallable } from "firebase/functions";
+import { firebaseConfigured, functions } from "../lib/firebase";
 import { publishExperienceRemote, updateExperienceRemote } from "../lib/morivoData";
 import LinkifiedText from "./LinkifiedText";
 import { getCurrentPosition } from "../lib/geo";
@@ -11,6 +12,8 @@ export default function Studio({ experience, setExperience, setView }) {
   const [selected, setSelected] = useState(flow[0]?.id || null);
   const [saving, setSaving] = useState(false);
   const [locating, setLocating] = useState(false);
+  const [revising, setRevising] = useState(false);
+  const [revisePrompt, setRevisePrompt] = useState("");
 
   const atom = flow.find((x) => x.id === selected) || null;
 
@@ -68,6 +71,22 @@ export default function Studio({ experience, setExperience, setView }) {
       alert(e.message);
     } finally {
       setLocating(false);
+    }
+  }
+
+  async function reviseWithAI() {
+    if (!revisePrompt.trim()) return;
+    if (!flow.length) return alert("Add at least one mission first.");
+    setRevising(true);
+    try {
+      const revise = httpsCallable(functions, "reviseExperience");
+      const result = await revise({ flow, instruction: revisePrompt.trim() });
+      await persist({ ...experience, flow: result.data.flow });
+      setRevisePrompt("");
+    } catch (e) {
+      alert(e.message);
+    } finally {
+      setRevising(false);
     }
   }
 
@@ -178,6 +197,21 @@ export default function Studio({ experience, setExperience, setView }) {
           )}
         </div>
 
+        {firebaseConfigured && flow.length > 0 && (
+          <div className="reviseBar">
+            <input
+              placeholder='Revise with AI — e.g. "make it funnier" or "suitable for younger children"'
+              value={revisePrompt}
+              onChange={(e) => setRevisePrompt(e.target.value)}
+              onKeyDown={(e) => e.key === "Enter" && reviseWithAI()}
+              disabled={revising}
+            />
+            <button disabled={revising || !revisePrompt.trim()} onClick={reviseWithAI}>
+              {revising ? "Revising…" : "✨ Revise"}
+            </button>
+          </div>
+        )}
+
         <div className="flow">
           {!flow.length && (
             <div className="emptyBuilder">
@@ -254,11 +288,13 @@ export default function Studio({ experience, setExperience, setView }) {
               onChange={(e) => patch({ reward: e.target.value })}
             />
 
-            <label>Points</label>
+            <label>Points (max 500)</label>
             <input
               type="number"
+              min="0"
+              max="500"
               value={atom.points || 100}
-              onChange={(e) => patch({ points: Number(e.target.value) })}
+              onChange={(e) => patch({ points: Math.max(0, Math.min(500, Number(e.target.value) || 0)) })}
             />
 
             <div className="actions">

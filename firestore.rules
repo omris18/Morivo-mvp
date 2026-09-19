@@ -37,21 +37,36 @@ service cloud.firestore {
       }
       match /progress/{uid} {
         allow read: if signedIn();
-        allow create: if signedIn() && request.auth.uid == uid;
-        allow update: if signedIn() && (request.auth.uid == uid || isExperienceOwner(experienceId));
+        allow create: if signedIn() && request.auth.uid == uid
+          && request.resource.data.points == 0
+          && request.resource.data.completedMissionIds.size() == 0;
+        // A participant can only ever move their own progress forward - points capped to a
+        // sane per-write increase (max single mission is 200) and at most one mission marked
+        // done per write - so a client can't just set points/completedMissionIds to anything.
+        allow update: if signedIn() && (
+          isExperienceOwner(experienceId) ||
+          (request.auth.uid == uid
+            && request.resource.data.points is number
+            && request.resource.data.points >= resource.data.points
+            && request.resource.data.points <= resource.data.points + 500
+            && request.resource.data.completedMissionIds.size() <= resource.data.completedMissionIds.size() + 1)
+        );
         allow delete: if signedIn() && (request.auth.uid == uid || isExperienceOwner(experienceId));
       }
 
       match /answers/{answerId} {
         allow read: if signedIn();
-        allow create: if signedIn() && request.resource.data.uid == request.auth.uid;
-        allow update: if signedIn() && resource.data.uid == request.auth.uid;
+        allow create: if signedIn() && request.resource.data.uid == request.auth.uid
+          && request.resource.data.text is string && request.resource.data.text.size() <= 2000;
+        allow update: if signedIn() && resource.data.uid == request.auth.uid
+          && request.resource.data.text is string && request.resource.data.text.size() <= 2000;
         allow delete: if signedIn() && (resource.data.uid == request.auth.uid || isExperienceOwner(experienceId));
       }
 
       match /messages/{messageId} {
         allow read: if signedIn();
-        allow create: if isExperienceOwner(experienceId);
+        allow create: if isExperienceOwner(experienceId)
+          && request.resource.data.text is string && request.resource.data.text.size() <= 500;
         allow delete: if isExperienceOwner(experienceId);
       }
     }

@@ -1,4 +1,5 @@
 const { onCall, HttpsError } = require("firebase-functions/v2/https");
+const { onDocumentCreated } = require("firebase-functions/v2/firestore");
 const { defineSecret } = require("firebase-functions/params");
 const OpenAI = require("openai");
 const admin = require("firebase-admin");
@@ -10,6 +11,19 @@ const openaiApiKey = defineSecret("OPENAI_API_KEY");
 const geminiApiKey = defineSecret("GEMINI_API_KEY");
 
 const MISSION_TYPES = ["photo", "video", "quiz", "puzzle", "note", "map", "story", "reward"];
+
+function sanitizeFlow(rawFlow) {
+  return (rawFlow || [])
+    .filter((m) => m && typeof m === "object")
+    .map((m, i) => ({
+      id: `${MISSION_TYPES.includes(m.type) ? m.type : "story"}-${Date.now()}-${i}`,
+      type: MISSION_TYPES.includes(m.type) ? m.type : "story",
+      title: String(m.title || `Mission ${i + 1}`).slice(0, 120),
+      text: String(m.text || "").slice(0, 600),
+      reward: String(m.reward || "").slice(0, 120),
+      points: Number.isFinite(Number(m.points)) ? Math.max(50, Math.min(200, Math.round(Number(m.points)))) : 100,
+    }));
+}
 
 const SYSTEM_PROMPT = `You design short interactive real-world "experiences" (treasure-hunt-style journeys) for an app called Morivo, used for family trips, birthdays, team building, school outings and similar events. Morivo is a global product used by people writing in many different languages - always respond in the same language the user wrote their description in, never default to English just because these instructions are in English.
 
@@ -170,16 +184,7 @@ exports.generateExperience = onCall({ secrets: [openaiApiKey, geminiApiKey], cor
     throw new HttpsError("internal", "The AI returned an unexpected experience shape.");
   }
 
-  const flow = data.flow
-    .filter(m => m && typeof m === "object")
-    .map((m, i) => ({
-      id: `${MISSION_TYPES.includes(m.type) ? m.type : "story"}-${Date.now()}-${i}`,
-      type: MISSION_TYPES.includes(m.type) ? m.type : "story",
-      title: String(m.title || `Mission ${i + 1}`).slice(0, 120),
-      text: String(m.text || "").slice(0, 600),
-      reward: String(m.reward || "").slice(0, 120),
-      points: Number.isFinite(Number(m.points)) ? Math.max(50, Math.min(200, Math.round(Number(m.points)))) : 100,
-    }));
+  const flow = sanitizeFlow(data.flow);
 
   const [hotelMission, attractionsMission] = await Promise.all([hotelMissionPromise, attractionsMissionPromise]);
   const extras = [hotelMission, attractionsMission].filter(Boolean);
@@ -278,3 +283,99 @@ ${chaptersText}`;
 
   return { story: finalStory };
 });
+
+const REVISE_SYSTEM_PROMPT = `You revise existing interactive "experiences" (mission journeys) for an app called Morivo, based on a specific instruction from the organizer - things like "make it funnier", "less competitive", "suitable for younger children", "add a mission about X", "shorten it". You are given the CURRENT mission list as JSON and an instruction. Apply the instruction thoughtfully across the missions where it's relevant - rewrite titles/text/rewards as needed, and only change the number or order of missions if the instruction actually implies that (like "add one more" or "cut it down"). Keep everything grounded and specific, never generic. Write in the same language the current missions are already written in (detect it automatically) unless the instruction explicitly asks to translate. Respond with STRICT JSON only, no markdown fencing, no commentary, matching exactly this shape: {"flow":[{"type":"photo","title":"short title","text":"one to two sentence instruction","reward":"short reward label","points":100}]}
+
+"type" must be one of: ${MISSION_TYPES.join(", ")}. "points" is an integer between 50 and 200.`;
+
+exports.reviseExperience = onCall({ secrets: [openaiApiKey], cors: true, timeoutSeconds: 60 }, async (request) => {
+  if (!request.auth) {
+    throw new HttpsError("unauthenticated", "Sign in before revising an experience.");
+  }
+
+  const { flow, instruction } = request.data || {};
+  if (!Array.isArray(flow) || flow.length === 0) {
+    throw new HttpsError("invalid-argument", "An existing set of missions is required.");
+  }
+  if (!instruction || !String(instruction).trim()) {
+    throw new HttpsError("invalid-argument", "Tell the AI what to change.");
+  }
+
+  const client = new OpenAI({ apiKey: openaiApiKey.value().trim() });
+  const currentFlow = flow.map((m) => ({ type: m.type, title: m.title, text: m.text, reward: m.reward, points: m.points }));
+  const userPrompt = `Current missions:\n${JSON.stringify(currentFlow)}\n\nInstruction: ${instruction}`;
+
+  let completion;
+  try {
+    completion = await client.chat.completions.create({
+      model: "gpt-4o-mini",
+      messages: [
+        { role: "system", content: REVISE_SYSTEM_PROMPT },
+        { role: "user", content: userPrompt },
+      ],
+      response_format: { type: "json_object" },
+      temperature: 0.8,
+    });
+  } catch (err) {
+    console.error("OpenAI revise request failed", err);
+    throw new HttpsError("unavailable", "The AI service failed to respond. Please try again.");
+  }
+
+  let data;
+  try {
+    data = JSON.parse(completion.choices[0].message.content);
+  } catch (err) {
+    throw new HttpsError("internal", "The AI returned data in an unexpected format.");
+  }
+
+  const revised = sanitizeFlow(data.flow);
+  if (!revised.length) {
+    throw new HttpsError("internal", "The AI returned an unexpected experience shape.");
+  }
+
+  return { flow: revised };
+});
+
+exports.notifyOnOrganizerMessage = onDocumentCreated(
+  { document: "experiences/{experienceId}/messages/{messageId}", secrets: [openaiApiKey] },
+  async (event) => {
+    const { experienceId } = event.params;
+    const message = event.data?.data();
+    if (!message?.text) return;
+
+    // Family/school product - organizer messages reach every participant, so moderate before
+    // it ever gets pushed out or stays visible in the feed.
+    try {
+      const client = new OpenAI({ apiKey: openaiApiKey.value().trim() });
+      const moderation = await client.moderations.create({ model: "omni-moderation-latest", input: message.text });
+      if (moderation.results?.[0]?.flagged) {
+        console.warn("Organizer message flagged by moderation, deleting", experienceId, event.params.messageId);
+        await event.data.ref.delete();
+        return;
+      }
+    } catch (err) {
+      console.error("Moderation check failed, proceeding without blocking", err);
+    }
+
+    const [participantsSnap, expSnap] = await Promise.all([
+      db.collection("experiences").doc(experienceId).collection("participants").get(),
+      db.collection("experiences").doc(experienceId).get(),
+    ]);
+
+    const tokens = [...new Set(participantsSnap.docs.map((d) => d.data().pushToken).filter(Boolean))];
+    if (!tokens.length) return;
+
+    const expName = expSnap.data()?.name || "Morivo";
+
+    try {
+      const response = await admin.messaging().sendEachForMulticast({
+        tokens,
+        notification: { title: expName, body: message.text.slice(0, 180) },
+        webpush: { fcmOptions: { link: "/" } },
+      });
+      console.log(`Push sent: ${response.successCount}/${tokens.length} succeeded`);
+    } catch (err) {
+      console.error("Failed to send push notifications", err);
+    }
+  }
+);
