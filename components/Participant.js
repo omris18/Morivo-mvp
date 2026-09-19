@@ -1,7 +1,7 @@
 "use client";
 import {useEffect,useState} from "react";
 import {firebaseConfigured} from "../lib/firebase";
-import {ensureUser,joinExperienceByCode,subscribeExperience,subscribeMyProgress,initializeProgress,completeJourneyMission,saveMissionAnswer} from "../lib/morivoData";
+import {ensureUser,joinExperienceByCode,subscribeExperience,subscribeMyProgress,initializeProgress,completeJourneyMission,saveMissionAnswer,subscribeMessages} from "../lib/morivoData";
 import {uploadMissionPhoto} from "../lib/mediaData";
 export default function Participant({experience,setExperience,setView,setActiveId,deepLinkCode}){
  const [code,setCode]=useState(deepLinkCode||experience.joinCode||""),[name,setName]=useState("Guest"),[joined,setJoined]=useState(false),[eid,setEid]=useState(experience.id),[uid,setUid]=useState("");
@@ -9,9 +9,12 @@ export default function Participant({experience,setExperience,setView,setActiveI
  const [quizAnswer,setQuizAnswer]=useState(null);
  const [noteText,setNoteText]=useState("");
  const [bump,setBump]=useState(false);
+ const [messages,setMessages]=useState([]),[dismissed,setDismissed]=useState([]);
  useEffect(()=>{if(deepLinkCode)setCode(deepLinkCode)},[deepLinkCode]);
  useEffect(()=>{if(firebaseConfigured&&eid&&eid!=="thailand-demo")return subscribeExperience(eid,x=>x&&setExperience(x))},[eid]);
  useEffect(()=>{if(firebaseConfigured&&joined&&eid&&uid){initializeProgress(eid,uid);return subscribeMyProgress(eid,uid,setProg)}},[joined,eid,uid]);
+ useEffect(()=>{if(firebaseConfigured&&joined&&eid)return subscribeMessages(eid,setMessages)},[joined,eid]);
+ const latestMessage=messages.find(m=>!dismissed.includes(m.id));
  const flow=experience.flow||[], idx=Math.min(prog.currentMissionIndex||0,Math.max(flow.length-1,0)), mission=flow[idx], finished=flow.length>0&&(prog.completedMissionIds||[]).length>=flow.length;
  useEffect(()=>{setQuizAnswer(null);setNoteText("")},[idx]);
  useEffect(()=>{if(!prog.points)return;setBump(true);const t=setTimeout(()=>setBump(false),450);return()=>clearTimeout(t)},[prog.points]);
@@ -24,6 +27,7 @@ export default function Participant({experience,setExperience,setView,setActiveI
  }catch(e){alert(e.message)}finally{setBusy(false)}}
  return <section className="panel narrow"><div className="tag">Participant Journey</div>{!joined?<><h2>Join an experience.</h2><label>Your name</label><input value={name} onChange={e=>setName(e.target.value)}/><label>Join code</label><input value={code} onChange={e=>setCode(e.target.value.toUpperCase())}/><div className="actions centerActions"><button className="primary" onClick={join}>Join Experience</button></div></>:<>
  <div className="participantHeader"><div><small>{experience.name}</small><h2>{finished?"Journey complete":`Mission ${idx+1} of ${flow.length}`}</h2></div><div className={"pointsBadge "+(bump?"bump":"")}>{prog.points||0}<small>PTS</small></div></div>
+ {latestMessage&&<div className="orgMessage"><span>📣 {latestMessage.text}</span><button onClick={()=>setDismissed(d=>[...d,latestMessage.id])}>✕</button></div>}
  <div className="journeyRail">{flow.map((m,i)=>{const done=(prog.completedMissionIds||[]).includes(m.id),active=!finished&&i===idx;return <div className={"journeyDot "+(done?"done":active?"active":"locked")} key={m.id}><span>{done?"✓":active?i+1:"🔒"}</span><small>{m.title}</small></div>})}</div>
  {finished?<div className="finishCard viewFade" key="finish"><div className="confetti">{Array.from({length:16}).map((_,i)=><span key={i}></span>)}</div><div className="finishIcon">🏆</div><h2>Experience complete.</h2><p>Your memories are waiting.</p><button className="primary" onClick={()=>setView("memory")}>Open Memory Book</button></div>:mission&&<div className="phone journeyPhone viewFade" key={mission.id}><div className="missionType">{mission.type}</div><h3>{mission.title}</h3><p>{mission.text}</p>
  {mission.type==="photo"&&<label className="uploadBox"><span>📸 Choose a photo</span><input type="file" accept="image/*" capture="environment" onChange={e=>setFile(e.target.files?.[0]||null)}/></label>}
