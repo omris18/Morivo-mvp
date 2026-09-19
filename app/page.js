@@ -12,7 +12,7 @@ import FirebaseStatus from "../components/FirebaseStatus";
 import Account from "../components/Account";
 import { firebaseConfigured, auth } from "../lib/firebase";
 import { onAuthStateChanged } from "firebase/auth";
-import { ensureUser, subscribeExperiences, subscribeExperience } from "../lib/morivoData";
+import { ensureUser, subscribeExperiences, subscribeExperience, completeGoogleRedirect } from "../lib/morivoData";
 
 const DEMO={
  id:"thailand-demo", name:"Thailand Family Adventure", type:"Family Trip",
@@ -60,7 +60,7 @@ export default function Home(){
      if(u) unsubExp=subscribeExperiences(u.uid, rows=>setExperiences(rows));
      else setExperiences([]);
    });
-   ensureUser().catch(console.error);
+   completeGoogleRedirect().catch(console.error).finally(()=>{ ensureUser().catch(console.error); });
    return ()=>{unsubExp();unsubAuth()};
  },[]);
 
