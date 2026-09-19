@@ -15,7 +15,38 @@ npm run cap:sync
 This runs `next build` and copies the fresh static output into both
 `android/` and `ios/`. Run it before opening either native project.
 
-## Android
+## Android — get an installable APK without installing anything
+
+`.github/workflows/android-build.yml` builds a debug APK automatically
+on every push to `main` or a `claude/**` branch (also runnable on demand
+from the GitHub Actions tab → "Android debug build" → Run workflow).
+
+1. Push (or open the Actions tab in GitHub for this repo).
+2. Wait for the "Android debug build" run to finish (a few minutes).
+3. Open that run → **Artifacts** → download `morivo-debug-apk`, unzip it
+   to get `app-debug.apk`.
+4. Send that file to an Android phone (email, Drive, USB, whatever) and
+   open it there. Android will ask to allow installing from this source
+   the first time — allow it, then install.
+
+This is a real installed app icon/window, not a browser tab — exactly
+what you need to check resolution, touch targets, and how buttons feel
+on an actual device. It's unsigned/debug, which is fine for this kind
+of testing; a signed release build is a separate step, only needed right
+before a real Play Store submission (see below).
+
+By default this debug build runs in demo mode (no live Firebase data),
+same as running `npm run dev` locally without `.env.local`. To make it
+build against the real `morivo-mvp` Firebase project instead, add these
+as **Actions secrets** (GitHub repo → Settings → Secrets and variables →
+Actions → New repository secret), one secret per line from your
+`NEXT_PUBLIC_FIREBASE_*` values — the workflow already reads them if
+present:
+`NEXT_PUBLIC_FIREBASE_API_KEY`, `NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN`,
+`NEXT_PUBLIC_FIREBASE_PROJECT_ID`, `NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET`,
+`NEXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID`, `NEXT_PUBLIC_FIREBASE_APP_ID`.
+
+## Android — full local setup (only needed for a real signed release)
 
 1. Install [Android Studio](https://developer.android.com/studio).
 2. `npx cap open android` — opens `android/` in Android Studio.
