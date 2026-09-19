@@ -3,6 +3,7 @@ import { useEffect, useMemo, useState } from "react";
 import Sidebar from "../components/Sidebar";
 import Dashboard from "../components/Dashboard";
 import CreateExperience from "../components/CreateExperience";
+import AICreator from "../components/AICreator";
 import Studio from "../components/Studio";
 import Runtime from "../components/Runtime";
 import Participant from "../components/Participant";
