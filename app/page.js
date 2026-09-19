@@ -9,7 +9,9 @@ import Runtime from "../components/Runtime";
 import Participant from "../components/Participant";
 import Memory from "../components/Memory";
 import FirebaseStatus from "../components/FirebaseStatus";
-import { firebaseConfigured } from "../lib/firebase";
+import Account from "../components/Account";
+import { firebaseConfigured, auth } from "../lib/firebase";
+import { onAuthStateChanged } from "firebase/auth";
 import { ensureUser, subscribeExperiences, subscribeExperience } from "../lib/morivoData";
 
 const DEMO={
@@ -51,12 +53,15 @@ export default function Home(){
 
  useEffect(()=>{
    if(!firebaseConfigured) return;
-   let unsub=()=>{};
-   ensureUser().then(u=>{
+   let unsubExp=()=>{};
+   const unsubAuth=onAuthStateChanged(auth, u=>{
+     unsubExp();
      setUser(u);
-     unsub=subscribeExperiences(u.uid, rows=>setExperiences(rows));
-   }).catch(console.error);
-   return ()=>unsub();
+     if(u) unsubExp=subscribeExperiences(u.uid, rows=>setExperiences(rows));
+     else setExperiences([]);
+   });
+   ensureUser().catch(console.error);
+   return ()=>{unsubExp();unsubAuth()};
  },[]);
 
  useEffect(()=>{
@@ -86,7 +91,7 @@ export default function Home(){
  return <div className="appShell">
    <Sidebar view={view} setView={setView}/>
    <main className="content">
-     <FirebaseStatus/>
+     <div className="topBar"><FirebaseStatus/><Account user={user}/></div>
      <div className="viewFade" key={view}>{Screen}</div>
    </main>
  </div>;
