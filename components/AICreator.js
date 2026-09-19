@@ -1,6 +1,7 @@
 "use client";
 import {useEffect,useMemo,useState} from "react";
-import {firebaseConfigured} from "../lib/firebase";
+import {httpsCallable} from "firebase/functions";
+import {firebaseConfigured,functions} from "../lib/firebase";
 import {createExperienceRemote,ensureUser} from "../lib/morivoData";
 
 const COPY={
@@ -29,10 +30,22 @@ export default function AICreator({setExperience,setView,setActiveId,user}){
  async function build(){
   if(!form.prompt.trim())return alert(lang==="he"?"כתבו כמה מילים על החוויה":"Describe the experience first");
   setBuilding(true);setStep(0);
-  await new Promise(r=>setTimeout(r,Math.max(4200,t.thinking.length*700)));
-  const flow=generateDraft(form);
-  const name=form.prompt.trim().split(/[.!?\n]/)[0].slice(0,48)||"New Experience";
-  const data={name,type:form.type,location:form.location,people:Number(form.people||0),story:form.prompt,flow,status:"draft",aiGenerated:true};
+  const minWait=new Promise(r=>setTimeout(r,Math.max(4200,t.thinking.length*700)));
+  let flow,name,usedAI=false;
+  if(firebaseConfigured){
+   try{
+    await ensureUser();
+    const generate=httpsCallable(functions,"generateExperience");
+    const result=await generate({prompt:form.prompt,type:form.type,location:form.location,duration:form.duration,people:form.people,lang});
+    flow=result.data.flow;name=result.data.name;usedAI=true;
+   }catch(e){console.error("AI generation failed, falling back to the draft generator",e)}
+  }
+  if(!flow){
+   flow=generateDraft(form);
+   name=form.prompt.trim().split(/[.!?\n]/)[0].slice(0,48)||"New Experience";
+  }
+  await minWait;
+  const data={name,type:form.type,location:form.location,people:Number(form.people||0),story:form.prompt,flow,status:"draft",aiGenerated:usedAI};
   try{
    if(firebaseConfigured){
     const u=user||await ensureUser(),id=await createExperienceRemote(u.uid,data);
