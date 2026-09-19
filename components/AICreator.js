@@ -29,16 +29,18 @@ export default function AICreator({setExperience,setView,setActiveId,user}){
  useEffect(()=>{if(!building)return;const id=setInterval(()=>setStep(x=>Math.min(x+1,t.thinking.length-1)),900);return()=>clearInterval(id)},[building,lang]);
  async function build(){
   if(!form.prompt.trim())return alert(lang==="he"?"כתבו כמה מילים על החוויה":"Describe the experience first");
+  if(!firebaseConfigured)return alert(lang==="he"?"AI אמיתי דורש חיבור ל-Firebase. כרגע האפליקציה במצב Demo (בדקי את המשתנים ב-Vercel/.env.local).":"Real AI requires a Firebase connection. The app is currently in Demo mode (check your Vercel/.env.local environment variables).");
   setBuilding(true);setStep(0);
   const minWait=new Promise(r=>setTimeout(r,Math.max(4200,t.thinking.length*700)));
-  let flow,name,usedAI=false;
-  if(firebaseConfigured){
-   try{
-    await ensureUser();
-    const generate=httpsCallable(functions,"generateExperience");
-    const result=await generate({prompt:form.prompt,type:form.type,location:form.location,duration:form.duration,people:form.people,lang});
-    flow=result.data.flow;name=result.data.name;usedAI=true;
-   }catch(e){console.error("AI generation failed, falling back to the draft generator",e)}
+  let flow,name,usedAI=false,aiError=null;
+  try{
+   await ensureUser();
+   const generate=httpsCallable(functions,"generateExperience");
+   const result=await generate({prompt:form.prompt,type:form.type,location:form.location,duration:form.duration,people:form.people,lang});
+   flow=result.data.flow;name=result.data.name;usedAI=true;
+  }catch(e){
+   console.error("AI generation failed, falling back to the draft generator",e);
+   aiError=`${e.code||"error"}: ${e.message||e}`;
   }
   if(!flow){
    flow=generateDraft(form);
@@ -47,11 +49,10 @@ export default function AICreator({setExperience,setView,setActiveId,user}){
   await minWait;
   const data={name,type:form.type,location:form.location,people:Number(form.people||0),story:form.prompt,flow,status:"draft",aiGenerated:usedAI};
   try{
-   if(firebaseConfigured){
-    const u=user||await ensureUser(),id=await createExperienceRemote(u.uid,data);
-    setExperience({...data,id,ownerUid:u.uid});setActiveId(id);
-   }else setExperience({...data,id:"local-"+Date.now()});
+   const u=user||await ensureUser(),id=await createExperienceRemote(u.uid,data);
+   setExperience({...data,id,ownerUid:u.uid});setActiveId(id);
    setView("studio");
+   if(aiError)alert((lang==="he"?"שימו לב: ה-AI האמיתי לא הגיב, נוצרה טיוטה גנרית במקום.\n\nסיבת הכשל: ":"Note: the real AI didn't respond, a generic placeholder draft was used instead.\n\nFailure reason: ")+aiError);
   }catch(e){alert(e.message);setBuilding(false)}
  }
  if(building)return <section className={"aiThinking "+(lang==="he"?"rtl":"")} dir={lang==="he"?"rtl":"ltr"}>
