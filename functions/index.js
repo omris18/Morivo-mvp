@@ -6,7 +6,7 @@ const openaiApiKey = defineSecret("OPENAI_API_KEY");
 
 const MISSION_TYPES = ["photo", "video", "quiz", "puzzle", "note", "map", "story", "reward"];
 
-const SYSTEM_PROMPT = `You design short interactive real-world "experiences" (treasure-hunt-style journeys) for an app called Morivo, used for family trips, birthdays, team building, school outings and similar events.
+const SYSTEM_PROMPT = `You design short interactive real-world "experiences" (treasure-hunt-style journeys) for an app called Morivo, used for family trips, birthdays, team building, school outings and similar events. Morivo is a global product used by people writing in many different languages - always respond in the same language the user wrote their description in, never default to English just because these instructions are in English.
 
 Given a free-text description of the people, place and occasion, invent a specific, concrete journey of 5 to 8 missions (called "atoms"). This is the single most important rule: every mission must be built out of a concrete detail from the description - a name, a relationship, an inside joke, a place, a hobby, an occasion detail. If the description mentions a person, place or theme, weave it into the mission text itself, not just the experience title. A mission that could be copy-pasted into any other unrelated experience without changes is a failure.
 
@@ -47,7 +47,7 @@ exports.generateExperience = onCall({ secrets: [openaiApiKey], cors: true, timeo
     location ? `Location: ${location}` : null,
     duration ? `Duration: ${duration}` : null,
     people ? `Participants: ${people}` : null,
-    `Write the "title" and "text" fields in ${lang === "he" ? "Hebrew" : "English"}.`,
+    `Write "name", and every mission's "title", "text" and "reward", in the same language the Description above is written in - detect it automatically, it can be any language (Hebrew, English, Arabic, French, Spanish, German, Russian, or any other). Use natural, native-sounding phrasing for that language and its culture, not a literal translation. Only if the Description is too short or ambiguous to confidently detect a language, default to ${lang === "he" ? "Hebrew" : "English"}.`,
   ].filter(Boolean).join("\n");
 
   let completion;

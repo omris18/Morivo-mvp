@@ -26,6 +26,7 @@ service cloud.firestore {
       match /events/{eventId} {
         allow read: if signedIn();
         allow create: if signedIn();
+        allow delete: if isExperienceOwner(experienceId);
       }
 
       match /media/{mediaId} {

@@ -66,8 +66,22 @@ export default function AICreator({setExperience,setView,setActiveId,user}){
  }
  if(building)return <section className={"aiThinking "+(lang==="he"?"rtl":"")} dir={lang==="he"?"rtl":"ltr"}>
    <div className="thinkingWorld">
-    <div className="route route1"></div><div className="route route2"></div>
-    <div className="orb orb1">✦</div><div className="orb orb2">📍</div><div className="orb orb3">📸</div><div className="orb orb4">🧩</div><div className="orb orb5">📖</div>
+    <svg className="thinkingLines" viewBox="0 0 600 540" preserveAspectRatio="none">
+     <defs>
+      <linearGradient id="lineGrad" x1="0" y1="0" x2="1" y2="1">
+       <stop offset="0%" stopColor="#efc186" stopOpacity="0"/>
+       <stop offset="50%" stopColor="#5fcdf8" stopOpacity=".9"/>
+       <stop offset="100%" stopColor="#7d5cff" stopOpacity="0"/>
+      </linearGradient>
+     </defs>
+     <path className="flowLine fl1" d="M78,127 Q220,190 300,270"/>
+     <path className="flowLine fl2" d="M165,382 Q245,320 300,270"/>
+     <path className="flowLine fl3" d="M293,72 Q297,175 300,270"/>
+     <path className="flowLine fl4" d="M432,382 Q365,320 300,270"/>
+     <path className="flowLine fl5" d="M503,138 Q395,205 300,270"/>
+    </svg>
+    <div className="coreGlowWrap" style={{transform:`scale(${(0.85+step*0.06).toFixed(2)})`}}><div className="coreGlow"></div></div>
+    <div className="orb orb1">📍</div><div className="orb orb2">📸</div><div className="orb orb3">🧩</div><div className="orb orb4">🏆</div><div className="orb orb5">📖</div>
     <div className="bookBuild"><span></span><span></span><span></span></div>
    </div>
    <div className="thinkingCopy"><div className="tag">{t.tag}</div><h1>{t.thinking[step]}</h1><p>{form.prompt}</p><div className="thinkingSteps">{t.thinking.map((x,i)=><i className={i<=step?"on":""} key={x}></i>)}</div></div>
