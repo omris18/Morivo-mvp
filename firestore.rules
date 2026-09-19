@@ -36,7 +36,8 @@ service cloud.firestore {
       }
       match /progress/{uid} {
         allow read: if signedIn();
-        allow create, update: if signedIn() && request.auth.uid == uid;
+        allow create: if signedIn() && request.auth.uid == uid;
+        allow update: if signedIn() && (request.auth.uid == uid || isExperienceOwner(experienceId));
         allow delete: if signedIn() && (request.auth.uid == uid || isExperienceOwner(experienceId));
       }
 
