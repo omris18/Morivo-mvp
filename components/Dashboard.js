@@ -1,10 +1,21 @@
-import {useState} from "react";
+import {useEffect,useState} from "react";
 import {firebaseConfigured} from "../lib/firebase";
-import {deleteExperienceRemote} from "../lib/morivoData";
+import {computeOwnerStats,deleteExperienceRemote} from "../lib/morivoData";
 
 export default function Dashboard({experience,experiences,setView,openExperience,activeId,setActiveId}){
  const [deletingId,setDeletingId]=useState(null);
+ const [stats,setStats]=useState({participants:0,missionsCompleted:0,memoriesCreated:0});
  const rows=experiences?.length ? experiences : [experience];
+
+ useEffect(()=>{
+   let alive=true;
+   if(firebaseConfigured&&experiences?.length){
+     computeOwnerStats(experiences).then(s=>{if(alive)setStats(s)});
+   }else{
+     setStats({participants:0,missionsCompleted:0,memoriesCreated:0});
+   }
+   return ()=>{alive=false};
+ },[experiences]);
 
  async function remove(x,e){
    e.stopPropagation();
@@ -26,8 +37,8 @@ export default function Dashboard({experience,experiences,setView,openExperience
      </div>
    </div>
    <div className="kpis">
-     <div><small>Experiences</small><b>{rows.length}</b></div><div><small>Participants</small><b>48</b></div>
-     <div><small>Missions completed</small><b>126</b></div><div><small>Memories created</small><b>312</b></div>
+     <div><small>Experiences</small><b>{experiences?.length||0}</b></div><div><small>Participants</small><b>{stats.participants}</b></div>
+     <div><small>Missions completed</small><b>{stats.missionsCompleted}</b></div><div><small>Memories created</small><b>{stats.memoriesCreated}</b></div>
    </div>
    <div className="panel">
      <div className="tag">Your experiences</div>

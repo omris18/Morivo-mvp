@@ -1,7 +1,7 @@
 "use client";
 import {useState} from "react";
 import {firebaseConfigured} from "../lib/firebase";
-import {upgradeToEmailAccount, signInWithEmail, signOutUser} from "../lib/morivoData";
+import {upgradeToEmailAccount, signInWithEmail, signOutUser, signInWithGoogle} from "../lib/morivoData";
 
 export default function Account({user}){
  const [mode,setMode]=useState("save");
@@ -27,8 +27,16 @@ export default function Account({user}){
    }catch(e){alert(e.message)}finally{setBusy(false)}
  }
 
+ async function google(){
+   setBusy(true);
+   try{ await signInWithGoogle(); }
+   catch(e){ if(e.code!=="auth/popup-closed-by-user") alert(e.message); }
+   finally{ setBusy(false); }
+ }
+
  return <div className="accountBar">
    <span>{mode==="save"?"Guest session — save your experiences to an account":"Sign in to an existing account"}</span>
+   <button disabled={busy} onClick={google}>🔵 Continue with Google</button>
    <input type="email" placeholder="Email" value={email} onChange={e=>setEmail(e.target.value)}/>
    <input type="password" placeholder="Password" value={password} onChange={e=>setPassword(e.target.value)}/>
    <button className="primary" disabled={busy} onClick={submit}>{busy?"…":mode==="save"?"Save Account":"Sign In"}</button>

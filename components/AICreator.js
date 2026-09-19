@@ -9,13 +9,17 @@ const TYPE_OPTIONS={
  he:["טיול משפחתי","יום הולדת","גיבוש צוות","בית ספר","מוזיאון"]
 };
 const DURATION_OPTIONS={
- en:["30 minutes","1 hour","2-3 hours","Half day (4-5 hours)","Full day","Multi-day"],
- he:["30 דקות","שעה","2-3 שעות","חצי יום (4-5 שעות)","יום שלם","כמה ימים"]
+ en:["30 minutes","1 hour","2-3 hours","Half day (4-5 hours)","Full day"],
+ he:["30 דקות","שעה","2-3 שעות","חצי יום (4-5 שעות)","יום שלם"]
+};
+const DAY_OPTIONS={
+ en:["1 day","2 days","3 days","4 days","5 days","6 days","7 days","8-14 days","15+ days"],
+ he:["יום אחד","יומיים","3 ימים","4 ימים","5 ימים","6 ימים","שבוע (7 ימים)","8-14 ימים","15+ ימים"]
 };
 
 const COPY={
- en:{tag:"Morivo AI",title:"Describe the experience. Morivo builds the journey.",desc:"Tell us who it is for, where it happens and what you want them to feel.",prompt:"Describe your experience",type:"Experience type",location:"Location",duration:"Duration",people:"Participants",build:"Build my experience",blank:"Start blank instead",thinking:["Understanding the people…","Finding the story…","Designing the route…","Creating missions…","Balancing rewards…","Assembling your experience…"],ready:"Your first draft is ready."},
- he:{tag:"Morivo AI",title:"תארו את החוויה. Morivo יבנה את המסע.",desc:"ספרו לנו למי החוויה, איפה היא מתקיימת ומה הייתם רוצים שהם ירגישו.",prompt:"תיאור החוויה",type:"סוג החוויה",location:"מיקום",duration:"משך",people:"משתתפים",build:"בנו לי חוויה",blank:"התחלה מחוויה ריקה",thinking:["לומד את האנשים…","מוצא את הסיפור…","מתכנן את המסלול…","יוצר משימות…","מאזן תגמולים…","מרכיב את החוויה…"],ready:"הטיוטה הראשונה מוכנה."}
+ en:{tag:"Morivo AI",title:"Describe the experience. Morivo builds the journey.",desc:"Tell us who it is for, where it happens and what you want them to feel.",prompt:"Describe your experience",type:"Experience type",location:"Location",duration:"Duration",days:"Trip length",people:"Participants",hotel:"Already booked a hotel?",build:"Build my experience",blank:"Start blank instead",thinking:["Understanding the people…","Finding the story…","Designing the route…","Creating missions…","Balancing rewards…","Assembling your experience…"],ready:"Your first draft is ready."},
+ he:{tag:"Morivo AI",title:"תארו את החוויה. Morivo יבנה את המסע.",desc:"ספרו לנו למי החוויה, איפה היא מתקיימת ומה הייתם רוצים שהם ירגישו.",prompt:"תיאור החוויה",type:"סוג החוויה",location:"מיקום",duration:"משך",days:"אורך הטיול",people:"משתתפים",hotel:"כבר הזמנתם מלון?",build:"בנו לי חוויה",blank:"התחלה מחוויה ריקה",thinking:["לומד את האנשים…","מוצא את הסיפור…","מתכנן את המסלול…","יוצר משימות…","מאזן תגמולים…","מרכיב את החוויה…"],ready:"הטיוטה הראשונה מוכנה."}
 };
 
 function generateDraft(f){
@@ -33,8 +37,9 @@ function generateDraft(f){
 }
 
 export default function AICreator({setExperience,setView,setActiveId,user}){
- const [lang,setLang]=useState("en"),[form,setForm]=useState({prompt:"",type:"",location:"",duration:"",people:""}),[building,setBuilding]=useState(false),[step,setStep]=useState(0);
+ const [lang,setLang]=useState("en"),[form,setForm]=useState({prompt:"",type:"",location:"",duration:"",people:"",hotelBooked:false}),[building,setBuilding]=useState(false),[step,setStep]=useState(0);
  const t=COPY[lang];
+ const isFamilyTrip=form.type===TYPE_OPTIONS.en[0]||form.type===TYPE_OPTIONS.he[0];
  useEffect(()=>{if(!building)return;const id=setInterval(()=>setStep(x=>Math.min(x+1,t.thinking.length-1)),900);return()=>clearInterval(id)},[building,lang]);
  async function build(){
   if(!form.prompt.trim())return alert(lang==="he"?"כתבו כמה מילים על החוויה":"Describe the experience first");
@@ -45,7 +50,8 @@ export default function AICreator({setExperience,setView,setActiveId,user}){
   try{
    await ensureUser();
    const generate=httpsCallable(functions,"generateExperience");
-   const result=await generate({prompt:form.prompt,type:form.type,location:form.location,duration:form.duration,people:form.people,lang});
+   const needsHotel=isFamilyTrip&&!form.hotelBooked;
+   const result=await generate({prompt:form.prompt,type:form.type,location:form.location,duration:form.duration,people:form.people,lang,multiDay:isFamilyTrip,needsHotel});
    flow=result.data.flow;name=result.data.name;usedAI=true;
   }catch(e){
    console.error("AI generation failed, falling back to the draft generator",e);
@@ -92,7 +98,8 @@ export default function AICreator({setExperience,setView,setActiveId,user}){
    <h1>{t.title}</h1><p>{t.desc}</p>
    <label>{t.prompt}</label><textarea className="aiPrompt" value={form.prompt} onChange={e=>setForm({...form,prompt:e.target.value})}/>
    <div className="fieldRow"><div><label>{t.type}</label><select value={form.type} onChange={e=>setForm({...form,type:e.target.value})}><option value=""></option>{TYPE_OPTIONS[lang].map(x=><option key={x} value={x}>{x}</option>)}</select></div><div><label>{t.location}</label><input value={form.location} onChange={e=>setForm({...form,location:e.target.value})}/></div></div>
-   <div className="fieldRow"><div><label>{t.duration}</label><select value={form.duration} onChange={e=>setForm({...form,duration:e.target.value})}><option value=""></option>{DURATION_OPTIONS[lang].map(x=><option key={x} value={x}>{x}</option>)}</select></div><div><label>{t.people}</label><input type="number" value={form.people} onChange={e=>setForm({...form,people:e.target.value})}/></div></div>
+   <div className="fieldRow"><div><label>{isFamilyTrip?t.days:t.duration}</label><select value={form.duration} onChange={e=>setForm({...form,duration:e.target.value})}><option value=""></option>{(isFamilyTrip?DAY_OPTIONS:DURATION_OPTIONS)[lang].map(x=><option key={x} value={x}>{x}</option>)}</select></div><div><label>{t.people}</label><input type="number" value={form.people} onChange={e=>setForm({...form,people:e.target.value})}/></div></div>
+   {isFamilyTrip&&<label className="hotelCheck"><input type="checkbox" checked={form.hotelBooked} onChange={e=>setForm({...form,hotelBooked:e.target.checked})}/> {t.hotel}</label>}
    <div className="actions"><button onClick={()=>setView("create")}>{t.blank}</button><button className="primary aiBuildButton" onClick={build}>✦ {t.build}</button></div>
   </div>
   <div className="panel aiPromise"><div className="constellation"><span>📍</span><span>📸</span><span>❓</span><span>🧩</span><span>🏆</span><span>📖</span></div><h2>One description.<br/>A complete journey.</h2><p>Morivo turns context into chapters, missions, rewards and memories — then opens everything in Studio for you to edit.</p></div>
