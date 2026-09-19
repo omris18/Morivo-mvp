@@ -29,7 +29,7 @@ Respond with STRICT JSON only, no markdown fencing, no commentary, matching exac
 
 "type" must be one of: ${MISSION_TYPES.join(", ")}. "points" is an integer between 50 and 200. Do not include an "id" field, the app assigns those.`;
 
-const GEMINI_MODELS = ["gemini-2.5-flash", "gemini-2.0-flash", "gemini-flash-latest", "gemini-1.5-flash"];
+const GEMINI_MODELS = ["gemini-3.6-flash", "gemini-2.5-flash", "gemini-2.0-flash", "gemini-flash-latest", "gemini-1.5-flash"];
 
 async function suggestHotel({ location, prompt, people, duration, lang }) {
   const hotelPrompt = `Suggest one specific, realistic accommodation option in or near "${location}" that would suit this group: "${prompt}"${people ? ` (${people} people)` : ""}${duration ? `, staying for ${duration}` : ""}. Respond in 2-3 sentences, in the same language as the group description above (detect it automatically), naming a real type of place or area and explaining briefly why it fits this specific group. Be practical and specific, not generic travel-blog language. Do not use markdown.`;
