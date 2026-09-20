@@ -35,6 +35,7 @@ export default function Participant({experience,setExperience,setView,setActiveI
   joinExperienceByPersonalCode(portalCode).then(result=>{
    if(!alive)return;
    setName(result.name);setUid(result.uid);setEid(result.experienceId);setActiveId(result.experienceId);setJoined(true);
+   if(result.renamedFrom)alert(p.identityReused(result.renamedFrom,result.name));
   }).catch(e=>{if(alive)setPortalError(e.message)}).finally(()=>{if(alive)setPortalResolving(false)});
   return ()=>{alive=false};
  },[portal,portalCode]);
@@ -85,8 +86,9 @@ export default function Participant({experience,setExperience,setView,setActiveI
     const withTimeout=(promise)=>Promise.race([promise,new Promise((_,reject)=>setTimeout(()=>reject(new Error(p.joinTimedOut)),20000))]);
     const u=await withTimeout(ensureUser());
     setUid(u.uid);
-    const id=await withTimeout(joinExperienceByCode(code,name.trim()));
-    setEid(id);setActiveId(id);
+    const result=await withTimeout(joinExperienceByCode(code,name.trim()));
+    setEid(result.experienceId);setActiveId(result.experienceId);
+    if(result.renamedFrom)alert(p.identityReused(result.renamedFrom,name.trim()));
    }else setUid("demo");
    setJoined(true);
   }catch(e){alert(e.message)}finally{setJoining(false)}
