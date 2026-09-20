@@ -10,6 +10,7 @@ import Participant from "../components/Participant";
 import Memory from "../components/Memory";
 import FirebaseStatus from "../components/FirebaseStatus";
 import Account from "../components/Account";
+import FlagIcon from "../components/FlagIcon";
 import { firebaseConfigured, auth } from "../lib/firebase";
 import { onAuthStateChanged } from "firebase/auth";
 import { ensureUser, subscribeExperiences, subscribeExperience, completeGoogleRedirect } from "../lib/morivoData";
@@ -121,7 +122,7 @@ export default function Home(){
        <div className="topBarRight">
          <div className="langSwitchGlobal">
            {COUNTRY_FLAGS.map(f=>(
-             <button key={f.country} className={lang===f.lang?"active":""} onClick={()=>setLang(f.lang)} title={f.label} aria-label={f.label}>{f.flag}</button>
+             <button key={f.country} className={lang===f.lang?"active":""} onClick={()=>setLang(f.lang)} title={f.label} aria-label={f.label}><FlagIcon code={f.country}/></button>
            ))}
          </div>
          <Account user={user} t={t}/>
