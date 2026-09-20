@@ -255,6 +255,17 @@ export default function Studio({ experience, setExperience, setView, t }) {
               onChange={(e) => patch({ text: e.target.value })}
             />
 
+            {atom.type === "puzzle" && (
+              <>
+                <label>{s.puzzleAnswer}</label>
+                <input
+                  value={atom.answer || ""}
+                  placeholder={s.puzzleAnswerPlaceholder}
+                  onChange={(e) => patch({ answer: e.target.value })}
+                />
+              </>
+            )}
+
             {atom.type === "map" && (
               <div className="gpsCheckpoint">
                 <label>{s.gpsCheckpoint}</label>

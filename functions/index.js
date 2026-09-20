@@ -22,6 +22,7 @@ function sanitizeFlow(rawFlow) {
       text: String(m.text || "").slice(0, 600),
       reward: String(m.reward || "").slice(0, 120),
       points: Number.isFinite(Number(m.points)) ? Math.max(50, Math.min(200, Math.round(Number(m.points)))) : 100,
+      ...(m.type === "puzzle" && m.answer ? { answer: String(m.answer).slice(0, 80) } : {}),
     }));
 }
 
@@ -32,20 +33,23 @@ Given a free-text description of the people, place and occasion, invent a specif
 Bad (too generic - never write like this): "Take a photo that could only belong to this group." / "Answer a playful question about the people sharing this experience." / "Capture something surprising, funny or beautiful."
 Good (specific, built from the input): if the input mentions a grandmother's 70th birthday at the beach, a good mission is "Find someone who remembers Grandma's first trip to this beach and get them to tell the story on camera" - concrete, references the actual people and place, gives a reason the moment matters.
 
+If a "Who's joining" section is provided below the description, listing names, ages, and relationships of the actual participants, use it aggressively: address specific people by name in mission text ("Ask Dana to..."), pair up people based on the relationships given (siblings, couples, grandparent/grandchild), and adjust tone/difficulty/physicality by the ages mentioned (a mission for a group with a 6-year-old and a 70-year-old should not require running or reading dense text). At least a third of the missions should reference a specific named person or relationship from that list, not just the group in general. If no such section is given, fall back to the general description only - do not invent names.
+
 Vary the mission types meaningfully:
 ${MISSION_TYPES.join(", ")}
 - "photo"/"video": ask participants to capture something specific and evocative, tied to a real detail from the description - not just "take a photo".
 - "note": ask for a short written memory, reflection or answer that only makes sense for this specific group and occasion.
-- "quiz"/"puzzle"/"map": a lightweight in-context challenge, written using real names/places/facts from the description where possible (the app currently renders these as simple generic prompts, so keep the mission's "text" self-contained and understandable without extra UI).
+- "quiz"/"map": a lightweight in-context challenge, written using real names/places/facts from the description where possible (the app currently renders these as simple generic prompts, so keep the mission's "text" self-contained and understandable without extra UI).
+- "puzzle": write a short, solvable riddle, cipher or word puzzle in "text" (built from a real detail in the description when possible - a name, place or shared memory), and include its solution as a separate "answer" field (a single word or short phrase, lowercase, no punctuation) - the app validates the participant's typed answer against it, so the riddle must have exactly one unambiguous correct answer.
 - "story": a narrative beat with no participant action, used for openings/transitions/closings - reference the actual occasion, not a generic "the beginning".
 - "reward": a payoff moment that ties back to something earlier in the journey.
 
 Give the whole journey a real arc: a hook that pulls people in using a specific detail from the description, rising missions that build on each other and reference earlier moments, then a closing mission that pays off the theme. Titles must be punchy and specific to this exact experience - never generic labels like "The Beginning" or "Capture the Moment".
 
 Respond with STRICT JSON only, no markdown fencing, no commentary, matching exactly this shape:
-{"name": "short experience title", "flow": [{"type": "photo", "title": "short title", "text": "one to two sentence instruction shown to the participant", "reward": "short reward label", "points": 100}]}
+{"name": "short experience title", "flow": [{"type": "photo", "title": "short title", "text": "one to two sentence instruction shown to the participant", "reward": "short reward label", "points": 100, "answer": "only for type puzzle"}]}
 
-"type" must be one of: ${MISSION_TYPES.join(", ")}. "points" is an integer between 50 and 200. Do not include an "id" field, the app assigns those.`;
+"type" must be one of: ${MISSION_TYPES.join(", ")}. "points" is an integer between 50 and 200. "answer" must only be present when "type" is "puzzle". Do not include an "id" field, the app assigns those.`;
 
 const GEMINI_MODELS = ["gemini-3.6-flash", "gemini-2.5-flash", "gemini-2.0-flash", "gemini-flash-latest", "gemini-1.5-flash"];
 
@@ -148,7 +152,7 @@ exports.generateExperience = onCall({ secrets: [openaiApiKey, geminiApiKey], cor
     throw new HttpsError("unauthenticated", "Sign in (even anonymously) before generating an experience.");
   }
 
-  const { prompt, type, location, duration, people, lang, multiDay, needsHotel, interests } = request.data || {};
+  const { prompt, type, location, duration, people, peopleDetails, lang, multiDay, needsHotel, interests } = request.data || {};
 
   if (!prompt || !String(prompt).trim()) {
     throw new HttpsError("invalid-argument", "A description of the experience is required.");
@@ -162,6 +166,7 @@ exports.generateExperience = onCall({ secrets: [openaiApiKey, geminiApiKey], cor
     location ? `Location: ${location}` : null,
     duration ? `Duration: ${duration}` : null,
     people ? `Participants: ${people}` : null,
+    peopleDetails && String(peopleDetails).trim() ? `Who's joining (names, ages, relationships): ${String(peopleDetails).trim().slice(0, 600)}` : null,
     multiDay ? `This is a multi-day trip - structure the missions across the days as described above, not a single sitting.` : null,
     `Write "name", and every mission's "title", "text" and "reward", in the same language the Description above is written in - detect it automatically, it can be any language (Hebrew, English, Arabic, French, Spanish, German, Russian, or any other). Use natural, native-sounding phrasing for that language and its culture, not a literal translation. Only if the Description is too short or ambiguous to confidently detect a language, default to ${lang === "he" ? "Hebrew" : "English"}.`,
   ].filter(Boolean).join("\n");
@@ -296,9 +301,9 @@ ${chaptersText}`;
   return { story: finalStory };
 });
 
-const REVISE_SYSTEM_PROMPT = `You revise existing interactive "experiences" (mission journeys) for an app called Morivo, based on a specific instruction from the organizer - things like "make it funnier", "less competitive", "suitable for younger children", "add a mission about X", "shorten it". You are given the CURRENT mission list as JSON and an instruction. Apply the instruction thoughtfully across the missions where it's relevant - rewrite titles/text/rewards as needed, and only change the number or order of missions if the instruction actually implies that (like "add one more" or "cut it down"). Keep everything grounded and specific, never generic. Write in the same language the current missions are already written in (detect it automatically) unless the instruction explicitly asks to translate. Respond with STRICT JSON only, no markdown fencing, no commentary, matching exactly this shape: {"flow":[{"type":"photo","title":"short title","text":"one to two sentence instruction","reward":"short reward label","points":100}]}
+const REVISE_SYSTEM_PROMPT = `You revise existing interactive "experiences" (mission journeys) for an app called Morivo, based on a specific instruction from the organizer - things like "make it funnier", "less competitive", "suitable for younger children", "add a mission about X", "shorten it". You are given the CURRENT mission list as JSON and an instruction. Apply the instruction thoughtfully across the missions where it's relevant - rewrite titles/text/rewards as needed, and only change the number or order of missions if the instruction actually implies that (like "add one more" or "cut it down"). Keep everything grounded and specific, never generic. Write in the same language the current missions are already written in (detect it automatically) unless the instruction explicitly asks to translate. A "puzzle" mission has an "answer" field (its solution) alongside "text" (its riddle) - if you keep a puzzle mission's riddle unchanged, keep its answer unchanged too; if you rewrite the riddle or add a new puzzle mission, write a matching new "answer" (single word or short phrase, lowercase, no punctuation). Respond with STRICT JSON only, no markdown fencing, no commentary, matching exactly this shape: {"flow":[{"type":"photo","title":"short title","text":"one to two sentence instruction","reward":"short reward label","points":100,"answer":"only for type puzzle"}]}
 
-"type" must be one of: ${MISSION_TYPES.join(", ")}. "points" is an integer between 50 and 200.`;
+"type" must be one of: ${MISSION_TYPES.join(", ")}. "points" is an integer between 50 and 200. "answer" must only be present when "type" is "puzzle".`;
 
 exports.reviseExperience = onCall({ secrets: [openaiApiKey], cors: true, timeoutSeconds: 60 }, async (request) => {
   if (!request.auth) {
@@ -314,7 +319,7 @@ exports.reviseExperience = onCall({ secrets: [openaiApiKey], cors: true, timeout
   }
 
   const client = new OpenAI({ apiKey: openaiApiKey.value().trim() });
-  const currentFlow = flow.map((m) => ({ type: m.type, title: m.title, text: m.text, reward: m.reward, points: m.points }));
+  const currentFlow = flow.map((m) => ({ type: m.type, title: m.title, text: m.text, reward: m.reward, points: m.points, ...(m.type === "puzzle" && m.answer ? { answer: m.answer } : {}) }));
   const userPrompt = `Current missions:\n${JSON.stringify(currentFlow)}\n\nInstruction: ${instruction}`;
 
   let completion;

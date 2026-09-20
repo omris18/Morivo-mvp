@@ -27,8 +27,13 @@ export default function Runtime({experience,setView,t}){
    const doneCount=merged.filter(p=>(p.completedMissionIds||[]).includes(m.id)||i<(p.currentMissionIndex||0)).length;
    return {id:m.id,title:m.title,pct:merged.length?Math.round((doneCount/merged.length)*100):0};
  }),[flow,merged]);
+ const completionRate=merged.length&&flow.length?Math.round((merged.filter(x=>(x.currentMissionIndex||0)>=flow.length).length/merged.length)*100):0;
+ const avgPoints=merged.length?Math.round(merged.reduce((s,p)=>s+(p.points||0),0)/merged.length):0;
+ const dropOff=useMemo(()=>missionPerf.length&&merged.length?missionPerf.reduce((worst,m)=>worst===null||m.pct<worst.pct?m:worst,null):null,[missionPerf,merged.length]);
  return <section><div className="panel"><div className="runtimeTitle"><div><div className="tag">{r.tag}</div><h2>{experience.name}</h2></div><div className="joinMini"><small>{r.joinCode}</small><b>{experience.joinCode||r.publishFirst}</b>{qrDataUrl&&<img className="joinQr" src={qrDataUrl} alt="Join QR code"/>}</div></div>
- <div className="runtimeStats"><div><b>{merged.length}</b><span>{r.participants}</span></div><div><b>{flow.length}</b><span>{r.missions}</span></div><div><b>{media.length}</b><span>{r.memories}</span></div><div><b>{merged.filter(x=>(x.currentMissionIndex||0)>=flow.length).length}</b><span>{r.finished}</span></div></div><h3>{r.liveJourneyMap}</h3>
+ <div className="runtimeStats"><div><b>{merged.length}</b><span>{r.participants}</span></div><div><b>{flow.length}</b><span>{r.missions}</span></div><div><b>{media.length}</b><span>{r.memories}</span></div><div><b>{merged.filter(x=>(x.currentMissionIndex||0)>=flow.length).length}</b><span>{r.finished}</span></div></div>
+ {merged.length>0&&<div className="runtimeStats insightsRow"><div><b>{completionRate}%</b><span>{r.completionRate}</span></div><div><b>{avgPoints}</b><span>{r.avgPoints}</span></div>{dropOff&&<div><b>{dropOff.pct}%</b><span>{r.dropOffAt} · {dropOff.title}</span></div>}</div>}
+ <h3>{r.liveJourneyMap}</h3>
  <div className="journeyTable"><div className="journeyTableHead"><span>{r.participant}</span>{flow.map((m,i)=><span key={m.id}>{i+1}</span>)}<span>{r.pointsCol}</span><span></span></div>{merged.map(p=>{
    const finished=(p.currentMissionIndex||0)>=flow.length;
    const mins=minutesAgo(p.updatedAt);
