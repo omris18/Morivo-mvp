@@ -396,3 +396,25 @@ exports.notifyOnOrganizerMessage = onDocumentCreated(
     }
   }
 );
+
+exports.moderateParticipantAnswer = onDocumentCreated(
+  { document: "experiences/{experienceId}/answers/{answerId}", secrets: [openaiApiKey] },
+  async (event) => {
+    const answer = event.data?.data();
+    if (!answer?.text) return;
+
+    // Family/school product - a participant's written memory ends up in the shared Memory
+    // Book and the organizer's live feed, so it needs the same moderation gate as organizer
+    // broadcasts before it settles into either.
+    try {
+      const client = new OpenAI({ apiKey: openaiApiKey.value().trim() });
+      const moderation = await client.moderations.create({ model: "omni-moderation-latest", input: answer.text });
+      if (moderation.results?.[0]?.flagged) {
+        console.warn("Participant answer flagged by moderation, deleting", event.params.experienceId, event.params.answerId);
+        await event.data.ref.delete();
+      }
+    } catch (err) {
+      console.error("Moderation check failed, proceeding without blocking", err);
+    }
+  }
+);
