@@ -189,6 +189,29 @@ button:active{transform:scale(.96)}
 .portalCard label{display:block;margin:12px 0 6px;font-weight:700;color:#fff}
 .portalCard input,.portalCard textarea,.portalCard select{width:100%;padding:13px;border-radius:12px;border:1px solid rgba(255,255,255,.18);background:rgba(5,11,19,.6);color:#fff}
 .portalCard p{color:#e7ecf3}
+.portalLangSwitch{margin:0 0 14px auto;width:max-content}
+[dir="rtl"] .portalLangSwitch{margin:0 auto 14px 0}
+.journeyGreeting{text-align:center;margin:2px 0 16px}
+.journeyGreeting h2{font:600 26px Georgia,serif;margin:0 0 4px;color:#fff}
+.journeyGreeting p{margin:0;color:#cdd8e6;font-size:12px;text-transform:uppercase;letter-spacing:.1em}
+.journeyProgressBar{height:9px;border-radius:999px;background:rgba(255,255,255,.14);overflow:hidden;margin:14px 0 20px}
+.journeyProgressFill{height:100%;background:linear-gradient(90deg,#7d5cff,#62cdf7,#58d39b);border-radius:999px;transition:width .4s ease}
+.journeyMap{position:relative;display:flex;flex-direction:column;padding:2px 0}
+.journeyStop{position:relative;display:flex;gap:13px;padding-bottom:20px}
+.journeyStop:last-child{padding-bottom:0}
+.journeyStop::before{content:"";position:absolute;left:15px;top:32px;bottom:-4px;width:2px;background:repeating-linear-gradient(to bottom,rgba(255,255,255,.35) 0 6px,transparent 6px 12px)}
+.journeyStop:last-child::before{display:none}
+[dir="rtl"] .journeyStop::before{left:auto;right:15px}
+.journeyStopDot{flex:0 0 32px;width:32px;height:32px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-weight:700;font-size:13px;background:rgba(255,255,255,.1);color:#cdd8e6;border:2px solid rgba(255,255,255,.25);z-index:1}
+.journeyStop.done .journeyStopDot{background:#58d39b;border-color:#58d39b;color:#06251a}
+.journeyStop.active .journeyStopDot{background:#7d5cff;border-color:#a788ff;color:#fff;box-shadow:0 0 0 5px rgba(125,92,255,.25)}
+.journeyStopCard{flex:1;min-width:0;background:rgba(8,15,24,.6);border:1px solid rgba(255,255,255,.12);border-radius:16px;padding:11px 14px;backdrop-filter:blur(6px)}
+.journeyStop.active .journeyStopCard{border-color:rgba(167,136,255,.55);box-shadow:0 0 0 1px rgba(167,136,255,.25)}
+.journeyStop.locked .journeyStopCard{opacity:.55}
+.journeyStopCard b{display:block;color:#fff;font-size:14.5px}
+.journeyStopMeta{font-size:10.5px;text-transform:uppercase;letter-spacing:.07em;color:#a9b8cc;margin-bottom:3px}
+.journeyStopHotel{margin-top:5px;font-size:12.5px;color:#cdd8e6}
+.journeyNavigateBtn{display:inline-flex;align-items:center;gap:5px;margin-top:8px;padding:6px 12px;border-radius:999px;background:linear-gradient(135deg,#7d5cff,#5f7cff);color:#fff;font-size:12.5px;text-decoration:none}
 .rosterHint{color:#9eaabd;font-size:13px;margin:0 0 6px}
 .rosterList{margin-top:14px;display:flex;flex-direction:column;gap:8px}
 .rosterRow{display:flex;align-items:center;gap:12px;padding:10px 14px;border:1px solid rgba(255,255,255,.1);border-radius:12px;background:#0a1624;flex-wrap:wrap}

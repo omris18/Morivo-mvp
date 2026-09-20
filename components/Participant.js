@@ -9,7 +9,13 @@ import LinkifiedText from "./LinkifiedText";
 import {distanceMeters,getCurrentPosition} from "../lib/geo";
 import {enablePushNotifications,pushSupported} from "../lib/push";
 import {experienceGradient} from "../lib/theme";
-export default function Participant({experience,setExperience,setView,setActiveId,deepLinkCode,t,portal,portalCode,chromeless}){
+import {COUNTRY_FLAGS} from "../lib/i18n";
+import FlagIcon from "./FlagIcon";
+function formatStopDate(dateStr,lang){
+ try{ return new Intl.DateTimeFormat(lang==="he"?"he-IL":lang,{day:"numeric",month:"short"}).format(new Date(dateStr+"T00:00:00")); }
+ catch{ return dateStr; }
+}
+export default function Participant({experience,setExperience,setView,setActiveId,deepLinkCode,t,lang,setLang,dir,portal,portalCode,chromeless}){
  const p=t.participant;
  const [code,setCode]=useState(deepLinkCode||experience.joinCode||""),[name,setName]=useState("Guest"),[joined,setJoined]=useState(false),[eid,setEid]=useState(experience.id),[uid,setUid]=useState("");
  const [portalResolving,setPortalResolving]=useState(!!portal);
@@ -101,19 +107,35 @@ export default function Participant({experience,setExperience,setView,setActiveI
    setFile(null);setPct(0);setQuizAnswer(null);setNoteText("");
  }catch(e){alert(e.message)}finally{setBusy(false)}}
  if(portal&&portalResolving){
-  return <div className="portalShell" style={{backgroundImage:experienceGradient(portalCode)}}><div className="portalLoading">⏳ {p.portalResolving}</div></div>;
+  return <div className="portalShell" dir={dir} style={{backgroundImage:experienceGradient(portalCode)}}><div className="portalLoading">⏳ {p.portalResolving}</div></div>;
  }
  if(portal&&portalError){
-  return <div className="portalShell" style={{backgroundImage:experienceGradient(portalCode)}}><div className="portalLoading">⚠ {portalError}</div></div>;
+  return <div className="portalShell" dir={dir} style={{backgroundImage:experienceGradient(portalCode)}}><div className="portalLoading">⚠ {portalError}</div></div>;
  }
  const coverPhoto=coverMedia.find(m=>!m.contentType?.startsWith("video/"));
  const portalBg=coverPhoto?`linear-gradient(180deg,rgba(5,11,19,.55),rgba(5,11,19,.92)),url(${coverPhoto.downloadURL})`:experienceGradient(experience.location||experience.type||experience.name);
+ const completedCount=(prog.completedMissionIds||[]).length;
+ const progressPct=flow.length?Math.round((completedCount/flow.length)*100):0;
  const joinedContent=<>
+ {chromeless&&<div className="journeyGreeting"><h2>{p.welcomeGreeting(name)}</h2><p>{experience.name}</p></div>}
  <div className="participantHeader"><div><small>{experience.name}</small><h2>{finished?p.journeyComplete:p.missionOf(idx+1,flow.length)}</h2></div><div className={"pointsBadge "+(bump?"bump":"")}>{prog.points||0}<small>PTS</small></div></div>
  {firebaseConfigured&&pushSupported&&pushState!=="on"&&<button className="pushEnable" disabled={pushState==="asking"} onClick={enableNotifications}>🔔 {pushState==="asking"?p.asking:p.enableNotifications}</button>}
  {latestMessage&&<div className="orgMessage"><span>📣 {latestMessage.text}</span><button onClick={()=>setDismissed(d=>[...d,latestMessage.id])}>✕</button></div>}
  {experience.paused&&!finished&&<div className="pausedBanner">⏸ {p.pausedByOrganizer}</div>}
- <div className="journeyRail">{flow.map((m,i)=>{const done=(prog.completedMissionIds||[]).includes(m.id),active=!finished&&i===idx;return <div className={"journeyDot "+(done?"done":active?"active":"locked")} key={m.id}><span>{done?"✓":active?i+1:"🔒"}</span><small>{m.title}</small></div>})}</div>
+ <div className="journeyProgressBar"><div className="journeyProgressFill" style={{width:`${progressPct}%`}}></div></div>
+ <div className="journeyMap">{flow.map((m,i)=>{
+   const done=(prog.completedMissionIds||[]).includes(m.id),active=!finished&&i===idx;
+   const hasNav=active&&Number.isFinite(m.lat)&&Number.isFinite(m.lng);
+   return <div className={"journeyStop "+(done?"done":active?"active":"locked")} key={m.id}>
+    <div className="journeyStopDot">{done?"✓":active?"★":i+1}</div>
+    <div className="journeyStopCard">
+     {(m.day||m.date)&&<div className="journeyStopMeta">{m.day?p.dayBadge(m.day):""}{m.day&&m.date?" · ":""}{m.date?formatStopDate(m.date,lang):""}</div>}
+     <b>{m.title}</b>
+     {m.hotel&&<div className="journeyStopHotel">🏨 {m.hotel}</div>}
+     {hasNav&&<a className="journeyNavigateBtn" href={`https://www.google.com/maps/search/?api=1&query=${m.lat},${m.lng}`} target="_blank" rel="noopener noreferrer">🧭 {p.navigate}</a>}
+    </div>
+   </div>;
+ })}</div>
  {finished?<div className="finishCard viewFade" key="finish"><div className="confetti">{Array.from({length:16}).map((_,i)=><span key={i}></span>)}</div><div className="finishIcon">🏆</div><h2>{p.journeyCompleteTitle}</h2><p>{p.journeyCompleteSub}</p>{badges.length>0&&<div className="badgeRow">{badges.map(b=><div className="badge" key={b.id} title={b.label}><span>{b.icon}</span><small>{b.label}</small></div>)}</div>}<button className="primary" onClick={()=>setView("memory")}>{p.openMemoryBook}</button></div>:mission&&<div className="phone journeyPhone viewFade" key={mission.id}><div className="missionType">{mission.type}</div><h3>{mission.title}</h3><p><LinkifiedText text={mission.text}/></p>
  {mission.type==="photo"&&<label className="uploadBox"><span>{p.choosePhoto}</span><input type="file" accept="image/*" capture="environment" onChange={e=>setFile(e.target.files?.[0]||null)}/></label>}
  {mission.type==="video"&&<label className="uploadBox"><span>{p.chooseVideo}</span><input type="file" accept="video/*" capture="environment" onChange={e=>setFile(e.target.files?.[0]||null)}/></label>}
@@ -132,10 +154,14 @@ export default function Participant({experience,setExperience,setView,setActiveI
 
  const joinForm=<><h2>{p.joinTitle}</h2><label>{p.yourName}</label><input value={name} onChange={e=>setName(e.target.value)}/><label>{p.joinCode}</label><input value={code} onChange={e=>setCode(e.target.value.toUpperCase())} onKeyDown={e=>e.key==="Enter"&&join()}/><div className="actions centerActions"><button className="primary" disabled={joining} onClick={join}>{joining?p.joining:p.joinBtn}</button></div></>;
 
+ const portalLangSwitch=<div className="langSwitchGlobal portalLangSwitch">
+   {COUNTRY_FLAGS.map(f=><button key={f.country} className={lang===f.lang?"active":""} onClick={()=>setLang(f.lang)} title={f.label} aria-label={f.label}><FlagIcon code={f.country}/></button>)}
+  </div>;
+
  if(chromeless){
-  return <div className="portalShell" style={{backgroundImage:portalBg}}><div className="portalCard">{!portal&&<div className="tag">{p.tag}</div>}{joined?joinedContent:joinForm}</div></div>;
+  return <div className="portalShell" dir={dir} style={{backgroundImage:portalBg}}><div className="portalCard">{portalLangSwitch}{!portal&&<div className="tag">{p.tag}</div>}{joined?joinedContent:joinForm}</div></div>;
  }
 
- return <section className="panel narrow"><div className="tag">{p.tag}</div>{joined?joinedContent:joinForm}
+ return <section className="panel narrow" dir={dir}><div className="tag">{p.tag}</div>{joined?joinedContent:joinForm}
  <div className="actions centerActions"><button onClick={()=>setView("runtime")}>{p.organizerRuntime}</button></div></section>
 }

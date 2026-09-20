@@ -287,6 +287,32 @@ export default function Studio({ experience, setExperience, setView, t }) {
               onChange={(e) => patch({ text: e.target.value })}
             />
 
+            <div className="fieldRow">
+              <div>
+                <label>{s.dayLabel}</label>
+                <input
+                  type="number" min="1"
+                  value={atom.day || ""}
+                  placeholder={s.dayPlaceholder}
+                  onChange={(e) => patch({ day: e.target.value ? Number(e.target.value) : null })}
+                />
+              </div>
+              <div>
+                <label>{s.dateLabel}</label>
+                <input
+                  type="date"
+                  value={atom.date || ""}
+                  onChange={(e) => patch({ date: e.target.value || null })}
+                />
+              </div>
+            </div>
+            <label>{s.hotelLabel}</label>
+            <input
+              value={atom.hotel || ""}
+              placeholder={s.hotelPlaceholder}
+              onChange={(e) => patch({ hotel: e.target.value })}
+            />
+
             {atom.type === "puzzle" && (
               <>
                 <label>{s.puzzleAnswer}</label>
