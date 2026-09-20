@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { httpsCallable } from "firebase/functions";
+import QRCode from "qrcode";
 import { firebaseConfigured, functions } from "../lib/firebase";
 import { publishExperienceRemote, updateExperienceRemote } from "../lib/morivoData";
 import LinkifiedText from "./LinkifiedText";
@@ -15,8 +16,26 @@ export default function Studio({ experience, setExperience, setView, t }) {
   const [locating, setLocating] = useState(false);
   const [revising, setRevising] = useState(false);
   const [revisePrompt, setRevisePrompt] = useState("");
+  const [publishing, setPublishing] = useState(false);
+  const [saveError, setSaveError] = useState(false);
+  const [qrImgUrl, setQrImgUrl] = useState(null);
 
   const atom = flow.find((x) => x.id === selected) || null;
+
+  useEffect(() => {
+    if (atom?.type === "map" && atom.qrCode) {
+      QRCode.toDataURL(atom.qrCode, { margin: 1, width: 160, color: { dark: "#050b13", light: "#ffffff" } })
+        .then(setQrImgUrl)
+        .catch(() => setQrImgUrl(null));
+    } else {
+      setQrImgUrl(null);
+    }
+  }, [atom?.qrCode, atom?.type]);
+
+  function generateQr() {
+    const code = Math.random().toString(36).slice(2, 10).toUpperCase();
+    patch({ qrCode: code });
+  }
 
   useEffect(() => {
     if (!selected && flow[0]) {
@@ -38,6 +57,7 @@ export default function Studio({ experience, setExperience, setView, t }) {
       next.id !== "thailand-demo"
     ) {
       setSaving(true);
+      setSaveError(false);
       try {
         await updateExperienceRemote(next.id, {
           flow: next.flow,
@@ -47,6 +67,9 @@ export default function Studio({ experience, setExperience, setView, t }) {
           location: next.location,
           people: next.people,
         });
+      } catch (e) {
+        setSaveError(true);
+        alert(s.saveFailed(e.message));
       } finally {
         setSaving(false);
       }
@@ -152,6 +175,8 @@ export default function Studio({ experience, setExperience, setView, t }) {
   }
 
   async function publish() {
+    if (publishing) return;
+
     if (!flow.length) {
       alert(s.addAtLeastOneMission);
       return;
@@ -168,22 +193,29 @@ export default function Studio({ experience, setExperience, setView, t }) {
       return;
     }
 
-    const code = await publishExperienceRemote(experience);
+    setPublishing(true);
+    try {
+      const code = await publishExperienceRemote(experience);
 
-    setExperience({
-      ...experience,
-      status: "live",
-      joinCode: code,
-    });
+      setExperience({
+        ...experience,
+        status: "live",
+        joinCode: code,
+      });
 
-    alert(s.published(code));
+      alert(s.published(code));
+    } catch (e) {
+      alert(e.message);
+    } finally {
+      setPublishing(false);
+    }
   }
 
   return (
     <section className="grid2">
       <div className="panel">
         <div className="tag">
-          {s.savingTag} · {saving ? s.saving : s.saved}
+          {s.savingTag} · {saving ? s.saving : saveError ? s.saveErrorTag : s.saved}
         </div>
 
         <h2>{experience.name || s.untitled}</h2>
@@ -294,6 +326,31 @@ export default function Studio({ experience, setExperience, setView, t }) {
               </div>
             )}
 
+            {atom.type === "map" && (
+              <div className="qrCheckpoint">
+                <label>{s.qrCheckpoint}</label>
+                <div className="fieldRow">
+                  <div>
+                    <input
+                      value={atom.qrCode || ""}
+                      placeholder={s.qrSetTo}
+                      onChange={(e) => patch({ qrCode: e.target.value.trim() || null })}
+                    />
+                  </div>
+                  <div>
+                    <button type="button" onClick={generateQr}>{s.generateQr}</button>
+                  </div>
+                </div>
+                {atom.qrCode && qrImgUrl && (
+                  <div className="qrPreviewWrap">
+                    <img className="qrPreview" src={qrImgUrl} alt="QR code" />
+                    <a href={qrImgUrl} download={`morivo-checkpoint-${atom.qrCode}.png`}>{s.downloadQr}</a>
+                    <button type="button" onClick={() => patch({ qrCode: null })}>{s.clearQr}</button>
+                  </div>
+                )}
+              </div>
+            )}
+
             <label>{s.reward}</label>
             <input
               value={atom.reward || ""}
@@ -321,8 +378,8 @@ export default function Studio({ experience, setExperience, setView, t }) {
         <div className="actions">
           <button onClick={() => setView("dashboard")}>{s.dashboardBtn}</button>
           <button onClick={() => setView("runtime")}>{s.runtimeBtn}</button>
-          <button className="primary" onClick={publish}>
-            {s.publish}
+          <button className="primary" disabled={publishing} onClick={publish}>
+            {publishing ? s.publishing : s.publish}
           </button>
         </div>
       </div>

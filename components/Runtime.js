@@ -13,19 +13,19 @@ export default function Runtime({experience,setView,t}){
  function messageEveryone(){
    if(!firebaseConfigured)return alert(r.connectFirebaseMsg);
    const text=window.prompt(r.sendMessagePrompt);
-   if(text&&text.trim())sendOrganizerMessage(experience.id,text);
+   if(text&&text.trim())sendOrganizerMessage(experience.id,text).catch(e=>alert(e.message));
  }
  function skip(p){
    if(!firebaseConfigured)return alert(r.connectFirebaseCtrl);
-   if(window.confirm(r.confirmSkip(p.name||p.participantName||"")))skipMissionForParticipant(experience.id,p.id,flow.length);
+   if(window.confirm(r.confirmSkip(p.name||p.participantName||"")))skipMissionForParticipant(experience.id,p.id,flow.length).catch(e=>alert(e.message));
  }
  function bonus(p){
    if(!firebaseConfigured)return alert(r.connectFirebaseCtrl);
-   awardBonusPoints(experience.id,p.id,50);
+   awardBonusPoints(experience.id,p.id,50).catch(e=>alert(e.message));
  }
  function togglePause(){
    if(!firebaseConfigured)return alert(r.connectFirebaseCtrl);
-   updateExperienceRemote(experience.id,{paused:!experience.paused});
+   updateExperienceRemote(experience.id,{paused:!experience.paused}).catch(e=>alert(e.message));
  }
  useEffect(()=>{if(!firebaseConfigured||!experience.id||experience.id==="thailand-demo"){setPeople([{id:"1",name:"Omri"},{id:"2",name:"Tair"},{id:"3",name:"Maya"}]);setProgress([{uid:"1",currentMissionIndex:4,points:640},{uid:"2",currentMissionIndex:3,points:590},{uid:"3",currentMissionIndex:2,points:520}]);return}
  const a=subscribeParticipants(experience.id,setPeople),b=subscribeEvents(experience.id,evs=>setFeed(evs.map(x=>x.text))),c=subscribeMedia(experience.id,setMedia),d=subscribeAllProgress(experience.id,setProgress),e=subscribeAnswers(experience.id,setAnswers);return()=>{a();b();c();d();e()}},[experience.id]);
