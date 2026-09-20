@@ -13,7 +13,7 @@ import Account from "../components/Account";
 import { firebaseConfigured, auth } from "../lib/firebase";
 import { onAuthStateChanged } from "firebase/auth";
 import { ensureUser, subscribeExperiences, subscribeExperience, completeGoogleRedirect } from "../lib/morivoData";
-import { STRINGS, getDir } from "../lib/i18n";
+import { STRINGS, getDir, COUNTRY_FLAGS } from "../lib/i18n";
 
 const DEMO={
  id:"thailand-demo", name:"Thailand Family Adventure", type:"Family Trip",
@@ -120,8 +120,9 @@ export default function Home(){
        <FirebaseStatus t={t}/>
        <div className="topBarRight">
          <div className="langSwitchGlobal">
-           <button className={lang==="en"?"active":""} onClick={()=>setLang("en")}>EN</button>
-           <button className={lang==="he"?"active":""} onClick={()=>setLang("he")}>עברית</button>
+           {COUNTRY_FLAGS.map(f=>(
+             <button key={f.country} className={lang===f.lang?"active":""} onClick={()=>setLang(f.lang)} title={f.label} aria-label={f.label}>{f.flag}</button>
+           ))}
          </div>
          <Account user={user} t={t}/>
        </div>

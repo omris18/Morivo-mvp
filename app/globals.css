@@ -46,11 +46,13 @@
 }
 @media(max-width:700px){.mbCoverContent h1{font-size:36px}.mbStats{grid-template-columns:repeat(2,1fr)}}
 .topBarRight{display:flex;align-items:center;gap:10px;flex-wrap:wrap}
-.langSwitchGlobal{display:flex;gap:4px;border:1px solid rgba(255,255,255,.12);border-radius:999px;padding:3px}
-.langSwitchGlobal button{padding:6px 12px;font-size:11px;border-radius:999px;border:0;background:transparent;color:#b7c2d2}
-.langSwitchGlobal button.active{background:#7d5cff;color:#fff}
+.langSwitchGlobal{display:flex;flex-wrap:wrap;gap:2px;max-width:220px;border:1px solid rgba(255,255,255,.12);border-radius:14px;padding:3px}
+.langSwitchGlobal button{padding:4px 6px;font-size:15px;line-height:1;border-radius:8px;border:0;background:transparent;cursor:pointer}
+.langSwitchGlobal button.active{background:#7d5cff}
 [dir="rtl"] .experienceRow,[dir="rtl"] .accountBar,[dir="rtl"] .runtimeTitle,[dir="rtl"] .participantHeader{text-align:right}
 [dir="rtl"] .sidebar{border-right:0;border-left:1px solid rgba(255,255,255,.1)}
+[dir="rtl"] .sidebar button{text-align:right}
+[dir="rtl"] .brand,[dir="rtl"] .tag{text-align:right}
 [dir="rtl"] .connector{transform:scaleX(-1)}
 [dir="rtl"] .actions{justify-content:flex-start}
 
