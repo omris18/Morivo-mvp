@@ -2,7 +2,7 @@
 import {useEffect,useRef,useState} from "react";
 import jsQR from "jsqr";
 import {firebaseConfigured} from "../lib/firebase";
-import {ensureUser,joinExperienceByCode,joinExperienceByPersonalCode,subscribeExperience,subscribeMyProgress,initializeProgress,completeJourneyMission,saveMissionAnswer,subscribeMessages} from "../lib/morivoData";
+import {ensureUser,joinExperienceByCode,joinExperienceByPersonalCode,subscribeExperience,subscribeMyProgress,initializeProgress,completeJourneyMission,saveMissionAnswer,subscribeMessages,translateExperienceRemote} from "../lib/morivoData";
 import {uploadMissionPhoto,subscribeMedia} from "../lib/mediaData";
 import {computeBadges} from "../lib/badges";
 import LinkifiedText from "./LinkifiedText";
@@ -33,6 +33,7 @@ export default function Participant({experience,setExperience,setView,setActiveI
  const [bump,setBump]=useState(false);
  const [messages,setMessages]=useState([]),[dismissed,setDismissed]=useState([]);
  const [pushState,setPushState]=useState("idle");
+ const [translated,setTranslated]=useState(null);
  useEffect(()=>{if(deepLinkCode)setCode(deepLinkCode)},[deepLinkCode]);
  useEffect(()=>{
   if(!portal||!portalCode)return;
@@ -49,8 +50,19 @@ export default function Participant({experience,setExperience,setView,setActiveI
  useEffect(()=>{if(chromeless&&firebaseConfigured&&eid&&eid!=="thailand-demo")return subscribeMedia(eid,setCoverMedia)},[chromeless,eid]);
  useEffect(()=>{if(firebaseConfigured&&joined&&eid&&uid){initializeProgress(eid,uid);return subscribeMyProgress(eid,uid,setProg)}},[joined,eid,uid]);
  useEffect(()=>{if(firebaseConfigured&&joined&&eid)return subscribeMessages(eid,setMessages)},[joined,eid]);
+ useEffect(()=>{
+  setTranslated(null);
+  if(!firebaseConfigured||!joined||!eid||eid==="thailand-demo")return;
+  if(experience.lang===lang)return;
+  let alive=true;
+  translateExperienceRemote(eid,lang).then(result=>{if(alive&&result)setTranslated(result)}).catch(()=>{});
+  return ()=>{alive=false};
+ },[joined,eid,lang,experience.lang]);
  const latestMessage=messages.find(m=>!dismissed.includes(m.id));
- const flow=experience.flow||[], idx=Math.min(prog.currentMissionIndex||0,Math.max(flow.length-1,0)), mission=flow[idx], finished=flow.length>0&&(prog.completedMissionIds||[]).length>=flow.length;
+ const experienceName=translated?.name||experience.name;
+ const rawFlow=experience.flow||[];
+ const flow=translated?rawFlow.map(m=>translated.flow.find(x=>x.id===m.id)||m):rawFlow;
+ const idx=Math.min(prog.currentMissionIndex||0,Math.max(flow.length-1,0)), mission=flow[idx], finished=flow.length>0&&(prog.completedMissionIds||[]).length>=flow.length;
  const badges=computeBadges(prog,flow);
  useEffect(()=>{setQuizAnswer(null);setNoteText("");setPuzzleAnswer("");setLocStatus(null);setQrVerified(false);stopScan()},[idx]);
  useEffect(()=>()=>stopScan(),[]);
@@ -117,8 +129,8 @@ export default function Participant({experience,setExperience,setView,setActiveI
  const completedCount=(prog.completedMissionIds||[]).length;
  const progressPct=flow.length?Math.round((completedCount/flow.length)*100):0;
  const joinedContent=<>
- {chromeless&&<div className="journeyGreeting"><h2>{p.welcomeGreeting(name)}</h2><p>{experience.name}</p></div>}
- <div className="participantHeader"><div><small>{experience.name}</small><h2>{finished?p.journeyComplete:p.missionOf(idx+1,flow.length)}</h2></div><div className={"pointsBadge "+(bump?"bump":"")}>{prog.points||0}<small>PTS</small></div></div>
+ {chromeless&&<div className="journeyGreeting"><h2>{p.welcomeGreeting(name)}</h2><p>{experienceName}</p></div>}
+ <div className="participantHeader"><div><small>{experienceName}</small><h2>{finished?p.journeyComplete:p.missionOf(idx+1,flow.length)}</h2></div><div className={"pointsBadge "+(bump?"bump":"")}>{prog.points||0}<small>PTS</small></div></div>
  {firebaseConfigured&&pushSupported&&pushState!=="on"&&<button className="pushEnable" disabled={pushState==="asking"} onClick={enableNotifications}>🔔 {pushState==="asking"?p.asking:p.enableNotifications}</button>}
  {latestMessage&&<div className="orgMessage"><span>📣 {latestMessage.text}</span><button onClick={()=>setDismissed(d=>[...d,latestMessage.id])}>✕</button></div>}
  {experience.paused&&!finished&&<div className="pausedBanner">⏸ {p.pausedByOrganizer}</div>}

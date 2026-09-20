@@ -3,13 +3,13 @@ import {useState} from "react";
 import { firebaseConfigured } from "../lib/firebase";
 import { createExperienceRemote, ensureUser } from "../lib/morivoData";
 
-export default function CreateExperience({setExperience,setView,user,setActiveId,t}){
+export default function CreateExperience({setExperience,setView,user,setActiveId,t,lang}){
  const [form,setForm]=useState({name:"",type:"",location:"",people:"",story:""});
  const [thinking,setThinking]=useState(false);
  const c=t.create;
  async function create(){
    setThinking(true);
-   const data={...form,people:Number(form.people||0),flow:[]};
+   const data={...form,people:Number(form.people||0),flow:[],lang};
    try{
      if(firebaseConfigured){
        const u=user || await ensureUser();

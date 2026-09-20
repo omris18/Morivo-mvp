@@ -73,6 +73,14 @@ service cloud.firestore {
           && request.resource.data.text is string && request.resource.data.text.size() <= 500;
         allow delete: if isExperienceOwner(experienceId);
       }
+
+      // Cached AI translations of the experience's own content, one per target language -
+      // only the translateExperience Cloud Function writes here (via admin credentials,
+      // which bypass these rules entirely); clients may only ever read a cached translation.
+      match /translations/{lang} {
+        allow read: if signedIn();
+        allow write: if false;
+      }
     }
 
     match /publicExperiences/{joinCode} {

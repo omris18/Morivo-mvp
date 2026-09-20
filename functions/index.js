@@ -212,6 +212,122 @@ exports.generateExperience = onCall({ secrets: [openaiApiKey, geminiApiKey], cor
   };
 });
 
+const LANG_NAMES = {
+  en: "English", he: "Hebrew", de: "German", pl: "Polish", el: "Greek",
+  hu: "Hungarian", ja: "Japanese", it: "Italian", th: "Thai",
+};
+
+exports.translateExperience = onCall({ secrets: [openaiApiKey], cors: true, timeoutSeconds: 60 }, async (request) => {
+  if (!request.auth) {
+    throw new HttpsError("unauthenticated", "Sign in before translating an experience.");
+  }
+
+  const { experienceId, targetLang } = request.data || {};
+  if (!experienceId || typeof experienceId !== "string") {
+    throw new HttpsError("invalid-argument", "An experience is required.");
+  }
+  if (!LANG_NAMES[targetLang]) {
+    throw new HttpsError("invalid-argument", "Unsupported target language.");
+  }
+
+  const expRef = db.collection("experiences").doc(experienceId);
+  const expSnap = await expRef.get();
+  if (!expSnap.exists) {
+    throw new HttpsError("not-found", "Experience not found.");
+  }
+  const exp = expSnap.data();
+
+  // The organizer's own language never needs translating - and for experiences created
+  // before this field existed, exp.lang is undefined, so this just falls through to
+  // (harmlessly) translating once and caching, rather than guessing.
+  if (exp.lang === targetLang) {
+    return { name: exp.name || "", story: exp.story || "", flow: exp.flow || [] };
+  }
+
+  const flow = Array.isArray(exp.flow) ? exp.flow : [];
+  if (!flow.length && !exp.name && !exp.story) {
+    return { name: exp.name || "", story: exp.story || "", flow };
+  }
+
+  const cacheRef = expRef.collection("translations").doc(targetLang);
+  const cacheSnap = await cacheRef.get();
+  const sourceUpdatedMs = exp.updatedAt?.toMillis ? exp.updatedAt.toMillis() : 0;
+  if (cacheSnap.exists) {
+    const cached = cacheSnap.data();
+    // A cached translation is only good while it's at least as new as the source content -
+    // any organizer edit since bumps updatedAt and invalidates it, so it gets rebuilt below.
+    if (cached.sourceUpdatedAt?.toMillis && cached.sourceUpdatedAt.toMillis() >= sourceUpdatedMs) {
+      return { name: cached.name || "", story: cached.story || "", flow: cached.flow || [] };
+    }
+  }
+
+  const client = new OpenAI({ apiKey: openaiApiKey.value().trim() });
+  const sourceForPrompt = {
+    name: exp.name || "",
+    story: exp.story || "",
+    flow: flow.map((m) => ({
+      id: m.id, type: m.type, title: m.title || "", text: m.text || "", reward: m.reward || "",
+      ...(m.type === "puzzle" && m.answer ? { answer: m.answer } : {}),
+      ...(m.hotel ? { hotel: m.hotel } : {}),
+    })),
+  };
+
+  const systemPrompt = `You translate content for an interactive experience app called Morivo into ${LANG_NAMES[targetLang]}, for a participant who doesn't speak the language it was originally written in. Translate naturally and idiomatically, not word-for-word - it should read like it was written natively in ${LANG_NAMES[targetLang]}. Translate every "name", "story", "title", "text" and "reward" field. A "hotel" field is a proper-noun hotel name - keep it exactly as-is, never translate or transliterate it. If a mission has an "answer" field (a puzzle's solution), translate it consistently with the translated "text" (the riddle) so the puzzle stays solvable: the translated answer must be exactly what a ${LANG_NAMES[targetLang]} speaker would naturally type as the answer to the translated riddle. Keep "id" and "type" fields completely unchanged - copy them through as given. Respond with STRICT JSON only, no markdown fencing, no commentary, matching exactly this shape: {"name":"...","story":"...","flow":[{"id":"...","type":"...","title":"...","text":"...","reward":"...","answer":"only if the input mission had one","hotel":"only if the input mission had one"}]}`;
+
+  let completion;
+  try {
+    completion = await client.chat.completions.create({
+      model: "gpt-4o-mini",
+      messages: [
+        { role: "system", content: systemPrompt },
+        { role: "user", content: JSON.stringify(sourceForPrompt) },
+      ],
+      response_format: { type: "json_object" },
+      temperature: 0.3,
+    });
+  } catch (err) {
+    console.error("OpenAI translate request failed", err);
+    throw new HttpsError("unavailable", "The translation service failed to respond. Please try again.");
+  }
+
+  let data;
+  try {
+    data = JSON.parse(completion.choices[0].message.content);
+  } catch (err) {
+    throw new HttpsError("internal", "The AI returned data in an unexpected format.");
+  }
+
+  // Merge back onto the original missions by id, rather than trusting the AI's flow shape
+  // wholesale - this keeps every structural field (points, day, date, lat/lng, qrCode...)
+  // exactly as the organizer set it, even if the model drops or reorders something.
+  const translatedById = new Map((Array.isArray(data.flow) ? data.flow : []).map((m) => [m.id, m]));
+  const mergedFlow = flow.map((m) => {
+    const t = translatedById.get(m.id);
+    return {
+      ...m,
+      title: t?.title ? String(t.title).slice(0, 120) : m.title,
+      text: t?.text !== undefined ? String(t.text).slice(0, 600) : m.text,
+      reward: t?.reward !== undefined ? String(t.reward).slice(0, 120) : m.reward,
+      ...(m.type === "puzzle" && t?.answer ? { answer: String(t.answer).slice(0, 80) } : {}),
+      ...(m.hotel && t?.hotel ? { hotel: String(t.hotel).slice(0, 120) } : {}),
+    };
+  });
+
+  const result = {
+    name: data.name ? String(data.name).slice(0, 120) : (exp.name || ""),
+    story: data.story !== undefined ? String(data.story).slice(0, 4000) : (exp.story || ""),
+    flow: mergedFlow,
+  };
+
+  await cacheRef.set({
+    ...result,
+    sourceUpdatedAt: exp.updatedAt || admin.firestore.FieldValue.serverTimestamp(),
+    translatedAt: admin.firestore.FieldValue.serverTimestamp(),
+  });
+
+  return result;
+});
+
 exports.generateMemoryStory = onCall({ secrets: [openaiApiKey], cors: true, timeoutSeconds: 60 }, async (request) => {
   if (!request.auth) {
     throw new HttpsError("unauthenticated", "Sign in before generating a story.");
