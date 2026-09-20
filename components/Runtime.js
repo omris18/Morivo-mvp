@@ -67,7 +67,7 @@ export default function Runtime({experience,setView,t,user}){
  useEffect(()=>{if(!firebaseConfigured||!experience.id||experience.id==="thailand-demo"){setPeople([{id:"1",name:"Omri"},{id:"2",name:"Tair"},{id:"3",name:"Maya"}]);setProgress([{uid:"1",currentMissionIndex:4,points:640},{uid:"2",currentMissionIndex:3,points:590},{uid:"3",currentMissionIndex:2,points:520}]);return}
  const a=subscribeParticipants(experience.id,setPeople),b=subscribeEvents(experience.id,evs=>setFeed(evs.map(x=>x.text))),c=subscribeMedia(experience.id,setMedia),d=subscribeAllProgress(experience.id,setProgress),e=subscribeAnswers(experience.id,setAnswers);return()=>{a();b();c();d();e()}},[experience.id]);
  useEffect(()=>{if(!experience.joinCode){setQrDataUrl(null);return}const link=`${window.location.origin}${window.location.pathname}?join=${experience.joinCode}`;QRCode.toDataURL(link,{margin:1,width:160,color:{dark:"#050b13",light:"#ffffff"}}).then(setQrDataUrl).catch(()=>setQrDataUrl(null))},[experience.joinCode]);
- useEffect(()=>{if(!firebaseConfigured||!experience.id||experience.id==="thailand-demo")return;return subscribeParticipantCodes(experience.id,setRoster)},[experience.id]);
+ useEffect(()=>{if(!firebaseConfigured||!experience.id||experience.id==="thailand-demo")return;return subscribeParticipantCodes(experience.id,setRoster,e=>alert(r.rosterLoadError(e.message)))},[experience.id]);
  const flow=experience.flow||[],merged=useMemo(()=>people.map(p=>({...p,...(progress.find(x=>x.uid===p.id)||{})})),[people,progress]);
  const missionPerf=useMemo(()=>flow.map((m,i)=>{
    const doneCount=merged.filter(p=>(p.completedMissionIds||[]).includes(m.id)||i<(p.currentMissionIndex||0)).length;
@@ -92,7 +92,7 @@ export default function Runtime({experience,setView,t,user}){
  {answers.length>0&&<div className="panel" style={{marginTop:18}}><div className="tag">{r.sharedMemories}</div><div className="feed">{answers.slice(0,8).map(a=><div key={a.id}><b>{a.participantName}</b> — {a.text}</div>)}</div></div>}
  {missionPerf.length>0&&<div className="panel" style={{marginTop:18}}><div className="tag">{r.missionPerformance}</div><div className="missionPerf">{missionPerf.map(m=><div className="missionPerfRow" key={m.id}><b>{m.title}</b><div className="missionPerfBar"><span style={{width:`${m.pct}%`}}></span></div><small>{m.pct}%</small></div>)}</div></div>}
  <div className="panel" style={{marginTop:18}}>
-  <div className="tag">{r.roster}</div>
+  <div className="tag">{r.roster} ({roster.length})</div>
   <p className="rosterHint">{r.rosterHint}</p>
   <div className="reviseBar"><input placeholder={r.rosterNamePlaceholder} value={rosterName} onChange={e=>setRosterName(e.target.value)} onKeyDown={e=>e.key==="Enter"&&addRoster()} disabled={addingRoster}/><button disabled={addingRoster||!rosterName.trim()} onClick={addRoster}>{addingRoster?r.saving:r.rosterAdd}</button></div>
   {roster.length>0&&<div className="rosterList">{roster.map(entry=>
