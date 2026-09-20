@@ -397,6 +397,37 @@ exports.notifyOnOrganizerMessage = onDocumentCreated(
   }
 );
 
+exports.moderateMediaUpload = onDocumentCreated(
+  { document: "experiences/{experienceId}/media/{mediaId}", secrets: [openaiApiKey] },
+  async (event) => {
+    const media = event.data?.data();
+    // Video isn't supported by the moderation model (image + text only) - flag it as a known
+    // gap rather than silently skip it forever.
+    if (!media?.downloadURL || !media.contentType?.startsWith("image/")) return;
+
+    try {
+      const client = new OpenAI({ apiKey: openaiApiKey.value().trim() });
+      const moderation = await client.moderations.create({
+        model: "omni-moderation-latest",
+        input: [{ type: "image_url", image_url: { url: media.downloadURL } }],
+      });
+      if (moderation.results?.[0]?.flagged) {
+        console.warn("Uploaded photo flagged by moderation, deleting", event.params.experienceId, event.params.mediaId);
+        await event.data.ref.delete();
+        if (media.storagePath) {
+          try {
+            await admin.storage().bucket().file(media.storagePath).delete();
+          } catch (err) {
+            console.error("Failed to delete flagged storage file", err);
+          }
+        }
+      }
+    } catch (err) {
+      console.error("Photo moderation check failed, proceeding without blocking", err);
+    }
+  }
+);
+
 exports.moderateParticipantAnswer = onDocumentCreated(
   { document: "experiences/{experienceId}/answers/{answerId}", secrets: [openaiApiKey] },
   async (event) => {
