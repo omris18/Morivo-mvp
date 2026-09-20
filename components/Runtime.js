@@ -14,11 +14,28 @@ export default function Runtime({experience,setView,t,user}){
  const [roster,setRoster]=useState([]),[rosterName,setRosterName]=useState(""),[addingRoster,setAddingRoster]=useState(false);
  const [writingCode,setWritingCode]=useState(null),[writeStatus,setWriteStatus]=useState("");
  const [generatingFor,setGeneratingFor]=useState(null);
+ function personalLink(code){
+   return `${window.location.origin}${window.location.pathname}?pcode=${code}`;
+ }
+ async function copyPersonalLink(code,name){
+   const url=personalLink(code);
+   try{
+     await navigator.clipboard.writeText(url);
+     alert(r.personalLinkCopied(name));
+   }catch{
+     window.prompt(r.personalLinkPrompt(name), url);
+   }
+ }
  async function addRoster(){
    if(!firebaseConfigured)return alert(r.connectFirebaseCtrl);
    if(!rosterName.trim())return;
    setAddingRoster(true);
-   try{ await addParticipantCode(experience.id, experience.ownerUid||user?.uid, rosterName.trim()); setRosterName(""); }
+   try{
+     const name=rosterName.trim();
+     const code=await addParticipantCode(experience.id, experience.ownerUid||user?.uid, name);
+     setRosterName("");
+     await copyPersonalLink(code,name);
+   }
    catch(e){ alert(e.message); }
    finally{ setAddingRoster(false); }
  }
@@ -56,9 +73,18 @@ export default function Runtime({experience,setView,t,user}){
    setGeneratingFor(p.id);
    try{
      const code=await addParticipantCode(experience.id, experience.ownerUid||user?.uid, name);
-     await writeTag({code,name});
+     await copyPersonalLink(code,name);
    }catch(e){ alert(e.message); }
    finally{ setGeneratingFor(null); }
+ }
+ async function copyJoinLink(){
+   const url=`${window.location.origin}${window.location.pathname}?join=${experience.joinCode}`;
+   try{
+     await navigator.clipboard.writeText(url);
+     alert(r.joinLinkCopied);
+   }catch{
+     window.prompt(r.joinLinkPrompt, url);
+   }
  }
  function togglePause(){
    if(!firebaseConfigured)return alert(r.connectFirebaseCtrl);
@@ -87,7 +113,7 @@ export default function Runtime({experience,setView,t,user}){
    const stuck=!finished&&mins!==null&&mins>=STUCK_MINUTES;
    return <div className={"journeyTableRow "+(stuck?"stuckRow":"")} style={journeyGridStyle} key={p.id}><span><b>{p.name||p.participantName}</b>{mins!==null&&<small className="lastActive">{stuck?"⚠ ":""}{mins<1?r.justNow:r.minAgo(mins)}</small>}</span>{flow.map((m,i)=>{const done=(p.completedMissionIds||[]).includes(m.id)||i<(p.currentMissionIndex||0),active=i===(p.currentMissionIndex||0);return <span key={m.id} className={done?"cellDone":active?"cellActive":"cellLocked"}>{done?"✓":active?"●":"·"}</span>})}<span><b>{p.points||0}</b></span><span className="rowActionBtns">{!finished&&<button className="skipBtn" onClick={()=>skip(p)} title={r.skipTitle}>⏭</button>}<button className="bonusBtn" onClick={()=>bonus(p)} title={r.bonusTitle}>🎁</button><button disabled={generatingFor===p.id} onClick={()=>generateNfcForParticipant(p)} title={r.generateNfcTitle}>{generatingFor===p.id?"…":"📲"}</button></span></div>
  })}</div>
- <div className="actions"><button onClick={()=>setView("studio")}>{r.studioBtn}</button><button onClick={togglePause}>{experience.paused?`▶ ${r.resumeBtn}`:`⏸ ${r.pauseBtn}`}</button><button onClick={messageEveryone}>{r.messageEveryone}</button><button className="primary" onClick={()=>setView("participant")}>{r.participantMode}</button></div></div>
+ <div className="actions"><button onClick={()=>setView("studio")}>{r.studioBtn}</button><button onClick={togglePause}>{experience.paused?`▶ ${r.resumeBtn}`:`⏸ ${r.pauseBtn}`}</button><button onClick={messageEveryone}>{r.messageEveryone}</button>{experience.joinCode&&<button className="primary" onClick={copyJoinLink}>{r.participantMode}</button>}</div></div>
  <div className="grid2" style={{marginTop:18}}><div className="panel"><div className="tag">{r.liveActivity}</div><div className="feed">{feed.map((x,i)=><div key={i}>{x}</div>)}</div></div><div className="panel"><div className="tag">{r.latestMemories}</div>{media.length?<div className="runtimeMedia">{media.slice(0,6).map(m=>m.contentType?.startsWith("video/")?<video key={m.id} src={m.downloadURL} muted/>:<img key={m.id} src={m.downloadURL} alt="memory"/>)}</div>:<p>{r.noPhotosYet}</p>}</div></div>
  {answers.length>0&&<div className="panel" style={{marginTop:18}}><div className="tag">{r.sharedMemories}</div><div className="feed">{answers.slice(0,8).map(a=><div key={a.id}><b>{a.participantName}</b> — {a.text}</div>)}</div></div>}
  {missionPerf.length>0&&<div className="panel" style={{marginTop:18}}><div className="tag">{r.missionPerformance}</div><div className="missionPerf">{missionPerf.map(m=><div className="missionPerfRow" key={m.id}><b>{m.title}</b><div className="missionPerfBar"><span style={{width:`${m.pct}%`}}></span></div><small>{m.pct}%</small></div>)}</div></div>}
@@ -100,6 +126,7 @@ export default function Runtime({experience,setView,t,user}){
     <span className="rosterName">{entry.name}</span>
     <span className="rosterCode">{entry.code}</span>
     <span className="rosterActions">
+     <button onClick={()=>copyPersonalLink(entry.code,entry.name)}>{r.rosterCopyLink}</button>
      <button disabled={writingCode===entry.code} onClick={()=>writeTag(entry)}>{writingCode===entry.code?writeStatus:r.rosterWriteNfc}</button>
      <button className="danger" onClick={()=>removeRoster(entry)}>{r.rosterRemove}</button>
     </span>
