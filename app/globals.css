@@ -143,3 +143,25 @@ button:active{transform:scale(.96)}
 @keyframes confettiFallLeft{0%{opacity:1;transform:translateY(0) rotate(0deg)}100%{opacity:0;transform:translateY(220px) rotate(-280deg)}}
 @keyframes confettiFallRight{0%{opacity:1;transform:translateY(0) rotate(0deg)}100%{opacity:0;transform:translateY(220px) rotate(280deg)}}
 @media (prefers-reduced-motion: reduce){*{animation-duration:.001ms !important;animation-iteration-count:1 !important;transition-duration:.001ms !important}}
+
+/* Premium design pass: extend the Memory Book's Apple-clean + warm-journal language to every screen */
+.tag{color:#efc186}
+.panel,.hero{position:relative}
+.panel::before,.hero::before{content:"";position:absolute;inset:0;border-radius:inherit;background:linear-gradient(180deg,rgba(255,255,255,.05),transparent 40%);pointer-events:none}
+.kpis div,.runtimeStats div{transition:transform .2s ease,border-color .2s ease}
+.kpis div:hover,.runtimeStats div:hover{transform:translateY(-2px);border-color:rgba(239,193,134,.3)}
+.kpis b,.runtimeStats b{font-family:Georgia,serif;color:#efc186}
+.kpis small,.runtimeStats span{text-transform:uppercase;letter-spacing:.08em;font-size:10px}
+.experienceRow{border:1px solid rgba(255,255,255,.09);border-radius:16px;padding:16px 18px;margin-bottom:10px;background:linear-gradient(180deg,rgba(255,255,255,.025),transparent)}
+.experienceRow:last-child{margin-bottom:0}
+.experienceRow:hover{padding-left:18px;transform:translateY(-1px);border-color:rgba(239,193,134,.28)}
+.experienceRow{transition:background-color .2s ease,padding-left .2s ease,border-color .2s ease,transform .2s ease}
+.experienceRow h3{font:500 20px Georgia,serif}
+.joinMini{border:1px solid rgba(239,193,134,.22)}
+.joinMini b{font-family:Georgia,serif;color:#efc186;font-size:24px}
+.pointsBadge{box-shadow:0 0 0 3px rgba(239,193,134,.22)}
+.finishCard{border:1px solid rgba(239,193,134,.22)}
+.mission{background:rgba(239,193,134,.1);border-color:rgba(239,193,134,.28)}
+.badge{background:rgba(239,193,134,.1);border-color:rgba(239,193,134,.28)}
+.flowNode small{color:#efc186;text-transform:uppercase;letter-spacing:.06em;font-size:10px}
+.phone h3{font:500 24px Georgia,serif;margin:2px 0 10px}
