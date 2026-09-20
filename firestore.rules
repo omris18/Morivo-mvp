@@ -12,10 +12,14 @@ service cloud.firestore {
 
     match /experiences/{experienceId} {
       allow create: if signedIn() && request.resource.data.ownerUid == request.auth.uid;
-      allow read, update, delete: if signedIn() && (
+      // Participants only ever need to READ the experience (to see missions/status) - every
+      // legitimate write (Studio edits, publish, pause) is organizer-only. A joined participant
+      // must never be able to update or delete the experience document itself.
+      allow read: if signedIn() && (
         resource.data.ownerUid == request.auth.uid ||
         exists(/databases/$(database)/documents/experiences/$(experienceId)/participants/$(request.auth.uid))
       );
+      allow update, delete: if signedIn() && resource.data.ownerUid == request.auth.uid;
 
       match /participants/{uid} {
         allow read: if signedIn();

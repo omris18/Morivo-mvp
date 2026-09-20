@@ -106,7 +106,11 @@ export default function Home(){
  })[view],[view,experience,experiences,user,activeId,lang]);
 
  if(view==="portal"){
-   return <Participant {...props} portal portalCode={portalCode}/>;
+   return <Participant {...props} portal chromeless portalCode={portalCode}/>;
+ }
+
+ if(view==="participant" && deepLinkCode){
+   return <Participant {...props} chromeless/>;
  }
 
  return <div className="appShell" dir={dir}>

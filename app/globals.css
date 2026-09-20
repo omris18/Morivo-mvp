@@ -181,6 +181,10 @@ button:active{transform:scale(.96)}
 .portalShell{min-height:100vh;width:100%;background-size:cover;background-position:center;display:flex;align-items:center;justify-content:center;padding:24px}
 .portalLoading{color:#f7f4ee;font-size:16px;font-weight:600;text-align:center;padding:20px 28px;border-radius:16px;background:rgba(5,11,19,.55);backdrop-filter:blur(6px)}
 .portalCard{width:100%;max-width:460px;padding:20px}
+.portalCard h2{font:500 32px Georgia,serif;color:#fff}
+.portalCard label{display:block;margin:12px 0 6px;font-weight:700;color:#fff}
+.portalCard input,.portalCard textarea,.portalCard select{width:100%;padding:13px;border-radius:12px;border:1px solid rgba(255,255,255,.18);background:rgba(5,11,19,.6);color:#fff}
+.portalCard p{color:#e7ecf3}
 .rosterHint{color:#9eaabd;font-size:13px;margin:0 0 6px}
 .rosterList{margin-top:14px;display:flex;flex-direction:column;gap:8px}
 .rosterRow{display:flex;align-items:center;gap:12px;padding:10px 14px;border:1px solid rgba(255,255,255,.1);border-radius:12px;background:#0a1624;flex-wrap:wrap}

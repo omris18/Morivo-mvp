@@ -9,7 +9,7 @@ import LinkifiedText from "./LinkifiedText";
 import {distanceMeters,getCurrentPosition} from "../lib/geo";
 import {enablePushNotifications,pushSupported} from "../lib/push";
 import {experienceGradient} from "../lib/theme";
-export default function Participant({experience,setExperience,setView,setActiveId,deepLinkCode,t,portal,portalCode}){
+export default function Participant({experience,setExperience,setView,setActiveId,deepLinkCode,t,portal,portalCode,chromeless}){
  const p=t.participant;
  const [code,setCode]=useState(deepLinkCode||experience.joinCode||""),[name,setName]=useState("Guest"),[joined,setJoined]=useState(false),[eid,setEid]=useState(experience.id),[uid,setUid]=useState("");
  const [portalResolving,setPortalResolving]=useState(!!portal);
@@ -39,7 +39,7 @@ export default function Participant({experience,setExperience,setView,setActiveI
   return ()=>{alive=false};
  },[portal,portalCode]);
  useEffect(()=>{if(firebaseConfigured&&eid&&eid!=="thailand-demo")return subscribeExperience(eid,x=>x&&setExperience(x))},[eid]);
- useEffect(()=>{if(portal&&firebaseConfigured&&eid&&eid!=="thailand-demo")return subscribeMedia(eid,setCoverMedia)},[portal,eid]);
+ useEffect(()=>{if(chromeless&&firebaseConfigured&&eid&&eid!=="thailand-demo")return subscribeMedia(eid,setCoverMedia)},[chromeless,eid]);
  useEffect(()=>{if(firebaseConfigured&&joined&&eid&&uid){initializeProgress(eid,uid);return subscribeMyProgress(eid,uid,setProg)}},[joined,eid,uid]);
  useEffect(()=>{if(firebaseConfigured&&joined&&eid)return subscribeMessages(eid,setMessages)},[joined,eid]);
  const latestMessage=messages.find(m=>!dismissed.includes(m.id));
@@ -128,10 +128,12 @@ export default function Participant({experience,setExperience,setView,setActiveI
  {mission.type==="note"&&<textarea className="noteInput" placeholder={p.writeMemory} value={noteText} onChange={e=>setNoteText(e.target.value)}/>}
  {busy&&(mission.type==="photo"||mission.type==="video")&&<div className="uploadProgress"><div style={{width:`${pct}%`}}></div><span>{pct}%</span></div>}<div className="mission">{p.reward}: {mission.reward||`${mission.points||100} pts`}</div><button className="primary" disabled={busy||experience.paused} onClick={complete}>{busy?p.saving:p.completeContinue}</button></div>}</>;
 
- if(portal){
-  return <div className="portalShell" style={{backgroundImage:portalBg}}><div className="portalCard">{joinedContent}</div></div>;
+ const joinForm=<><h2>{p.joinTitle}</h2><label>{p.yourName}</label><input value={name} onChange={e=>setName(e.target.value)}/><label>{p.joinCode}</label><input value={code} onChange={e=>setCode(e.target.value.toUpperCase())} onKeyDown={e=>e.key==="Enter"&&join()}/><div className="actions centerActions"><button className="primary" disabled={joining} onClick={join}>{joining?p.joining:p.joinBtn}</button></div></>;
+
+ if(chromeless){
+  return <div className="portalShell" style={{backgroundImage:portalBg}}><div className="portalCard">{!portal&&<div className="tag">{p.tag}</div>}{joined?joinedContent:joinForm}</div></div>;
  }
 
- return <section className="panel narrow"><div className="tag">{p.tag}</div>{!joined?<><h2>{p.joinTitle}</h2><label>{p.yourName}</label><input value={name} onChange={e=>setName(e.target.value)}/><label>{p.joinCode}</label><input value={code} onChange={e=>setCode(e.target.value.toUpperCase())} onKeyDown={e=>e.key==="Enter"&&join()}/><div className="actions centerActions"><button className="primary" disabled={joining} onClick={join}>{joining?p.joining:p.joinBtn}</button></div></>:joinedContent}
+ return <section className="panel narrow"><div className="tag">{p.tag}</div>{joined?joinedContent:joinForm}
  <div className="actions centerActions"><button onClick={()=>setView("runtime")}>{p.organizerRuntime}</button></div></section>
 }
