@@ -2,14 +2,39 @@
 import {useEffect,useMemo,useState} from "react";
 import QRCode from "qrcode";
 import {firebaseConfigured} from "../lib/firebase";
-import {subscribeEvents,subscribeParticipants,subscribeAllProgress,subscribeAnswers,sendOrganizerMessage,skipMissionForParticipant,awardBonusPoints,updateExperienceRemote} from "../lib/morivoData";
+import {subscribeEvents,subscribeParticipants,subscribeAllProgress,subscribeAnswers,sendOrganizerMessage,skipMissionForParticipant,awardBonusPoints,updateExperienceRemote,addParticipantCode,subscribeParticipantCodes,removeParticipantCode} from "../lib/morivoData";
 import {subscribeMedia} from "../lib/mediaData";
+import {writeNfcTag,nfcWriteSupported} from "../lib/nfc";
 const STUCK_MINUTES=3;
 function minutesAgo(ts){ if(!ts?.toMillis)return null; return Math.floor((Date.now()-ts.toMillis())/60000); }
-export default function Runtime({experience,setView,t}){
+export default function Runtime({experience,setView,t,user}){
  const r=t.runtime;
  const [people,setPeople]=useState([]),[feed,setFeed]=useState([]),[media,setMedia]=useState([]),[progress,setProgress]=useState([]),[answers,setAnswers]=useState([]);
  const [qrDataUrl,setQrDataUrl]=useState(null);
+ const [roster,setRoster]=useState([]),[rosterName,setRosterName]=useState(""),[addingRoster,setAddingRoster]=useState(false);
+ const [writingCode,setWritingCode]=useState(null),[writeStatus,setWriteStatus]=useState("");
+ async function addRoster(){
+   if(!firebaseConfigured)return alert(r.connectFirebaseCtrl);
+   if(!rosterName.trim())return;
+   setAddingRoster(true);
+   try{ await addParticipantCode(experience.id, experience.ownerUid||user?.uid, rosterName.trim()); setRosterName(""); }
+   catch(e){ alert(e.message); }
+   finally{ setAddingRoster(false); }
+ }
+ async function removeRoster(code){
+   if(!window.confirm(r.confirmRemoveRoster))return;
+   removeParticipantCode(code).catch(e=>alert(e.message));
+ }
+ async function writeTag(entry){
+   if(!nfcWriteSupported())return alert(r.nfcNotSupported);
+   setWritingCode(entry.code);setWriteStatus(r.nfcWaiting);
+   const url=`${window.location.origin}${window.location.pathname}?pcode=${entry.code}`;
+   try{
+     await writeNfcTag(url,{onStatus:(s)=>setWriteStatus(s==="writing"?r.nfcWriting:r.nfcWaiting)});
+     alert(r.nfcWriteSuccess(entry.name));
+   }catch(e){ alert(e.message); }
+   finally{ setWritingCode(null);setWriteStatus(""); }
+ }
  function messageEveryone(){
    if(!firebaseConfigured)return alert(r.connectFirebaseMsg);
    const text=window.prompt(r.sendMessagePrompt);
@@ -30,6 +55,7 @@ export default function Runtime({experience,setView,t}){
  useEffect(()=>{if(!firebaseConfigured||!experience.id||experience.id==="thailand-demo"){setPeople([{id:"1",name:"Omri"},{id:"2",name:"Tair"},{id:"3",name:"Maya"}]);setProgress([{uid:"1",currentMissionIndex:4,points:640},{uid:"2",currentMissionIndex:3,points:590},{uid:"3",currentMissionIndex:2,points:520}]);return}
  const a=subscribeParticipants(experience.id,setPeople),b=subscribeEvents(experience.id,evs=>setFeed(evs.map(x=>x.text))),c=subscribeMedia(experience.id,setMedia),d=subscribeAllProgress(experience.id,setProgress),e=subscribeAnswers(experience.id,setAnswers);return()=>{a();b();c();d();e()}},[experience.id]);
  useEffect(()=>{if(!experience.joinCode){setQrDataUrl(null);return}const link=`${window.location.origin}${window.location.pathname}?join=${experience.joinCode}`;QRCode.toDataURL(link,{margin:1,width:160,color:{dark:"#050b13",light:"#ffffff"}}).then(setQrDataUrl).catch(()=>setQrDataUrl(null))},[experience.joinCode]);
+ useEffect(()=>{if(!firebaseConfigured||!experience.id||experience.id==="thailand-demo")return;return subscribeParticipantCodes(experience.id,setRoster)},[experience.id]);
  const flow=experience.flow||[],merged=useMemo(()=>people.map(p=>({...p,...(progress.find(x=>x.uid===p.id)||{})})),[people,progress]);
  const missionPerf=useMemo(()=>flow.map((m,i)=>{
    const doneCount=merged.filter(p=>(p.completedMissionIds||[]).includes(m.id)||i<(p.currentMissionIndex||0)).length;
@@ -53,5 +79,20 @@ export default function Runtime({experience,setView,t}){
  <div className="grid2" style={{marginTop:18}}><div className="panel"><div className="tag">{r.liveActivity}</div><div className="feed">{feed.map((x,i)=><div key={i}>{x}</div>)}</div></div><div className="panel"><div className="tag">{r.latestMemories}</div>{media.length?<div className="runtimeMedia">{media.slice(0,6).map(m=>m.contentType?.startsWith("video/")?<video key={m.id} src={m.downloadURL} muted/>:<img key={m.id} src={m.downloadURL} alt="memory"/>)}</div>:<p>{r.noPhotosYet}</p>}</div></div>
  {answers.length>0&&<div className="panel" style={{marginTop:18}}><div className="tag">{r.sharedMemories}</div><div className="feed">{answers.slice(0,8).map(a=><div key={a.id}><b>{a.participantName}</b> — {a.text}</div>)}</div></div>}
  {missionPerf.length>0&&<div className="panel" style={{marginTop:18}}><div className="tag">{r.missionPerformance}</div><div className="missionPerf">{missionPerf.map(m=><div className="missionPerfRow" key={m.id}><b>{m.title}</b><div className="missionPerfBar"><span style={{width:`${m.pct}%`}}></span></div><small>{m.pct}%</small></div>)}</div></div>}
+ <div className="panel" style={{marginTop:18}}>
+  <div className="tag">{r.roster}</div>
+  <p className="rosterHint">{r.rosterHint}</p>
+  <div className="reviseBar"><input placeholder={r.rosterNamePlaceholder} value={rosterName} onChange={e=>setRosterName(e.target.value)} onKeyDown={e=>e.key==="Enter"&&addRoster()} disabled={addingRoster}/><button disabled={addingRoster||!rosterName.trim()} onClick={addRoster}>{addingRoster?r.saving:r.rosterAdd}</button></div>
+  {roster.length>0&&<div className="rosterList">{roster.map(entry=>
+   <div className="rosterRow" key={entry.code}>
+    <span className="rosterName">{entry.name}</span>
+    <span className="rosterCode">{entry.code}</span>
+    <span className="rosterActions">
+     <button disabled={writingCode===entry.code} onClick={()=>writeTag(entry)}>{writingCode===entry.code?writeStatus:r.rosterWriteNfc}</button>
+     <button className="danger" onClick={()=>removeRoster(entry.code)}>{r.rosterRemove}</button>
+    </span>
+   </div>
+  )}</div>}
+ </div>
  </section>
 }

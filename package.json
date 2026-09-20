@@ -6,6 +6,7 @@
     "cap:sync": "next build && npx cap sync"
   },
   "dependencies": {
+    "@capgo/capacitor-nfc": "^8.2.8",
     "firebase": "12.17.1",
     "jsqr": "^1.4.0",
     "next": "^14.2.35",

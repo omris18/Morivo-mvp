@@ -76,5 +76,14 @@ service cloud.firestore {
       allow create, update: if signedIn() && request.resource.data.ownerUid == request.auth.uid;
       allow delete: if signedIn() && resource.data.ownerUid == request.auth.uid;
     }
+
+    // Pre-registered personal codes (one per named participant, meant for NFC tags) -
+    // resolved on tap without needing the shared join code.
+    match /participantCodes/{code} {
+      allow read: if signedIn();
+      allow create: if signedIn() && request.resource.data.ownerUid == request.auth.uid
+        && request.resource.data.name is string && request.resource.data.name.size() <= 80;
+      allow delete: if signedIn() && resource.data.ownerUid == request.auth.uid;
+    }
   }
 }

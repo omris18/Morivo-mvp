@@ -221,7 +221,7 @@ export default function Studio({ experience, setExperience, setView, t }) {
         <h2>{experience.name || s.untitled}</h2>
 
         <div className="atomBar">
-          {["photo", "video", "map", "quiz", "puzzle", "note", "reward", "story", "nfc"].map(
+          {["photo", "video", "map", "quiz", "puzzle", "note", "reward", "story"].map(
             (type) => (
               <button key={type} onClick={() => add(type)}>
                 ＋ {type}

@@ -46,6 +46,7 @@ export default function Home(){
   });
   const [activeId,setActiveId]=useState(null);
   const [deepLinkCode,setDeepLinkCode]=useState("");
+  const [portalCode,setPortalCode]=useState("");
   const [lang,setLang]=useState("en");
 
  useEffect(()=>{
@@ -57,8 +58,11 @@ export default function Home(){
  },[lang]);
 
  useEffect(()=>{
-   const q=new URLSearchParams(window.location.search).get("join");
-   if(q){ setDeepLinkCode(q.toUpperCase()); setView("participant"); }
+   const params=new URLSearchParams(window.location.search);
+   const pc=params.get("pcode");
+   const q=params.get("join");
+   if(pc){ setPortalCode(pc.toUpperCase()); setView("portal"); }
+   else if(q){ setDeepLinkCode(q.toUpperCase()); setView("participant"); }
  },[]);
 
  useEffect(()=>{
@@ -90,6 +94,7 @@ export default function Home(){
  const t=STRINGS[lang];
  const dir=getDir(lang);
  const props={experience,setExperience,setView,user,experiences,setExperiences,activeId,setActiveId,openExperience,deepLinkCode,lang,setLang,t,dir};
+
  const Screen=useMemo(()=>({
    dashboard:<Dashboard {...props}/>,
    ai:<AICreator {...props}/>,
@@ -99,6 +104,10 @@ export default function Home(){
    participant:<Participant {...props}/>,
    memory:<Memory {...props}/>
  })[view],[view,experience,experiences,user,activeId,lang]);
+
+ if(view==="portal"){
+   return <Participant {...props} portal portalCode={portalCode}/>;
+ }
 
  return <div className="appShell" dir={dir}>
    <Sidebar view={view} setView={setView} t={t}/>
