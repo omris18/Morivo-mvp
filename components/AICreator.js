@@ -33,8 +33,11 @@ function generateDraft(f){
 
 export default function AICreator({setExperience,setView,setActiveId,user,lang,t,dir}){
  const a=t.aiCreator;
- const [form,setForm]=useState({prompt:"",type:"",location:"",duration:"",people:"",hotelBooked:false}),[building,setBuilding]=useState(false),[step,setStep]=useState(0);
+ const [form,setForm]=useState({prompt:"",type:"",location:"",duration:"",people:"",hotelBooked:false,interests:[]}),[building,setBuilding]=useState(false),[step,setStep]=useState(0);
  const isFamilyTrip=form.type===TYPE_OPTIONS.en[0]||form.type===TYPE_OPTIONS.he[0];
+ function toggleInterest(key){
+  setForm(f=>({...f,interests:f.interests.includes(key)?f.interests.filter(x=>x!==key):[...f.interests,key]}));
+ }
  useEffect(()=>{if(!building)return;const id=setInterval(()=>setStep(x=>Math.min(x+1,a.thinking.length-1)),900);return()=>clearInterval(id)},[building,lang]);
  async function build(){
   if(!form.prompt.trim())return alert(a.describeFirst);
@@ -46,7 +49,7 @@ export default function AICreator({setExperience,setView,setActiveId,user,lang,t
    await ensureUser();
    const generate=httpsCallable(functions,"generateExperience");
    const needsHotel=isFamilyTrip&&!form.hotelBooked;
-   const result=await generate({prompt:form.prompt,type:form.type,location:form.location,duration:form.duration,people:form.people,lang,multiDay:isFamilyTrip,needsHotel});
+   const result=await generate({prompt:form.prompt,type:form.type,location:form.location,duration:form.duration,people:form.people,lang,multiDay:isFamilyTrip,needsHotel,interests:isFamilyTrip?form.interests:[]});
    flow=result.data.flow;name=result.data.name;usedAI=true;
   }catch(e){
    console.error("AI generation failed, falling back to the draft generator",e);
@@ -95,6 +98,7 @@ export default function AICreator({setExperience,setView,setActiveId,user,lang,t
    <div className="fieldRow"><div><label>{a.type}</label><select value={form.type} onChange={e=>setForm({...form,type:e.target.value})}><option value=""></option>{TYPE_OPTIONS[lang].map(x=><option key={x} value={x}>{x}</option>)}</select></div><div><label>{a.location}</label><input value={form.location} onChange={e=>setForm({...form,location:e.target.value})}/></div></div>
    <div className="fieldRow"><div><label>{isFamilyTrip?a.days:a.duration}</label><select value={form.duration} onChange={e=>setForm({...form,duration:e.target.value})}><option value=""></option>{(isFamilyTrip?DAY_OPTIONS:DURATION_OPTIONS)[lang].map(x=><option key={x} value={x}>{x}</option>)}</select></div><div><label>{a.people}</label><input type="number" value={form.people} onChange={e=>setForm({...form,people:e.target.value})}/></div></div>
    {isFamilyTrip&&<label className="hotelCheck"><input type="checkbox" checked={form.hotelBooked} onChange={e=>setForm({...form,hotelBooked:e.target.checked})}/> {a.hotel}</label>}
+   {isFamilyTrip&&<div className="interestsField"><label>{a.interests}</label><div className="chipRow">{Object.keys(a.interestOptions).map(key=><button type="button" key={key} className={"chip "+(form.interests.includes(key)?"selected":"")} onClick={()=>toggleInterest(key)}>{a.interestOptions[key]}</button>)}</div></div>}
    <div className="actions"><button onClick={()=>setView("create")}>{a.blank}</button><button className="primary aiBuildButton" onClick={build}>✦ {a.build}</button></div>
   </div>
   <div className="panel aiPromise"><div className="constellation"><span>📍</span><span>📸</span><span>❓</span><span>🧩</span><span>🏆</span><span>📖</span></div><h2>{a.promiseTitle1}<br/>{a.promiseTitle2}</h2><p>{a.promiseDesc}</p></div>

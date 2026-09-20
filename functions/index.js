@@ -115,8 +115,20 @@ async function suggestHotel({ location, prompt, people, duration, lang }) {
   };
 }
 
-async function suggestAttractions({ location, prompt, people, duration, lang }) {
-  const attrPrompt = `Suggest 3 to 4 specific, real attractions or activities in or near "${location}" that would suit this group: "${prompt}"${people ? ` (${people} people)` : ""}${duration ? `, over ${duration}` : ""}. For each, give a real, findable attraction or activity name and a 1-2 sentence reason it fits this exact group - their ages, interests, and any dietary/religious/accessibility needs mentioned - practical and specific, not generic travel-blog language. Write in the same language as the group description above (detect it automatically). Respond with STRICT JSON only, no markdown fencing, no commentary, matching exactly this shape: {"options":[{"name":"attraction or activity name","why":"1-2 sentence reason"}]}`;
+const INTEREST_LABELS = {
+  nature: "Nature & Outdoors",
+  museums: "Museums & Culture",
+  food: "Food & Dining",
+  shopping: "Shopping",
+  adventure: "Adventure & Extreme sports",
+  kids: "Kid-Friendly activities",
+  nightlife: "Nightlife & Entertainment",
+  relaxation: "Relaxation & Wellness",
+};
+
+async function suggestAttractions({ location, prompt, people, duration, lang, interests }) {
+  const interestLabels = Array.isArray(interests) ? interests.map((i) => INTEREST_LABELS[i]).filter(Boolean) : [];
+  const attrPrompt = `Suggest 3 to 4 specific, real attractions or activities in or near "${location}" that would suit this group: "${prompt}"${people ? ` (${people} people)` : ""}${duration ? `, over ${duration}` : ""}.${interestLabels.length ? ` The group specifically wants to focus on these categories: ${interestLabels.join(", ")} - prioritize real options that match those categories over generic sightseeing.` : ""} For each, give a real, findable attraction or activity name and a 1-2 sentence reason it fits this exact group - their ages, interests, and any dietary/religious/accessibility needs mentioned - practical and specific, not generic travel-blog language. Write in the same language as the group description above (detect it automatically). Respond with STRICT JSON only, no markdown fencing, no commentary, matching exactly this shape: {"options":[{"name":"attraction or activity name","why":"1-2 sentence reason"}]}`;
   const data = await askGeminiJSON(attrPrompt, "attraction suggestion");
   if (!Array.isArray(data?.options) || !data.options.length) return null;
   const text = optionsToMissionText(data.options, 4, mapsSearchUrl, location);
@@ -136,7 +148,7 @@ exports.generateExperience = onCall({ secrets: [openaiApiKey, geminiApiKey], cor
     throw new HttpsError("unauthenticated", "Sign in (even anonymously) before generating an experience.");
   }
 
-  const { prompt, type, location, duration, people, lang, multiDay, needsHotel } = request.data || {};
+  const { prompt, type, location, duration, people, lang, multiDay, needsHotel, interests } = request.data || {};
 
   if (!prompt || !String(prompt).trim()) {
     throw new HttpsError("invalid-argument", "A description of the experience is required.");
@@ -155,7 +167,7 @@ exports.generateExperience = onCall({ secrets: [openaiApiKey, geminiApiKey], cor
   ].filter(Boolean).join("\n");
 
   const hotelMissionPromise = (needsHotel && location) ? suggestHotel({ location, prompt, people, duration, lang }) : Promise.resolve(null);
-  const attractionsMissionPromise = (multiDay && location) ? suggestAttractions({ location, prompt, people, duration, lang }) : Promise.resolve(null);
+  const attractionsMissionPromise = (multiDay && location) ? suggestAttractions({ location, prompt, people, duration, lang, interests }) : Promise.resolve(null);
 
   let completion;
   try {
