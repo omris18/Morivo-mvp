@@ -6,7 +6,7 @@ export default function Sidebar({view,setView,t}){
    <div className="tag">{t.brandTag}</div>
    <nav>{items.map(id=>{
      const target=id==="participant"?"runtime":id;
-     return <button key={id} onClick={()=>setView(target)} className={view===target?"active":""}>
+     return <button key={id} onClick={()=>setView(target)} className={view===id?"active":""}>
       <span>{icons[id]}</span>{t.nav[id]}
      </button>;
    })}</nav>
