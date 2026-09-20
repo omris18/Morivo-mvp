@@ -4,8 +4,11 @@ export default function Sidebar({view,setView,t}){
  return <aside className="sidebar">
    <div className="brand">◆ {t.brand}</div>
    <div className="tag">{t.brandTag}</div>
-   <nav>{items.map(id=><button key={id} onClick={()=>setView(id)} className={view===id?"active":""}>
-    <span>{icons[id]}</span>{t.nav[id]}
-   </button>)}</nav>
+   <nav>{items.map(id=>{
+     const target=id==="participant"?"runtime":id;
+     return <button key={id} onClick={()=>setView(target)} className={view===target?"active":""}>
+      <span>{icons[id]}</span>{t.nav[id]}
+     </button>;
+   })}</nav>
  </aside>
 }

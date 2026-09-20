@@ -13,6 +13,7 @@ export default function Runtime({experience,setView,t,user}){
  const [qrDataUrl,setQrDataUrl]=useState(null);
  const [roster,setRoster]=useState([]),[rosterName,setRosterName]=useState(""),[addingRoster,setAddingRoster]=useState(false);
  const [writingCode,setWritingCode]=useState(null),[writeStatus,setWriteStatus]=useState("");
+ const [generatingFor,setGeneratingFor]=useState(null);
  async function addRoster(){
    if(!firebaseConfigured)return alert(r.connectFirebaseCtrl);
    if(!rosterName.trim())return;
@@ -21,9 +22,9 @@ export default function Runtime({experience,setView,t,user}){
    catch(e){ alert(e.message); }
    finally{ setAddingRoster(false); }
  }
- async function removeRoster(code){
-   if(!window.confirm(r.confirmRemoveRoster))return;
-   removeParticipantCode(code).catch(e=>alert(e.message));
+ async function removeRoster(entry){
+   if(!window.confirm(r.confirmRemoveRoster(entry.name)))return;
+   removeParticipantCode(entry.code).catch(e=>alert(e.message));
  }
  async function writeTag(entry){
    if(!nfcWriteSupported())return alert(r.nfcNotSupported);
@@ -48,6 +49,17 @@ export default function Runtime({experience,setView,t,user}){
    if(!firebaseConfigured)return alert(r.connectFirebaseCtrl);
    awardBonusPoints(experience.id,p.id,50).catch(e=>alert(e.message));
  }
+ async function generateNfcForParticipant(p){
+   if(!firebaseConfigured)return alert(r.connectFirebaseCtrl);
+   const name=p.name||p.participantName||"";
+   if(!name.trim())return;
+   setGeneratingFor(p.id);
+   try{
+     const code=await addParticipantCode(experience.id, experience.ownerUid||user?.uid, name);
+     await writeTag({code,name});
+   }catch(e){ alert(e.message); }
+   finally{ setGeneratingFor(null); }
+ }
  function togglePause(){
    if(!firebaseConfigured)return alert(r.connectFirebaseCtrl);
    updateExperienceRemote(experience.id,{paused:!experience.paused}).catch(e=>alert(e.message));
@@ -64,7 +76,7 @@ export default function Runtime({experience,setView,t,user}){
  const completionRate=merged.length&&flow.length?Math.round((merged.filter(x=>(x.currentMissionIndex||0)>=flow.length).length/merged.length)*100):0;
  const avgPoints=merged.length?Math.round(merged.reduce((s,p)=>s+(p.points||0),0)/merged.length):0;
  const dropOff=useMemo(()=>missionPerf.length&&merged.length?missionPerf.reduce((worst,m)=>worst===null||m.pct<worst.pct?m:worst,null):null,[missionPerf,merged.length]);
- const journeyGridStyle={gridTemplateColumns:`minmax(140px,1.5fr) repeat(${flow.length},42px) 70px 76px`,minWidth:`${140+flow.length*42+70+76+5*(flow.length+3)}px`};
+ const journeyGridStyle={gridTemplateColumns:`minmax(140px,1.5fr) repeat(${flow.length},42px) 70px 116px`,minWidth:`${140+flow.length*42+70+116+5*(flow.length+3)}px`};
  return <section><div className="panel"><div className="runtimeTitle"><div><div className="tag">{r.tag}</div><h2>{experience.name}</h2>{experience.paused&&<span className="pausedTag">⏸ {r.paused}</span>}</div><div className="joinMini"><small>{r.joinCode}</small><b>{experience.joinCode||r.publishFirst}</b>{qrDataUrl&&<img className="joinQr" src={qrDataUrl} alt="Join QR code"/>}</div></div>
  <div className="runtimeStats"><div><b>{merged.length}</b><span>{r.participants}</span></div><div><b>{flow.length}</b><span>{r.missions}</span></div><div><b>{media.length}</b><span>{r.memories}</span></div><div><b>{merged.filter(x=>(x.currentMissionIndex||0)>=flow.length).length}</b><span>{r.finished}</span></div></div>
  {merged.length>0&&<div className="runtimeStats insightsRow"><div><b>{completionRate}%</b><span>{r.completionRate}</span></div><div><b>{avgPoints}</b><span>{r.avgPoints}</span></div>{dropOff&&<div><b>{dropOff.pct}%</b><span>{r.dropOffAt} · {dropOff.title}</span></div>}</div>}
@@ -73,7 +85,7 @@ export default function Runtime({experience,setView,t,user}){
    const finished=(p.currentMissionIndex||0)>=flow.length;
    const mins=minutesAgo(p.updatedAt);
    const stuck=!finished&&mins!==null&&mins>=STUCK_MINUTES;
-   return <div className={"journeyTableRow "+(stuck?"stuckRow":"")} style={journeyGridStyle} key={p.id}><span><b>{p.name||p.participantName}</b>{mins!==null&&<small className="lastActive">{stuck?"⚠ ":""}{mins<1?r.justNow:r.minAgo(mins)}</small>}</span>{flow.map((m,i)=>{const done=(p.completedMissionIds||[]).includes(m.id)||i<(p.currentMissionIndex||0),active=i===(p.currentMissionIndex||0);return <span key={m.id} className={done?"cellDone":active?"cellActive":"cellLocked"}>{done?"✓":active?"●":"·"}</span>})}<span><b>{p.points||0}</b></span><span className="rowActionBtns">{!finished&&<button className="skipBtn" onClick={()=>skip(p)} title={r.skipTitle}>⏭</button>}<button className="bonusBtn" onClick={()=>bonus(p)} title={r.bonusTitle}>🎁</button></span></div>
+   return <div className={"journeyTableRow "+(stuck?"stuckRow":"")} style={journeyGridStyle} key={p.id}><span><b>{p.name||p.participantName}</b>{mins!==null&&<small className="lastActive">{stuck?"⚠ ":""}{mins<1?r.justNow:r.minAgo(mins)}</small>}</span>{flow.map((m,i)=>{const done=(p.completedMissionIds||[]).includes(m.id)||i<(p.currentMissionIndex||0),active=i===(p.currentMissionIndex||0);return <span key={m.id} className={done?"cellDone":active?"cellActive":"cellLocked"}>{done?"✓":active?"●":"·"}</span>})}<span><b>{p.points||0}</b></span><span className="rowActionBtns">{!finished&&<button className="skipBtn" onClick={()=>skip(p)} title={r.skipTitle}>⏭</button>}<button className="bonusBtn" onClick={()=>bonus(p)} title={r.bonusTitle}>🎁</button><button disabled={generatingFor===p.id} onClick={()=>generateNfcForParticipant(p)} title={r.generateNfcTitle}>{generatingFor===p.id?"…":"📲"}</button></span></div>
  })}</div>
  <div className="actions"><button onClick={()=>setView("studio")}>{r.studioBtn}</button><button onClick={togglePause}>{experience.paused?`▶ ${r.resumeBtn}`:`⏸ ${r.pauseBtn}`}</button><button onClick={messageEveryone}>{r.messageEveryone}</button><button className="primary" onClick={()=>setView("participant")}>{r.participantMode}</button></div></div>
  <div className="grid2" style={{marginTop:18}}><div className="panel"><div className="tag">{r.liveActivity}</div><div className="feed">{feed.map((x,i)=><div key={i}>{x}</div>)}</div></div><div className="panel"><div className="tag">{r.latestMemories}</div>{media.length?<div className="runtimeMedia">{media.slice(0,6).map(m=>m.contentType?.startsWith("video/")?<video key={m.id} src={m.downloadURL} muted/>:<img key={m.id} src={m.downloadURL} alt="memory"/>)}</div>:<p>{r.noPhotosYet}</p>}</div></div>
@@ -89,7 +101,7 @@ export default function Runtime({experience,setView,t,user}){
     <span className="rosterCode">{entry.code}</span>
     <span className="rosterActions">
      <button disabled={writingCode===entry.code} onClick={()=>writeTag(entry)}>{writingCode===entry.code?writeStatus:r.rosterWriteNfc}</button>
-     <button className="danger" onClick={()=>removeRoster(entry.code)}>{r.rosterRemove}</button>
+     <button className="danger" onClick={()=>removeRoster(entry)}>{r.rosterRemove}</button>
     </span>
    </div>
   )}</div>}
