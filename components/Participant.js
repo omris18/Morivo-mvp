@@ -136,6 +136,25 @@ export default function Participant({experience,setExperience,setView,setActiveI
     </div>
    </div>;
  })}</div>
+ {chromeless&&(experience.adultsCount>0||experience.childrenCount>0)&&<div className="familyPassport">
+  <div className="journeySectionTitle">{p.familyPassportTitle}</div>
+  <div className="familyIcons">
+   {Array.from({length:experience.adultsCount||0}).map((_,i)=><span key={"a"+i}>🧑</span>)}
+   {Array.from({length:experience.childrenCount||0}).map((_,i)=><span key={"c"+i}>🧒</span>)}
+  </div>
+ </div>}
+ {chromeless&&(experience.flights||[]).length>0&&<div className="flightsSection">
+  <div className="journeySectionTitle">{p.ourFlightsTitle}</div>
+  {experience.flights.map(f=>{
+   const dirLabel={outbound:p.flightOutbound,return:p.flightReturn,internal:p.flightInternal}[f.direction]||f.direction;
+   return <div className="flightItem" key={f.id}>
+    <b>{f.flightNumber}</b>
+    <span>{f.date?formatStopDate(f.date,lang):""}{f.time?" · "+f.time:""}</span>
+    <small className={"flightDirTag "+f.direction}>{dirLabel}</small>
+   </div>;
+  })}
+ </div>}
+ {chromeless&&<button type="button" className="printJourneyBtn noPrint" onClick={()=>window.print()}>🖨 {p.downloadJourneyPdf}</button>}
  {finished?<div className="finishCard viewFade" key="finish"><div className="confetti">{Array.from({length:16}).map((_,i)=><span key={i}></span>)}</div><div className="finishIcon">🏆</div><h2>{p.journeyCompleteTitle}</h2><p>{p.journeyCompleteSub}</p>{badges.length>0&&<div className="badgeRow">{badges.map(b=><div className="badge" key={b.id} title={b.label}><span>{b.icon}</span><small>{b.label}</small></div>)}</div>}<button className="primary" onClick={()=>setView("memory")}>{p.openMemoryBook}</button></div>:mission&&<div className="phone journeyPhone viewFade" key={mission.id}><div className="missionType">{mission.type}</div><h3>{mission.title}</h3><p><LinkifiedText text={mission.text}/></p>
  {mission.type==="photo"&&<label className="uploadBox"><span>{p.choosePhoto}</span><input type="file" accept="image/*" capture="environment" onChange={e=>setFile(e.target.files?.[0]||null)}/></label>}
  {mission.type==="video"&&<label className="uploadBox"><span>{p.chooseVideo}</span><input type="file" accept="video/*" capture="environment" onChange={e=>setFile(e.target.files?.[0]||null)}/></label>}

@@ -3,6 +3,10 @@ import {firebaseConfigured} from "../lib/firebase";
 import {computeOwnerStats,deleteExperienceRemote} from "../lib/morivoData";
 
 export default function Dashboard({experience,experiences,setView,openExperience,activeId,setActiveId,t}){
+ function goToCategory(view){
+   if(activeId) setView(view);
+   else document.getElementById("yourExperiencesList")?.scrollIntoView({behavior:"smooth",block:"start"});
+ }
  const [deletingId,setDeletingId]=useState(null);
  const [stats,setStats]=useState({participants:0,missionsCompleted:0,memoriesCreated:0});
  const rows=experiences?.length ? experiences : [experience];
@@ -38,10 +42,12 @@ export default function Dashboard({experience,experiences,setView,openExperience
      </div>
    </div>
    <div className="kpis">
-     <div><small>{d.experiences}</small><b>{experiences?.length||0}</b></div><div><small>{d.participants}</small><b>{stats.participants}</b></div>
-     <div><small>{d.missionsCompleted}</small><b>{stats.missionsCompleted}</b></div><div><small>{d.memoriesCreated}</small><b>{stats.memoriesCreated}</b></div>
+     <button className="kpiBtn" onClick={()=>document.getElementById("yourExperiencesList")?.scrollIntoView({behavior:"smooth",block:"start"})}><small>{d.experiences}</small><b>{experiences?.length||0}</b></button>
+     <button className="kpiBtn" onClick={()=>goToCategory("runtime")}><small>{d.participants}</small><b>{stats.participants}</b></button>
+     <button className="kpiBtn" onClick={()=>goToCategory("runtime")}><small>{d.missionsCompleted}</small><b>{stats.missionsCompleted}</b></button>
+     <button className="kpiBtn" onClick={()=>goToCategory("memory")}><small>{d.memoriesCreated}</small><b>{stats.memoriesCreated}</b></button>
    </div>
-   <div className="panel">
+   <div className="panel" id="yourExperiencesList">
      <div className="tag">{d.yourExperiences}</div>
      {rows.map(x=><div className="experienceRow" key={x.id}>
        <div><h3>{x.name}</h3><p>{x.location || x.type} · {x.status || d.draft}</p></div>

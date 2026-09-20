@@ -94,7 +94,13 @@ export default function Runtime({experience,setView,t,user}){
  const a=subscribeParticipants(experience.id,setPeople),b=subscribeEvents(experience.id,evs=>setFeed(evs.map(x=>x.text))),c=subscribeMedia(experience.id,setMedia),d=subscribeAllProgress(experience.id,setProgress),e=subscribeAnswers(experience.id,setAnswers);return()=>{a();b();c();d();e()}},[experience.id]);
  useEffect(()=>{if(!experience.joinCode){setQrDataUrl(null);return}const link=`${window.location.origin}${window.location.pathname}?join=${experience.joinCode}`;QRCode.toDataURL(link,{margin:1,width:160,color:{dark:"#050b13",light:"#ffffff"}}).then(setQrDataUrl).catch(()=>setQrDataUrl(null))},[experience.joinCode]);
  useEffect(()=>{if(!firebaseConfigured||!experience.id||experience.id==="thailand-demo")return;return subscribeParticipantCodes(experience.id,setRoster,e=>alert(r.rosterLoadError(e.message)))},[experience.id]);
- const flow=experience.flow||[],merged=useMemo(()=>people.map(p=>({...p,...(progress.find(x=>x.uid===p.id)||{})})),[people,progress]);
+ const flow=experience.flow||[];
+ const merged=useMemo(()=>{
+   const real=people.map(p=>({...p,...(progress.find(x=>x.uid===p.id)||{})}));
+   const realNames=new Set(real.map(p=>p.name||p.participantName));
+   const pending=roster.filter(entry=>!realNames.has(entry.name)).map(entry=>({id:entry.code,name:entry.name,pending:true,points:0,currentMissionIndex:0,completedMissionIds:[]}));
+   return [...real,...pending];
+ },[people,progress,roster]);
  const missionPerf=useMemo(()=>flow.map((m,i)=>{
    const doneCount=merged.filter(p=>(p.completedMissionIds||[]).includes(m.id)||i<(p.currentMissionIndex||0)).length;
    return {id:m.id,title:m.title,pct:merged.length?Math.round((doneCount/merged.length)*100):0};
@@ -108,10 +114,10 @@ export default function Runtime({experience,setView,t,user}){
  {merged.length>0&&<div className="runtimeStats insightsRow"><div><b>{completionRate}%</b><span>{r.completionRate}</span></div><div><b>{avgPoints}</b><span>{r.avgPoints}</span></div>{dropOff&&<div><b>{dropOff.pct}%</b><span>{r.dropOffAt} · {dropOff.title}</span></div>}</div>}
  <h3>{r.liveJourneyMap}</h3>
  <div className="journeyTable"><div className="journeyTableHead" style={journeyGridStyle}><span>{r.participant}</span>{flow.map((m,i)=><span key={m.id}>{i+1}</span>)}<span>{r.pointsCol}</span><span></span></div>{merged.map(p=>{
-   const finished=(p.currentMissionIndex||0)>=flow.length;
-   const mins=minutesAgo(p.updatedAt);
-   const stuck=!finished&&mins!==null&&mins>=STUCK_MINUTES;
-   return <div className={"journeyTableRow "+(stuck?"stuckRow":"")} style={journeyGridStyle} key={p.id}><span><b>{p.name||p.participantName}</b>{mins!==null&&<small className="lastActive">{stuck?"⚠ ":""}{mins<1?r.justNow:r.minAgo(mins)}</small>}</span>{flow.map((m,i)=>{const done=(p.completedMissionIds||[]).includes(m.id)||i<(p.currentMissionIndex||0),active=i===(p.currentMissionIndex||0);return <span key={m.id} className={done?"cellDone":active?"cellActive":"cellLocked"}>{done?"✓":active?"●":"·"}</span>})}<span><b>{p.points||0}</b></span><span className="rowActionBtns">{!finished&&<button className="skipBtn" onClick={()=>skip(p)} title={r.skipTitle}>⏭</button>}<button className="bonusBtn" onClick={()=>bonus(p)} title={r.bonusTitle}>🎁</button><button disabled={generatingFor===p.id} onClick={()=>generateNfcForParticipant(p)} title={r.generateNfcTitle}>{generatingFor===p.id?"…":"📲"}</button></span></div>
+   const finished=!p.pending&&(p.currentMissionIndex||0)>=flow.length;
+   const mins=p.pending?null:minutesAgo(p.updatedAt);
+   const stuck=!p.pending&&!finished&&mins!==null&&mins>=STUCK_MINUTES;
+   return <div className={"journeyTableRow "+(stuck?"stuckRow":"")+(p.pending?" pendingRow":"")} style={journeyGridStyle} key={p.id}><span><b>{p.name||p.participantName}</b>{mins!==null&&<small className="lastActive">{stuck?"⚠ ":""}{mins<1?r.justNow:r.minAgo(mins)}</small>}</span>{flow.map((m,i)=>{const done=!p.pending&&((p.completedMissionIds||[]).includes(m.id)||i<(p.currentMissionIndex||0)),active=!p.pending&&i===(p.currentMissionIndex||0);return <span key={m.id} className={done?"cellDone":active?"cellActive":"cellLocked"}>{done?"✓":active?"●":"·"}</span>})}<span>{p.pending?<small className="pendingTag">{r.notJoinedYet}</small>:<b>{p.points||0}</b>}</span><span className="rowActionBtns">{!p.pending&&<>{!finished&&<button className="skipBtn" onClick={()=>skip(p)} title={r.skipTitle}>⏭</button>}<button className="bonusBtn" onClick={()=>bonus(p)} title={r.bonusTitle}>🎁</button><button disabled={generatingFor===p.id} onClick={()=>generateNfcForParticipant(p)} title={r.generateNfcTitle}>{generatingFor===p.id?"…":"📲"}</button></>}</span></div>
  })}</div>
  <div className="actions"><button onClick={()=>setView("studio")}>{r.studioBtn}</button><button onClick={togglePause}>{experience.paused?`▶ ${r.resumeBtn}`:`⏸ ${r.pauseBtn}`}</button><button onClick={messageEveryone}>{r.messageEveryone}</button>{experience.joinCode&&<button className="primary" onClick={copyJoinLink}>{r.participantMode}</button>}</div></div>
  <div className="grid2" style={{marginTop:18}}><div className="panel"><div className="tag">{r.liveActivity}</div><div className="feed">{feed.map((x,i)=><div key={i}>{x}</div>)}</div></div><div className="panel"><div className="tag">{r.latestMemories}</div>{media.length?<div className="runtimeMedia">{media.slice(0,6).map(m=>m.contentType?.startsWith("video/")?<video key={m.id} src={m.downloadURL} muted/>:<img key={m.id} src={m.downloadURL} alt="memory"/>)}</div>:<p>{r.noPhotosYet}</p>}</div></div>

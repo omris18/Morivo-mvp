@@ -66,6 +66,9 @@ export default function Studio({ experience, setExperience, setView, t }) {
           type: next.type,
           location: next.location,
           people: next.people,
+          flights: next.flights || [],
+          adultsCount: next.adultsCount || 0,
+          childrenCount: next.childrenCount || 0,
         });
       } catch (e) {
         setSaveError(true);
@@ -84,6 +87,21 @@ export default function Studio({ experience, setExperience, setView, t }) {
     );
 
     persist({ ...experience, flow: nextFlow });
+  }
+
+  function addFlight() {
+    const flights = [...(experience.flights || []), { id: `flight-${Date.now()}`, flightNumber: "", date: "", time: "", direction: "outbound" }];
+    persist({ ...experience, flights });
+  }
+
+  function updateFlight(flightId, values) {
+    const flights = (experience.flights || []).map((f) => f.id === flightId ? { ...f, ...values } : f);
+    persist({ ...experience, flights });
+  }
+
+  function removeFlight(flightId) {
+    const flights = (experience.flights || []).filter((f) => f.id !== flightId);
+    persist({ ...experience, flights });
   }
 
   async function setCheckpointHere() {
@@ -219,6 +237,37 @@ export default function Studio({ experience, setExperience, setView, t }) {
         </div>
 
         <h2>{experience.name || s.untitled}</h2>
+
+        <div className="tripDetails">
+          <div className="tag">{s.tripDetailsTag}</div>
+          <div className="fieldRow">
+            <div>
+              <label>{s.adultsLabel}</label>
+              <input type="number" min="0" value={experience.adultsCount || 0}
+                onChange={(e) => persist({ ...experience, adultsCount: Math.max(0, Number(e.target.value) || 0) })} />
+            </div>
+            <div>
+              <label>{s.childrenLabel}</label>
+              <input type="number" min="0" value={experience.childrenCount || 0}
+                onChange={(e) => persist({ ...experience, childrenCount: Math.max(0, Number(e.target.value) || 0) })} />
+            </div>
+          </div>
+          <label>{s.flightsLabel}</label>
+          {(experience.flights || []).map((f) => (
+            <div className="flightRow" key={f.id}>
+              <input placeholder={s.flightNumberPlaceholder} value={f.flightNumber || ""} onChange={(e) => updateFlight(f.id, { flightNumber: e.target.value })} />
+              <input type="date" value={f.date || ""} onChange={(e) => updateFlight(f.id, { date: e.target.value })} />
+              <input type="time" value={f.time || ""} onChange={(e) => updateFlight(f.id, { time: e.target.value })} />
+              <select value={f.direction || "outbound"} onChange={(e) => updateFlight(f.id, { direction: e.target.value })}>
+                <option value="outbound">{s.flightOutbound}</option>
+                <option value="return">{s.flightReturn}</option>
+                <option value="internal">{s.flightInternal}</option>
+              </select>
+              <button className="danger" onClick={() => removeFlight(f.id)}>✕</button>
+            </div>
+          ))}
+          <button type="button" onClick={addFlight}>+ {s.addFlight}</button>
+        </div>
 
         <div className="atomBar">
           {["photo", "video", "map", "quiz", "puzzle", "note", "reward", "story"].map(
