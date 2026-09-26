@@ -54,7 +54,7 @@ Respond with STRICT JSON only, no markdown fencing, no commentary, matching exac
 const GEMINI_MODELS = ["gemini-3.6-flash", "gemini-2.5-flash", "gemini-2.0-flash", "gemini-flash-latest", "gemini-1.5-flash"];
 
 function bookingSearchUrl(name, location, opts) {
-  const q = [name, location].filter(Boolean).join(" ");
+  const q = String(name || "").replace(/\s*\([^)]*\)/g, "").trim() || String(location || "").trim();
   const params = new URLSearchParams({ ss: q });
   const { checkin, checkout, adults, children, childrenAges, rooms } = opts || {};
   if (checkin) params.set("checkin", checkin);
@@ -131,7 +131,7 @@ async function suggestHotel({ location, prompt, people, duration, lang, startDat
     id: `story-${Date.now()}-hotel`,
     type: "story",
     title: lang === "he" ? "היכן להתארח" : "Where to Stay",
-    text: text.slice(0, 1200),
+    text,
     reward: "",
     points: 0,
   };
@@ -180,6 +180,7 @@ exports.generateExperience = onCall({ secrets: [openaiApiKey, geminiApiKey], cor
 
   const userPrompt = [
     `Description: ${prompt}`,
+    `Required output language for every name, title, instruction and reward: ${LANG_NAMES[lang] || "the language of the description"}. The destination country does not determine the language.`,
     type ? `Experience type: ${type}` : null,
     location ? `Location: ${location}` : null,
     duration ? `Duration: ${duration}` : null,
@@ -195,7 +196,7 @@ exports.generateExperience = onCall({ secrets: [openaiApiKey, geminiApiKey], cor
   let completion;
   try {
     completion = await client.chat.completions.create({
-      model: "gpt-4o-mini",
+      model: "gpt-4o",
       messages: [
         { role: "system", content: SYSTEM_PROMPT },
         { role: "user", content: userPrompt },
