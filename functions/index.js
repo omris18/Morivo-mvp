@@ -573,10 +573,11 @@ exports.moderateParticipantAnswer = onDocumentCreated(
   }
 );
 
-// Site-wide brand/marketing art (hero panels, loading-screen backdrops). These are shared
-// visual assets, not per-user or per-experience content - the prompt is always one of a
-// fixed, server-defined set below, never client-supplied text, so a signed-in caller can only
-// ever (re)generate one of these known images, not arbitrary AI-image content on our bill.
+// Brand/marketing art (hero panels, loading-screen backdrops). The base prompt for each key
+// is always one of the fixed, server-defined templates below, never client-supplied text - a
+// signed-in caller can only ever steer the mood/motifs within that template via a short,
+// truncated "context" snippet (what they typed about their own experience), never replace it
+// outright, so this can't be used to generate arbitrary AI-image content on our bill.
 const BRAND_IMAGE_SPECS = {
   aiCreatorHero: {
     prompt: "A dreamy, abstract 3D illustration for a premium travel-and-events app's hero panel. Softly glowing golden and purple light forms drifting in a dark navy space, with real depth, soft bokeh and cinematic lighting, evoking the feeling of a journey coming to life. Faint glowing silhouettes of a camera, a map pin, a jigsaw puzzle piece, a trophy and an open book gently floating in the scene, connected by soft trails of light. No text, no logos, no readable words, no real people. Elegant, premium, three-dimensional, a genuine wow first impression.",
@@ -597,16 +598,24 @@ exports.generateBrandImage = onCall({ secrets: [openaiApiKey], cors: true, timeo
     throw new HttpsError("unauthenticated", "Sign in before generating brand art.");
   }
 
-  const { key } = request.data || {};
+  const { key, context } = request.data || {};
   const spec = BRAND_IMAGE_SPECS[key];
   if (!spec) {
     throw new HttpsError("invalid-argument", "Unknown image key.");
   }
 
+  // A per-experience personalization snippet - what the organizer typed about their own
+  // experience (type, location, description). Bounded in length and only ever appended to our
+  // own fixed template, never used as the prompt by itself.
+  const cleanContext = typeof context === "string" ? context.trim().replace(/\s+/g, " ").slice(0, 500) : "";
+  const prompt = cleanContext
+    ? `${spec.prompt}\n\nPersonalize the mood, colors and any suggested motifs to fit this specific real experience (do not render any text, words or logos in the image): "${cleanContext}"`
+    : spec.prompt;
+
   const client = new OpenAI({ apiKey: openaiApiKey.value().trim() });
   let result;
   try {
-    result = await client.images.generate({ model: "gpt-image-1", prompt: spec.prompt, size: spec.size, n: 1 });
+    result = await client.images.generate({ model: "gpt-image-1", prompt, size: spec.size, n: 1 });
   } catch (err) {
     console.error("OpenAI image generation failed", err);
     throw new HttpsError("unavailable", "Image generation failed. Please try again.");
@@ -619,15 +628,21 @@ exports.generateBrandImage = onCall({ secrets: [openaiApiKey], cors: true, timeo
 
   const buffer = Buffer.from(b64, "base64");
   const bucket = admin.storage().bucket();
-  const file = bucket.file(`brand/${key}.png`);
+  // A personalized image is one-off for this caller's draft, not the shared site default -
+  // give it its own path so it never overwrites (or gets overwritten by) the shared asset
+  // other users' un-personalized screens read from.
+  const path = cleanContext ? `brand/${key}-${request.auth.uid}-${Date.now()}.png` : `brand/${key}.png`;
+  const file = bucket.file(path);
   await file.save(buffer, { contentType: "image/png", metadata: { cacheControl: "public, max-age=3600" } });
   await file.makePublic();
-  const url = `https://storage.googleapis.com/${bucket.name}/brand/${key}.png?v=${Date.now()}`;
+  const url = `https://storage.googleapis.com/${bucket.name}/${path}?v=${Date.now()}`;
 
-  await db.collection("siteAssets").doc(key).set({
-    url,
-    updatedAt: admin.firestore.FieldValue.serverTimestamp(),
-  });
+  if (!cleanContext) {
+    await db.collection("siteAssets").doc(key).set({
+      url,
+      updatedAt: admin.firestore.FieldValue.serverTimestamp(),
+    });
+  }
 
   return { url };
 });
