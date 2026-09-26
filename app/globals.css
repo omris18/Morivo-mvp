@@ -435,3 +435,103 @@ body{background:radial-gradient(circle at 78% -10%,rgba(123,199,216,.08),transpa
 .studioPreviewPanel .phone{width:100%;max-width:315px;min-height:510px;margin:0 auto;border-radius:32px!important;border:1px solid rgba(255,255,255,.13)!important;background:radial-gradient(circle at 50% 0,rgba(239,193,134,.07),transparent 30%),#07131d!important;padding:28px 22px!important;box-shadow:0 28px 55px rgba(0,0,0,.32),inset 0 0 0 5px rgba(255,255,255,.018)}.studioPreviewPanel .phone:before{content:"";display:block;width:58px;height:5px;border-radius:99px;background:#1b2a36;margin:-14px auto 32px}.studioPreviewPanel .phone h3{font:500 27px/1.08 Georgia,serif!important;color:#f6f1e9}.studioPreviewPanel .phone p{color:#94a5b4;line-height:1.65;font-size:13px}.studioPreviewPanel .mission{margin-top:26px;padding:13px;border-radius:12px;background:rgba(239,193,134,.07);border-color:rgba(239,193,134,.18);color:var(--m-warm);font-size:11px}.studioPreviewPanel .phone .primary{width:100%;margin-top:12px;border-radius:999px;background:linear-gradient(135deg,#f1c894,#dda96d);border:0;color:#17202a}
 @media(max-width:1050px){.studioPage{grid-template-columns:1fr}.studioPreviewPanel{position:relative;top:auto;min-height:auto}.atomBar{grid-template-columns:repeat(4,1fr)}}
 @media(max-width:650px){.studioWorkspace{padding:20px}.studioHeader{flex-direction:column}.atomBar{grid-template-columns:repeat(2,1fr)}.flowNode{grid-template-columns:64px 1fr!important}.studioPreviewPanel{padding:16px}}
+
+/* Participant journey — the same navy, warm light and route language as Studio. */
+.portalShell{position:relative;align-items:flex-start;padding:clamp(16px,4vw,48px);background-color:#071019;isolation:isolate}
+.portalShell::before{content:"";position:fixed;inset:0;z-index:-1;background:linear-gradient(180deg,rgba(5,13,22,.18),rgba(5,13,22,.7) 55%,#06111b);pointer-events:none}
+.portalCard{position:relative;max-width:620px;margin:auto;padding:clamp(20px,4vw,38px);border:1px solid rgba(255,255,255,.14);border-radius:28px;background:linear-gradient(155deg,rgba(13,29,42,.94),rgba(6,17,27,.96));box-shadow:0 32px 90px rgba(0,0,0,.35),inset 0 1px rgba(255,255,255,.04);backdrop-filter:blur(18px)}
+.portalCard::before{content:"";position:absolute;inset:12px;border:1px solid rgba(239,193,134,.08);border-radius:20px;pointer-events:none}
+.portalCard .portalLangSwitch{position:relative;z-index:1;margin-bottom:24px}
+.participantJoin{max-width:440px;margin:20px auto 10px;text-align:start}
+.participantJoinMark{position:relative;width:47px;height:42px;margin-bottom:18px}
+.participantJoinMark span{position:absolute;width:28px;height:3px;left:8px;top:20px;border-radius:99px;background:linear-gradient(90deg,var(--m-warm),var(--m-sky));transform-origin:center}
+.participantJoinMark span:nth-child(1){transform:translate(-5px,-5px) rotate(-49deg)}
+.participantJoinMark span:nth-child(2){transform:translate(5px,-5px) rotate(49deg)}
+.participantJoinMark span:nth-child(3){width:24px;top:29px;left:11px;opacity:.55}
+.participantJoinEyebrow{font-size:10px;font-weight:700;letter-spacing:.18em;color:var(--m-warm)}
+.portalCard .participantJoin h2{font:500 clamp(34px,6vw,48px)/1.06 Georgia,serif;letter-spacing:-.035em;margin:12px 0 30px;color:#f7f2ea}
+.portalCard .participantJoin label{margin:18px 0 8px;color:#a9bac9;font-size:11px;font-weight:700;letter-spacing:.08em}
+.portalCard .participantJoin input{min-height:52px;background:#091926;border-color:rgba(255,255,255,.13);font-size:16px;outline:none;transition:border-color .18s,box-shadow .18s}
+.portalCard .participantJoin input:focus-visible{border-color:var(--m-warm);box-shadow:0 0 0 3px rgba(239,193,134,.14)}
+.participantJoin .actions{margin-top:28px}
+.participantJoin .actions button{width:100%;min-height:52px;border-radius:999px;background:linear-gradient(135deg,#f1c894,#dda96d);color:#17202a;font-weight:750;box-shadow:0 12px 30px rgba(239,193,134,.14)}
+.participantJoin .actions button:disabled{opacity:.6}
+.portalCard .journeyGreeting{text-align:start;margin:4px 0 24px;padding-bottom:22px;border-bottom:1px solid rgba(255,255,255,.09)}
+.portalCard .journeyGreeting h2{font:500 clamp(32px,5vw,43px)/1.08 Georgia,serif;letter-spacing:-.03em;margin:0 0 8px;color:#f7f2ea}
+.portalCard .journeyGreeting p{color:var(--m-warm);font-size:10px;letter-spacing:.16em}
+.portalCard .participantHeader{align-items:flex-start}
+.portalCard .participantHeader small{display:block;color:#8ea2b4;font-size:11px;margin-bottom:6px}
+.portalCard .participantHeader h2{font:500 27px/1.1 Georgia,serif;margin:0;color:#f7f2ea}
+.portalCard .pointsBadge{flex:none;min-width:63px;min-height:63px;display:grid;place-content:center;text-align:center;padding:7px;border:1px solid rgba(239,193,134,.35);background:rgba(239,193,134,.09);color:var(--m-warm);font:600 19px Georgia,serif}
+.portalCard .pointsBadge small{margin:0;color:#b99b72;font:700 8px Inter,system-ui,sans-serif;letter-spacing:.12em}
+.portalCard .journeyProgressBar{height:5px;margin:18px 0 28px;background:rgba(255,255,255,.08)}
+.portalCard .journeyProgressFill{background:linear-gradient(90deg,var(--m-warm),var(--m-sky))}
+.portalCard .journeyStop{gap:15px;padding-bottom:13px}
+.portalCard .journeyStop::before{left:15px;top:30px;bottom:-5px;width:1px;background:linear-gradient(rgba(239,193,134,.35),rgba(123,199,216,.16))}
+[dir="rtl"] .portalCard .journeyStop::before{left:auto;right:15px}
+.portalCard .journeyStopDot{width:32px;height:32px;border:1px solid rgba(239,193,134,.28);background:#122535;color:var(--m-warm);font-size:12px}
+.portalCard .journeyStop.active .journeyStopDot{background:var(--m-warm);border-color:var(--m-warm);color:#182635;box-shadow:0 0 0 5px rgba(239,193,134,.1)}
+.portalCard .journeyStop.done .journeyStopDot{background:#5ccda4;border-color:#5ccda4}
+.portalCard .journeyStopCard{background:rgba(255,255,255,.025);border-color:rgba(255,255,255,.08);padding:14px 16px;border-radius:14px;backdrop-filter:none}
+.portalCard .journeyStop.active .journeyStopCard{background:linear-gradient(120deg,rgba(239,193,134,.1),rgba(123,199,216,.035));border-color:rgba(239,193,134,.32);box-shadow:none}
+.portalCard .journeyStopCard b{font:500 17px/1.2 Georgia,serif;color:#f5f1e9}
+.portalCard .journeyStopMeta{color:var(--m-warm);font-size:9px;letter-spacing:.12em;margin-bottom:7px}
+.portalCard .journeyNavigateBtn{background:rgba(123,199,216,.11);border:1px solid rgba(123,199,216,.27);color:#a8d9e3}
+.portalCard .journeySectionTitle{margin:24px 0 10px;letter-spacing:.16em;font-size:10px}
+.portalCard .familyPassport,.portalCard .flightsSection{background:rgba(255,255,255,.025);border-color:rgba(255,255,255,.08)}
+.portalCard .journeyPhone{width:100%;min-height:0;margin:25px 0 0;padding:26px;border:1px solid rgba(239,193,134,.23);border-radius:21px;background:radial-gradient(circle at 90% 0,rgba(239,193,134,.1),transparent 32%),#0b1b29;box-shadow:0 20px 46px rgba(0,0,0,.18)}
+.portalCard .journeyPhone h3{font:500 32px/1.12 Georgia,serif;color:#f7f2ea;margin:10px 0 14px}
+.portalCard .journeyPhone p{font-size:14px;line-height:1.7;color:#b8c5d0}
+.portalCard .journeyPhone .mission{background:rgba(239,193,134,.07);border-color:rgba(239,193,134,.18);color:var(--m-warm);font-size:12px}
+.portalCard .journeyPhone .primary{width:100%;min-height:48px;border-radius:999px;background:linear-gradient(135deg,#f1c894,#dda96d);color:#17202a;font-weight:750}
+.portalCard .printJourneyBtn{border-radius:999px;color:#b7c9d5}
+.portalCard .finishCard{background:linear-gradient(145deg,rgba(239,193,134,.1),rgba(88,211,155,.05));border:1px solid rgba(239,193,134,.2)}
+@media(max-width:600px){.portalShell{padding:12px}.portalCard{padding:20px 18px;border-radius:22px}.portalCard::before{inset:7px;border-radius:16px}.portalCard .portalLangSwitch{margin-bottom:16px}.portalCard .journeyPhone{padding:20px}.portalCard .journeyPhone h3{font-size:27px}}
+@media print{.portalShell::before,.portalCard::before{display:none}.portalCard{max-width:100%;border:0;box-shadow:none;background:#fff;backdrop-filter:none}.portalCard .journeyGreeting h2,.portalCard .participantHeader h2,.portalCard .journeyStopCard b{color:#111}.portalCard .journeyStopCard,.portalCard .familyPassport,.portalCard .flightsSection{background:#fff;border-color:#ddd}.portalCard .journeyStopMeta,.portalCard .journeyGreeting p{color:#555}}
+/* Runtime — warm, legible controls in the Morivo design system. */
+.runtimePage{max-width:1220px;margin:auto}
+.runtimePage .panel{padding:30px;border:1px solid var(--m-line);border-radius:24px;background:linear-gradient(155deg,#0d1d2b,#08131e);box-shadow:0 22px 60px rgba(0,0,0,.16);min-width:0}
+.runtimePage .runtimeTitle{align-items:flex-start;padding-bottom:24px;border-bottom:1px solid var(--m-line)}
+.runtimePage .runtimeTitle>div:first-child{min-width:0;flex:1}
+.runtimePage .runtimeTitle h2{font:500 clamp(32px,4vw,48px)/1.08 Georgia,serif;letter-spacing:-.03em;margin:10px 0 0;overflow-wrap:anywhere}
+.runtimePage .tag{color:var(--m-warm);font-size:10px;letter-spacing:.15em}
+.runtimePage .joinMini{display:grid;grid-template-columns:1fr 88px;column-gap:18px;align-items:center;padding:17px 20px;border:1px solid rgba(239,193,134,.24);border-radius:17px;background:rgba(239,193,134,.055);text-align:start;flex:none}
+.runtimePage .joinMini small{color:#b7a181;font-size:9px;letter-spacing:.14em}
+.runtimePage .joinMini b{grid-column:1;font:600 20px/1.35 ui-monospace,monospace;letter-spacing:.1em;color:#f5d7ad;overflow-wrap:anywhere;direction:ltr;text-align:start}
+.runtimePage .joinQr{grid-column:2;grid-row:1/3;width:88px;height:88px;margin:0;padding:5px;border-radius:10px}
+.runtimePage .joinMini:not(:has(img)){grid-template-columns:1fr}
+.runtimePage .runtimeStats{gap:12px;margin:24px 0}
+.runtimePage .runtimeStats>div{display:flex;flex-direction:column;gap:10px;min-width:0;padding:19px 20px;border-color:rgba(255,255,255,.07);border-radius:15px;background:rgba(255,255,255,.025)}
+.runtimePage .runtimeStats b{font:500 34px/1 Georgia,serif;color:#f7f2ea}
+.runtimePage .runtimeStats span{order:-1;font-size:10px;line-height:1.5;letter-spacing:.07em;color:#a2b3c2}
+.runtimePage .insightsRow{grid-template-columns:repeat(3,minmax(0,1fr));margin-top:-10px}
+.runtimePage .insightsRow>div{background:transparent;border-style:dashed}
+.runtimePage .insightsRow b{font-size:25px;color:var(--m-sky)}
+.runtimePage h3{font:500 25px Georgia,serif;margin:30px 0 16px}
+.runtimePage .journeyTable{border:1px solid var(--m-line);border-radius:15px;background:rgba(3,12,20,.3);padding:5px 15px 10px;scrollbar-color:#3a5060 #0a1722}
+.runtimePage .journeyTableHead{padding:14px 0;color:#9aacba;letter-spacing:.05em}
+.runtimePage .journeyTableRow{min-height:58px;padding:10px 0;border-color:rgba(255,255,255,.055);font-size:13px}
+.runtimePage .journeyTableRow:last-child{border-bottom:0}
+.runtimePage .cellActive{color:var(--m-warm);text-shadow:0 0 12px rgba(239,193,134,.3)}
+.runtimePage .cellDone{color:#71d4af}
+.runtimePage .rowActionBtns button{min-height:34px;min-width:34px;padding:5px;border:1px solid rgba(255,255,255,.12);border-radius:9px;background:rgba(255,255,255,.035)}
+.runtimePage .actions{gap:9px;margin-top:23px;padding-top:20px;border-top:1px solid var(--m-line)}
+.runtimePage .actions button,.runtimePage .rosterActions button{border-radius:999px;background:rgba(255,255,255,.025);border:1px solid rgba(255,255,255,.12);color:#c9d5df}
+.runtimePage .actions .primary{margin-inline-start:auto;background:linear-gradient(135deg,#f1c894,#dda96d);color:#17202a;border:0;font-weight:700}
+.runtimePage .feed{gap:10px}
+.runtimePage .feed>div{padding:15px 17px;border-color:rgba(255,255,255,.07);border-inline-start:2px solid rgba(239,193,134,.4);background:rgba(255,255,255,.02);color:#b6c5d2;font-size:13px;line-height:1.6}
+.runtimePage .runtimeMedia{gap:10px}
+.runtimePage .runtimeMedia img,.runtimePage .runtimeMedia video{border:1px solid rgba(255,255,255,.1);border-radius:13px}
+.runtimePage .missionPerfRow{display:grid;grid-template-columns:minmax(130px,1fr) minmax(100px,1.5fr) 45px;gap:18px;padding:10px 0}
+.runtimePage .missionPerfRow b{min-width:0;font-weight:500;line-height:1.5;color:#c6d1dc}
+.runtimePage .missionPerfBar{height:5px;background:#1a2b39}
+.runtimePage .missionPerfBar span{background:linear-gradient(90deg,var(--m-warm),var(--m-sky))}
+.runtimePage .rosterHint{max-width:750px;font-size:13px;line-height:1.7;color:#94a8b9}
+.runtimePage .reviseBar{max-width:620px;margin:20px 0}
+.runtimePage .reviseBar input{font-size:16px;border-color:rgba(255,255,255,.13);background:#071723}
+.runtimePage .reviseBar button{border-radius:12px;background:rgba(239,193,134,.12);border:1px solid rgba(239,193,134,.3);color:var(--m-warm)}
+.runtimePage .rosterRow{padding:15px 17px;border-color:rgba(255,255,255,.08);background:rgba(255,255,255,.025)}
+.runtimePage button:focus-visible,.runtimePage input:focus-visible{outline:2px solid var(--m-warm);outline-offset:3px}
+.runtimePage button:disabled{opacity:.5}
+@media(max-width:800px){.runtimePage .runtimeTitle{flex-direction:column;gap:22px}.runtimePage .joinMini{width:100%}.runtimePage .runtimeStats{grid-template-columns:repeat(2,minmax(0,1fr))}.runtimePage .insightsRow{grid-template-columns:1fr}.runtimePage .panel{padding:22px}.runtimePage .actions .primary{margin-inline-start:0}}
+@media(max-width:500px){.runtimePage .panel{padding:18px;border-radius:20px}.runtimePage .runtimeStats{gap:8px}.runtimePage .runtimeStats>div{padding:15px}.runtimePage .actions{display:grid;grid-template-columns:1fr}.runtimePage .actions button{width:100%;min-height:46px}.runtimePage .missionPerfRow{grid-template-columns:minmax(0,1fr) 40px;gap:8px}.runtimePage .missionPerfRow b{grid-column:1/-1}.runtimePage .rosterActions{width:100%;margin:0}.runtimePage .rosterActions button{min-height:42px}.runtimePage .joinMini{padding:14px}}
