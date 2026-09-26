@@ -53,9 +53,16 @@ Respond with STRICT JSON only, no markdown fencing, no commentary, matching exac
 
 const GEMINI_MODELS = ["gemini-3.6-flash", "gemini-2.5-flash", "gemini-2.0-flash", "gemini-flash-latest", "gemini-1.5-flash"];
 
-function bookingSearchUrl(name, location) {
+function bookingSearchUrl(name, location, opts) {
   const q = [name, location].filter(Boolean).join(" ");
-  return `https://www.booking.com/searchresults.html?ss=${encodeURIComponent(q)}`;
+  const params = new URLSearchParams({ ss: q });
+  const { checkin, checkout, adults } = opts || {};
+  if (checkin) params.set("checkin", checkin);
+  if (checkout) params.set("checkout", checkout);
+  params.set("group_adults", String(Math.max(1, Number(adults) || 2)));
+  params.set("no_rooms", "1");
+  params.set("group_children", "0");
+  return `https://www.booking.com/searchresults.html?${params.toString()}`;
 }
 
 function mapsSearchUrl(name, location) {
@@ -93,21 +100,21 @@ async function askGeminiJSON(promptText, label) {
   return null;
 }
 
-function optionsToMissionText(options, max, urlFor, location) {
+function optionsToMissionText(options, max, urlFor, location, urlOpts) {
   const lines = options.slice(0, max).map((o, i) => {
     const name = String(o?.name || "").trim().slice(0, 100);
     const why = String(o?.why || "").trim().slice(0, 220);
     if (!name) return null;
-    return `${i + 1}. ${name}${why ? ` — ${why}` : ""}\n${urlFor(name, location)}`;
+    return `${i + 1}. ${name}${why ? ` — ${why}` : ""}\n${urlFor(name, location, urlOpts)}`;
   }).filter(Boolean);
   return lines.length ? lines.join("\n\n") : null;
 }
 
-async function suggestHotel({ location, prompt, people, duration, lang }) {
+async function suggestHotel({ location, prompt, people, duration, lang, startDate, endDate }) {
   const hotelPrompt = `Suggest 2 to 3 specific, realistic accommodation options in or near "${location}" that would suit this group: "${prompt}"${people ? ` (${people} people)` : ""}${duration ? `, staying for ${duration}` : ""}. For each option give a real, findable hotel/accommodation name or a specific well-known area, and a 1-2 sentence reason it fits this exact group - practical and specific, not generic travel-blog language. Write in the same language as the group description above (detect it automatically). Respond with STRICT JSON only, no markdown fencing, no commentary, matching exactly this shape: {"options":[{"name":"hotel or area name","why":"1-2 sentence reason"}]}`;
   const data = await askGeminiJSON(hotelPrompt, "hotel suggestion");
   if (!Array.isArray(data?.options) || !data.options.length) return null;
-  const text = optionsToMissionText(data.options, 3, bookingSearchUrl, location);
+  const text = optionsToMissionText(data.options, 3, bookingSearchUrl, location, { checkin: startDate, checkout: endDate, adults: people });
   if (!text) return null;
   return {
     id: `story-${Date.now()}-hotel`,
@@ -152,7 +159,7 @@ exports.generateExperience = onCall({ secrets: [openaiApiKey, geminiApiKey], cor
     throw new HttpsError("unauthenticated", "Sign in (even anonymously) before generating an experience.");
   }
 
-  const { prompt, type, location, duration, people, peopleDetails, lang, multiDay, needsHotel, interests } = request.data || {};
+  const { prompt, type, location, duration, people, peopleDetails, lang, multiDay, needsHotel, interests, startDate, endDate } = request.data || {};
 
   if (!prompt || !String(prompt).trim()) {
     throw new HttpsError("invalid-argument", "A description of the experience is required.");
@@ -171,7 +178,7 @@ exports.generateExperience = onCall({ secrets: [openaiApiKey, geminiApiKey], cor
     `Write "name", and every mission's "title", "text" and "reward", in the same language the Description above is written in - detect it automatically, it can be any language (Hebrew, English, Arabic, French, Spanish, German, Russian, or any other). Use natural, native-sounding phrasing for that language and its culture, not a literal translation. Only if the Description is too short or ambiguous to confidently detect a language, default to ${lang === "he" ? "Hebrew" : "English"}.`,
   ].filter(Boolean).join("\n");
 
-  const hotelMissionPromise = (needsHotel && location) ? suggestHotel({ location, prompt, people, duration, lang }) : Promise.resolve(null);
+  const hotelMissionPromise = (needsHotel && location) ? suggestHotel({ location, prompt, people, duration, lang, startDate, endDate }) : Promise.resolve(null);
   const attractionsMissionPromise = (multiDay && location) ? suggestAttractions({ location, prompt, people, duration, lang, interests }) : Promise.resolve(null);
 
   let completion;
