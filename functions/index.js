@@ -199,9 +199,10 @@ exports.generateExperience = onCall({ secrets: [openaiApiKey, geminiApiKey], cor
       messages: [
         { role: "system", content: SYSTEM_PROMPT },
         { role: "user", content: userPrompt },
+        { role: "system", content: "Final language check: identify the language of the Description, not the destination. Write the experience name and every mission title, instruction and reward entirely in that language. A trip to Rome described in English must be written in English, never Italian or Spanish. Keep proper place names unchanged." },
       ],
       response_format: { type: "json_object" },
-      temperature: 0.9,
+      temperature: 0.6,
     });
   } catch (err) {
     console.error("OpenAI request failed", err);
