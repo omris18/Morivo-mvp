@@ -54,7 +54,7 @@ Respond with STRICT JSON only, no markdown fencing, no commentary, matching exac
 const GEMINI_MODELS = ["gemini-3.6-flash", "gemini-2.5-flash", "gemini-2.0-flash", "gemini-flash-latest", "gemini-1.5-flash"];
 
 function bookingSearchUrl(name, location, opts) {
-  const q = [name, location].filter(Boolean).join(" ");
+  const q = String(name || "").replace(/\s*\([^)]*\)/g, "").trim() || String(location || "").trim();
   const params = new URLSearchParams({ ss: q });
   const { checkin, checkout, adults, children, childrenAges, rooms } = opts || {};
   if (checkin) params.set("checkin", checkin);
