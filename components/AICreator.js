@@ -35,6 +35,13 @@ function generateDraft(f){
 export default function AICreator({setExperience,setView,setActiveId,user,lang,t,dir}){
  const a=t.aiCreator;
  const [form,setForm]=useState({prompt:"",type:"",location:"",duration:"",startDate:"",endDate:"",people:"",peopleDetails:"",hotelBooked:false,interests:[],adults:"2",children:"0",childrenAges:[]}),[building,setBuilding]=useState(false),[step,setStep]=useState(0);
+ const TOTAL_STEPS=3;
+ const [formStep,setFormStep]=useState(1);
+ function goNext(){
+  if(formStep===1&&!form.prompt.trim())return alert(a.describeFirst);
+  setFormStep(s=>Math.min(TOTAL_STEPS,s+1));
+ }
+ function goBack(){setFormStep(s=>Math.max(1,s-1))}
  const isFamilyTrip=form.type===TYPE_OPTIONS.en[0]||form.type===TYPE_OPTIONS.he[0];
  const tripDays=isFamilyTrip?daysBetween(form.startDate,form.endDate):0;
  const [heroArt,setHeroArt]=useState(null),[loadingArt,setLoadingArt]=useState(null),[generatingKey,setGeneratingKey]=useState(null);
@@ -114,17 +121,34 @@ export default function AICreator({setExperience,setView,setActiveId,user,lang,t
   <div className="panel">
    <div className="aiTop"><div className="tag">{a.tag}</div></div>
    <h1>{a.title}</h1><p>{a.desc}</p>
-   <label>{a.prompt}</label><textarea className="aiPrompt" value={form.prompt} onChange={e=>setForm({...form,prompt:e.target.value})}/>
-   <div className="fieldRow"><div><label>{a.type}</label><select value={form.type} onChange={e=>setForm({...form,type:e.target.value})}><option value=""></option>{TYPE_OPTIONS[lang].map(x=><option key={x} value={x}>{x}</option>)}</select></div><div><label>{a.location}</label><input value={form.location} onChange={e=>setForm({...form,location:e.target.value})}/></div></div>
-   {isFamilyTrip?
-    <div className="fieldRow"><div><label>{a.startDate}</label><input type="date" value={form.startDate} onChange={e=>setForm({...form,startDate:e.target.value,endDate:form.endDate&&form.endDate<e.target.value?"":form.endDate})}/></div><div><label>{a.endDate}</label><input type="date" min={form.startDate||undefined} value={form.endDate} onChange={e=>setForm({...form,endDate:e.target.value})}/></div></div>
-    :<div className="fieldRow"><div><label>{a.duration}</label><select value={form.duration} onChange={e=>setForm({...form,duration:e.target.value})}><option value=""></option>{DURATION_OPTIONS[lang].map(x=><option key={x} value={x}>{x}</option>)}</select></div><div><label>{a.people}</label><input type="number" value={form.people} onChange={e=>setForm({...form,people:e.target.value})}/></div></div>}
-   {isFamilyTrip&&<div className="fieldRow"><div><label>{a.days}</label><div className="tripLengthDisplay">{tripDays?a.tripLength(tripDays):"—"}</div></div><div><label>{a.people}</label><input type="number" value={form.people} onChange={e=>setForm({...form,people:e.target.value})}/></div></div>}
-   <label>{a.peopleDetails}</label><textarea className="peopleDetailsInput" placeholder={a.peopleDetailsPlaceholder} value={form.peopleDetails} onChange={e=>setForm({...form,peopleDetails:e.target.value})}/>
-   {isFamilyTrip&&<div className="hotelPartyBox"><div className="tag">{lang==="he"?"הרכב לאירוח":"Stay party"}</div><div className="fieldRow"><div><label>{lang==="he"?"מבוגרים":"Adults"}</label><input type="number" min="1" max="12" value={form.adults} onChange={e=>setForm({...form,adults:e.target.value})}/></div><div><label>{lang==="he"?"ילדים":"Children"}</label><input type="number" min="0" max="8" value={form.children} onChange={e=>setChildrenCount(e.target.value)}/></div></div>{Number(form.children)>0&&<div className="childrenAges"><label>{lang==="he"?"גילי הילדים — כדי למצוא חדר ומחיר מתאימים":"Children ages — for accurate rooms and pricing"}</label><div className="ageGrid">{form.childrenAges.map((age,i)=><input key={i} type="number" min="0" max="17" placeholder={(lang==="he"?"ילד ":"Child ")+(i+1)} value={age} onChange={e=>setChildAge(i,e.target.value)}/>)}</div></div>}</div>}
-   {isFamilyTrip&&<label className="hotelCheck"><input type="checkbox" checked={form.hotelBooked} onChange={e=>setForm({...form,hotelBooked:e.target.checked})}/> {a.hotel}</label>}
-   {isFamilyTrip&&<div className="interestsField"><label>{a.interests}</label><div className="chipRow">{Object.keys(a.interestOptions).map(key=><button type="button" key={key} className={"chip "+(form.interests.includes(key)?"selected":"")} onClick={()=>toggleInterest(key)}>{a.interestOptions[key]}</button>)}</div></div>}
-   <div className="actions"><button onClick={()=>setView("create")}>{a.blank}</button><button className="primary aiBuildButton" onClick={build}>✦ {a.build}</button></div>
+   <div className={"aiFormStep "+(formStep===1?"active":"")} data-step="1">
+    <label>{a.prompt}</label><textarea className="aiPrompt" value={form.prompt} onChange={e=>setForm({...form,prompt:e.target.value})}/>
+    <div className="fieldRow"><div><label>{a.type}</label><select value={form.type} onChange={e=>setForm({...form,type:e.target.value})}><option value=""></option>{TYPE_OPTIONS[lang].map(x=><option key={x} value={x}>{x}</option>)}</select></div><div><label>{a.location}</label><input value={form.location} onChange={e=>setForm({...form,location:e.target.value})}/></div></div>
+   </div>
+
+   <div className={"aiFormStep "+(formStep===2?"active":"")} data-step="2">
+    {isFamilyTrip?
+     <div className="fieldRow"><div><label>{a.startDate}</label><input type="date" value={form.startDate} onChange={e=>setForm({...form,startDate:e.target.value,endDate:form.endDate&&form.endDate<e.target.value?"":form.endDate})}/></div><div><label>{a.endDate}</label><input type="date" min={form.startDate||undefined} value={form.endDate} onChange={e=>setForm({...form,endDate:e.target.value})}/></div></div>
+     :<div className="fieldRow"><div><label>{a.duration}</label><select value={form.duration} onChange={e=>setForm({...form,duration:e.target.value})}><option value=""></option>{DURATION_OPTIONS[lang].map(x=><option key={x} value={x}>{x}</option>)}</select></div><div><label>{a.people}</label><input type="number" value={form.people} onChange={e=>setForm({...form,people:e.target.value})}/></div></div>}
+    {isFamilyTrip&&<div className="fieldRow"><div><label>{a.days}</label><div className="tripLengthDisplay">{tripDays?a.tripLength(tripDays):"—"}</div></div><div><label>{a.people}</label><input type="number" value={form.people} onChange={e=>setForm({...form,people:e.target.value})}/></div></div>}
+    {isFamilyTrip&&<div className="hotelPartyBox"><div className="tag">{lang==="he"?"הרכב לאירוח":"Stay party"}</div><div className="fieldRow"><div><label>{lang==="he"?"מבוגרים":"Adults"}</label><input type="number" min="1" max="12" value={form.adults} onChange={e=>setForm({...form,adults:e.target.value})}/></div><div><label>{lang==="he"?"ילדים":"Children"}</label><input type="number" min="0" max="8" value={form.children} onChange={e=>setChildrenCount(e.target.value)}/></div></div>{Number(form.children)>0&&<div className="childrenAges"><label>{lang==="he"?"גילי הילדים — כדי למצוא חדר ומחיר מתאימים":"Children ages — for accurate rooms and pricing"}</label><div className="ageGrid">{form.childrenAges.map((age,i)=><input key={i} type="number" min="0" max="17" placeholder={(lang==="he"?"ילד ":"Child ")+(i+1)} value={age} onChange={e=>setChildAge(i,e.target.value)}/>)}</div></div>}</div>}
+   </div>
+
+   <div className={"aiFormStep "+(formStep===3?"active":"")} data-step="3">
+    <label>{a.peopleDetails}</label><textarea className="peopleDetailsInput" placeholder={a.peopleDetailsPlaceholder} value={form.peopleDetails} onChange={e=>setForm({...form,peopleDetails:e.target.value})}/>
+    {isFamilyTrip&&<label className="hotelCheck"><input type="checkbox" checked={form.hotelBooked} onChange={e=>setForm({...form,hotelBooked:e.target.checked})}/> {a.hotel}</label>}
+    {isFamilyTrip&&<div className="interestsField"><label>{a.interests}</label><div className="chipRow">{Object.keys(a.interestOptions).map(key=><button type="button" key={key} className={"chip "+(form.interests.includes(key)?"selected":"")} onClick={()=>toggleInterest(key)}>{a.interestOptions[key]}</button>)}</div></div>}
+   </div>
+
+   <div className="stepNav">
+    <span className="stepIndicator">{lang==="he"?`שלב ${formStep} מתוך ${TOTAL_STEPS}`:`Step ${formStep} of ${TOTAL_STEPS}`}</span>
+    <div className="stepNavBtns">
+     {formStep>1&&<button type="button" onClick={goBack}>{lang==="he"?"→ הקודם":"← Back"}</button>}
+     {formStep<TOTAL_STEPS&&<button type="button" className="primary" onClick={goNext}>{lang==="he"?"הבא ←":"Next →"}</button>}
+    </div>
+   </div>
+
+   <div className="actions finalActions"><button onClick={()=>setView("create")}>{a.blank}</button><button className="primary aiBuildButton" onClick={build}>✦ {a.build}</button></div>
   </div>
   <div className={"panel aiPromise "+(shownHeroArt?"aiPromiseArt":"")} style={shownHeroArt?{backgroundImage:`url(${shownHeroArt})`}:undefined}>
    {shownHeroArt?<div className="aiPromiseShade"></div>:<div className="constellation">
