@@ -77,10 +77,12 @@ export default function Memory({experience,setExperience,setView,t,user,publicVi
  if(publicView&&!publicLoaded)return <section className="memoryBook memoryBookPublicState" dir={dir}><p>⏳ {m2.publicLoading}</p></section>;
  if(publicView&&!localExp)return <section className="memoryBook memoryBookPublicState" dir={dir}><p>⚠ {m2.publicNotFound}</p></section>;
 
- return <section className="memoryBook" dir={dir}>
+ return <>
+ <section className="memoryBook" dir={dir}>
 
   <div className="mbCover" style={coverPhoto?{backgroundImage:`url(${coverPhoto.downloadURL})`}:undefined}>
    <div className="mbCoverShade"></div>
+   <div className="mbCoverFrame"></div>
    <div className="mbCoverContent">
     <span className="mbEyebrow">{m2.morivoMemoryBook}</span>
     <h1>{exp.name||t.studio.untitled}</h1>
@@ -124,22 +126,25 @@ export default function Memory({experience,setExperience,setView,t,user,publicVi
    </div>)}
   </div>}
 
-  {canShare&&<div className="mbSection mbShare">
-   <div className="mbHeading">{m2.shareTitle}</div>
-   <p className="mbShareDesc">{m2.shareDesc}</p>
-   {exp.memoryPublic?
-    <div className="mbShareRow">
-     <input readOnly value={shareUrl} onFocus={e=>e.target.select()}/>
-     <button disabled={sharing} onClick={copyShareLink}>{m2.shareCopyLink}</button>
-     <button disabled={sharing} onClick={()=>setShared(false)}>{m2.shareUnpublish}</button>
-    </div>
-    :<button className="mbShareBtn" disabled={sharing} onClick={()=>setShared(true)}>{m2.sharePublic}</button>}
+  {canShare&&<div className="mbSection mbShareSection">
+   <div className="mbShare">
+    <div className="mbHeading">{m2.shareTitle}</div>
+    <p className="mbShareDesc">{m2.shareDesc}</p>
+    {exp.memoryPublic?
+     <div className="mbShareRow">
+      <input readOnly value={shareUrl} onFocus={e=>e.target.select()}/>
+      <button disabled={sharing} onClick={copyShareLink}>{m2.shareCopyLink}</button>
+      <button disabled={sharing} onClick={()=>setShared(false)}>{m2.shareUnpublish}</button>
+     </div>
+     :<button className="mbShareBtn" disabled={sharing} onClick={()=>setShared(true)}>{m2.sharePublic}</button>}
+   </div>
   </div>}
+ </section>
 
-  <div className="actions mbActions">
-   <button className="primary" onClick={()=>window.print()}>{m2.exportPrint}</button>
-   {!publicView&&<button onClick={()=>setView("runtime")}>{m2.backToRuntime}</button>}
-  </div>
-  {publicView&&<div className="mbPoweredBy">{m2.poweredBy}</div>}
- </section>;
+ <div className="actions mbActions">
+  <button className="primary" onClick={()=>window.print()}>{m2.exportPrint}</button>
+  {!publicView&&<button onClick={()=>setView("runtime")}>{m2.backToRuntime}</button>}
+ </div>
+ {publicView&&<div className="mbPoweredBy">{m2.poweredBy}</div>}
+ </>;
 }
