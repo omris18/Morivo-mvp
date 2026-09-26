@@ -230,13 +230,11 @@ export default function Studio({ experience, setExperience, setView, t }) {
   }
 
   return (
-    <section className="grid2">
-      <div className="panel">
-        <div className="tag">
+    <section className="grid2 studioPage">
+      <div className="panel studioWorkspace">
+        <div className="studioHeader"><div><div className="tag">
           {s.savingTag} · {saving ? s.saving : saveError ? s.saveErrorTag : s.saved}
-        </div>
-
-        <h2>{experience.name || s.untitled}</h2>
+        </div><h2>{experience.name || s.untitled}</h2></div><div className={"savePill "+(saveError?"error":saving?"saving":"saved")}><i></i>{saving ? s.saving : saveError ? s.saveErrorTag : s.saved}</div></div>
 
         <div className="tripDetails">
           <div className="tag">{s.tripDetailsTag}</div>
@@ -459,8 +457,8 @@ export default function Studio({ experience, setExperience, setView, t }) {
         </div>
       </div>
 
-      <div className="panel">
-        <div className="tag">{s.liveParticipantPreview}</div>
+      <div className="panel studioPreviewPanel">
+        <div className="previewHeader"><div><div className="tag">{s.liveParticipantPreview}</div><span>LIVE EXPERIENCE</span></div><i></i></div>
 
         {atom ? (
           <div className="phone">
