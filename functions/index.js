@@ -131,7 +131,7 @@ async function suggestHotel({ location, prompt, people, duration, lang, startDat
     id: `story-${Date.now()}-hotel`,
     type: "story",
     title: lang === "he" ? "היכן להתארח" : "Where to Stay",
-    text: text.slice(0, 1200),
+    text,
     reward: "",
     points: 0,
   };
