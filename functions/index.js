@@ -180,6 +180,7 @@ exports.generateExperience = onCall({ secrets: [openaiApiKey, geminiApiKey], cor
 
   const userPrompt = [
     `Description: ${prompt}`,
+    `Required output language for every name, title, instruction and reward: ${LANG_NAMES[lang] || "the language of the description"}. The destination country does not determine the language.`,
     type ? `Experience type: ${type}` : null,
     location ? `Location: ${location}` : null,
     duration ? `Duration: ${duration}` : null,
@@ -195,7 +196,7 @@ exports.generateExperience = onCall({ secrets: [openaiApiKey, geminiApiKey], cor
   let completion;
   try {
     completion = await client.chat.completions.create({
-      model: "gpt-4o-mini",
+      model: "gpt-4o",
       messages: [
         { role: "system", content: SYSTEM_PROMPT },
         { role: "user", content: userPrompt },
