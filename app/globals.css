@@ -25,6 +25,16 @@
 .mbStoryText{font:400 19px/1.8 Georgia,serif;color:#e7ecf3;white-space:pre-wrap}
 .mbWriteBtn{margin-top:18px;border:1px solid rgba(239,193,134,.4);background:rgba(239,193,134,.08);color:#efc186;padding:11px 18px;border-radius:12px}
 .mbWriteBtn:disabled{opacity:.6}
+.mbShareDesc{color:#9eaabd;font-size:14px;margin-bottom:14px}
+.mbShareBtn{border:1px solid rgba(125,92,255,.4);background:rgba(125,92,255,.1);color:#c9bcff;padding:11px 18px;border-radius:12px}
+.mbShareBtn:disabled{opacity:.6}
+.mbShareRow{display:flex;flex-wrap:wrap;gap:8px}
+.mbShareRow input{flex:1;min-width:200px;padding:11px 13px;border-radius:12px;border:1px solid rgba(255,255,255,.11);background:#071321;color:white}
+.mbShareRow button{border:1px solid rgba(255,255,255,.14);background:#0c1b2e;color:#e7ecf3;padding:0 14px;border-radius:12px;white-space:nowrap}
+.mbShareRow button:disabled{opacity:.6}
+.mbPoweredBy{text-align:center;color:#7c8aa0;font-size:12px;letter-spacing:.04em;margin-top:-24px}
+.memoryBookPublicState{max-width:900px;margin:80px auto;text-align:center;color:#9eaabd;font-size:16px}
+.memoryPublicShell{min-height:100vh;padding:28px;max-width:1000px;margin:0 auto}
 .mbChapter{margin-bottom:36px;padding-bottom:36px;border-bottom:1px solid rgba(255,255,255,.08)}
 .mbChapter:last-child{border-bottom:0;margin-bottom:0;padding-bottom:0}
 .mbChapter h3{font:500 24px Georgia,serif;margin-bottom:16px}
@@ -35,7 +45,7 @@
 .mbQuote cite{display:block;font-style:normal;font-size:12px;color:#9eaabd;margin-top:6px}
 .mbActions{justify-content:center;margin-top:8px}
 @media print{
- aside.sidebar,.topBar,.mbActions{display:none!important}
+ aside.sidebar,.topBar,.mbActions,.mbShare,.mbPoweredBy{display:none!important}
  body,.content{background:#fff!important;color:#111!important}
  .memoryBook{max-width:100%}
  .mbCover{min-height:280px;-webkit-print-color-adjust:exact;print-color-adjust:exact}

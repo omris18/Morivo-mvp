@@ -48,6 +48,7 @@ export default function Home(){
   const [activeId,setActiveId]=useState(null);
   const [deepLinkCode,setDeepLinkCode]=useState("");
   const [portalCode,setPortalCode]=useState("");
+  const [memoryId,setMemoryId]=useState("");
   const [lang,setLang]=useState("en");
  const [country,setCountry]=useState("US");
 
@@ -73,8 +74,10 @@ export default function Home(){
    const params=new URLSearchParams(window.location.search);
    const pc=params.get("pcode");
    const q=params.get("join");
+   const mem=params.get("memory");
    if(pc){ setPortalCode(pc.toUpperCase()); setView("portal"); }
    else if(q){ setDeepLinkCode(q.toUpperCase()); setView("participant"); }
+   else if(mem){ setMemoryId(mem); setView("memoryPublic"); }
  },[]);
 
  useEffect(()=>{
@@ -123,6 +126,10 @@ export default function Home(){
 
  if(view==="participant" && deepLinkCode){
    return <Participant {...props} chromeless/>;
+ }
+
+ if(view==="memoryPublic"){
+   return <div className="memoryPublicShell" dir={dir}><Memory {...props} publicView memoryId={memoryId}/></div>;
  }
 
  return <div className="appShell" dir={dir}>

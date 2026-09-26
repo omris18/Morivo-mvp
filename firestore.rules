@@ -17,7 +17,8 @@ service cloud.firestore {
       // must never be able to update or delete the experience document itself.
       allow read: if signedIn() && (
         resource.data.ownerUid == request.auth.uid ||
-        exists(/databases/$(database)/documents/experiences/$(experienceId)/participants/$(request.auth.uid))
+        exists(/databases/$(database)/documents/experiences/$(experienceId)/participants/$(request.auth.uid)) ||
+        resource.data.memoryPublic == true
       );
       allow update, delete: if signedIn() && resource.data.ownerUid == request.auth.uid;
 
