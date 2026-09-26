@@ -362,3 +362,40 @@ body{background:radial-gradient(circle at 78% -10%,rgba(123,199,216,.08),transpa
 .experiencePanel .rowActions{display:flex;align-items:center;gap:7px}.experiencePanel .rowActions button{min-height:36px;border-radius:999px;font-size:11px;padding:7px 13px}.openExperience{background:transparent;border:1px solid rgba(255,255,255,.12);color:#dce5ed}.openExperience span{margin-inline-start:7px}.experiencePanel .danger{background:transparent;border:1px solid rgba(255,120,120,.12);color:#a87676}
 @media(max-width:1000px){.morivoHero{grid-template-columns:1fr;padding:42px}.heroJourney{height:270px}.dashboardKpis{grid-template-columns:repeat(2,1fr)}}
 @media(max-width:700px){.morivoHero{padding:30px 24px;min-height:auto}.morivoHero h1{font-size:43px}.heroJourney{height:235px;margin-top:8px}.dashboardKpis{grid-template-columns:1fr 1fr}.experiencePanel{padding:18px}.experiencePanel .experienceRow{grid-template-columns:46px 1fr}.experiencePanel .rowActions{grid-column:2}.experienceThumb{width:46px;height:46px}.sidebarJourney{display:none}}
+
+
+/* MORIVO AI Creator — journey-first premium pass */
+.aiCreate{max-width:1220px;margin:0 auto;grid-template-columns:minmax(0,1.08fr) minmax(360px,.92fr);gap:18px;align-items:stretch}
+.aiCreate>.panel{border-radius:24px;border:1px solid var(--m-line);background:linear-gradient(160deg,rgba(13,28,41,.96),rgba(8,18,28,.98));padding:34px;box-shadow:0 24px 65px rgba(0,0,0,.18)}
+.aiCreate>.panel:first-child{padding:38px 40px}
+.aiCreate h1{font:500 clamp(38px,4vw,57px)/1.02 Georgia,serif;letter-spacing:-.03em;margin:8px 0 14px;max-width:650px}
+.aiCreate>.panel:first-child>p{color:#93a5b6;line-height:1.65;max-width:620px;margin-bottom:28px}
+.aiCreate label{display:block;color:#aab7c4;font-size:10px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;margin:16px 0 7px}
+.aiCreate input,.aiCreate select,.aiCreate textarea{border:1px solid rgba(255,255,255,.1);background:rgba(4,12,19,.62);color:#f4f1eb;border-radius:12px;outline:none;transition:border-color .2s,box-shadow .2s,background .2s}
+.aiCreate input:focus,.aiCreate select:focus,.aiCreate textarea:focus{border-color:rgba(239,193,134,.5);box-shadow:0 0 0 3px rgba(239,193,134,.07);background:#081520}
+.aiPrompt{min-height:132px;font-size:16px;line-height:1.55;padding:16px}
+.peopleDetailsInput{min-height:84px}
+.aiCreate .fieldRow{gap:12px}.aiCreate .tripLengthDisplay{min-height:45px;display:flex;align-items:center;padding:0 13px;border-radius:12px;border:1px solid rgba(255,255,255,.08);background:rgba(255,255,255,.025);font-family:Georgia,serif;color:var(--m-warm)}
+.aiCreate .hotelCheck{display:flex;align-items:center;gap:9px;text-transform:none;letter-spacing:0;font-size:13px;padding:12px 14px;border:1px solid rgba(255,255,255,.08);border-radius:12px;background:rgba(255,255,255,.025)}
+.aiCreate .hotelCheck input{width:16px;height:16px;margin:0}
+.aiCreate .chip{background:rgba(255,255,255,.025);border-color:rgba(255,255,255,.09);color:#8fa2b5}
+.aiCreate .chip.selected{background:rgba(239,193,134,.1);border-color:rgba(239,193,134,.4);color:var(--m-warm)}
+.aiCreate .actions{margin-top:26px;padding-top:22px;border-top:1px solid rgba(255,255,255,.07)}
+.aiCreate .actions button{border-radius:999px;padding:12px 18px}
+.aiCreate .aiBuildButton{background:linear-gradient(135deg,#f1c894,#dda96d);border:0;color:#17202a;box-shadow:0 10px 28px rgba(239,193,134,.16)}
+.aiCreate .aiBuildButton:hover{box-shadow:0 13px 34px rgba(239,193,134,.22)}
+.aiPromise{overflow:hidden;min-height:690px;display:flex;flex-direction:column;justify-content:flex-end;background:radial-gradient(circle at 24% 17%,rgba(157,134,255,.2),transparent 32%),radial-gradient(circle at 80% 54%,rgba(123,199,216,.16),transparent 38%),linear-gradient(160deg,#102231,#07131d)}
+.aiPromise::after{content:"";position:absolute;inset:0;background:linear-gradient(180deg,transparent 38%,rgba(6,14,22,.76) 70%,#071019 100%);pointer-events:none}
+.aiPromise>*{position:relative;z-index:2}.aiPromise .constellation{position:absolute;inset:48px 22px auto;height:310px;z-index:1}
+.aiPromise h2{font:500 37px/1.06 Georgia,serif;letter-spacing:-.025em;margin:0 0 12px;color:#f7f2ea}.aiPromise h2 br+*{color:var(--m-warm)}
+.aiPromise p{color:#9eafbf;line-height:1.6;max-width:470px}
+.aiPromise .brandArtRow{margin-top:18px}.brandArtBtn{border-radius:999px!important;font-size:10px!important;letter-spacing:.02em}
+.constellation span{width:50px;height:50px;font-size:0!important}.constellation span::after{font-size:17px;color:#dce6ee}
+.constellation span:nth-of-type(1)::after{content:"⌖"}.constellation span:nth-of-type(2)::after{content:"◉"}.constellation span:nth-of-type(3)::after{content:"?"}.constellation span:nth-of-type(4)::after{content:"◇"}.constellation span:nth-of-type(5)::after{content:"✦"}.constellation span:nth-of-type(6)::after{content:"▤"}
+.aiThinking{max-width:1220px;margin:0 auto;min-height:75vh;grid-template-columns:1.1fr .9fr}
+.thinkingWorld{border:1px solid var(--m-line);box-shadow:0 30px 80px rgba(0,0,0,.2);background:radial-gradient(circle at 50% 50%,rgba(239,193,134,.09),transparent 24%),radial-gradient(circle at 55% 45%,rgba(123,199,216,.11),transparent 43%),linear-gradient(145deg,#091723,#061019)}
+.aiThinking .flowLine{stroke:url(#lineGrad);stroke-width:1.6}.aiThinking .orb{background:#0b1b28;border-color:rgba(255,255,255,.11);font-size:0}.aiThinking .orb::after{font-size:19px;color:#dce7ef}.aiThinking .orb1::after{content:"⌖"}.aiThinking .orb2::after{content:"◉"}.aiThinking .orb3::after{content:"◇"}.aiThinking .orb4::after{content:"✦"}.aiThinking .orb5::after{content:"▤"}
+.aiThinking .coreGlow{background:radial-gradient(circle,rgba(239,193,134,.28),rgba(123,199,216,.14) 48%,transparent 72%)}
+.aiThinking .bookBuild span{background:rgba(239,193,134,.08);border-color:rgba(239,193,134,.34)}
+.thinkingCopy .tag{font-size:10px;letter-spacing:.17em}.thinkingCopy h1{font:500 clamp(40px,4.5vw,64px)/1.04 Georgia,serif;letter-spacing:-.035em;color:#f7f2eb;margin:14px 0 18px}.thinkingCopy p{font-size:14px;line-height:1.7;color:#8396a9;max-width:450px}.thinkingSteps{gap:7px}.thinkingSteps i{height:2px;width:34px;background:#1b2a38}.thinkingSteps i.on{background:linear-gradient(90deg,var(--m-warm),var(--m-sky))}
+@media(max-width:900px){.aiCreate,.aiThinking{grid-template-columns:1fr}.aiPromise{min-height:520px}.aiCreate>.panel:first-child{padding:28px}.aiPromise .constellation{height:245px}.thinkingWorld{height:400px}}
