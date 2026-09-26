@@ -309,3 +309,56 @@ button:active{transform:scale(.96)}
 .constellation span:nth-child(5){animation-delay:-4s}
 .constellation span:nth-child(6){animation-delay:-.6s}
 @keyframes constellationFloat{0%,100%{transform:translateY(0)}50%{transform:translateY(-10px)}}
+
+
+/* MORIVO 2026 — unified journey design system */
+:root{--m-bg:#071019;--m-surface:#0b1722;--m-surface2:#0f1d2a;--m-line:rgba(255,255,255,.09);--m-text:#f6f3ed;--m-muted:#93a3b4;--m-warm:#efc186;--m-sky:#7bc7d8;--m-violet:#9d86ff}
+body{background:radial-gradient(circle at 78% -10%,rgba(123,199,216,.08),transparent 32%),var(--m-bg);color:var(--m-text)}
+.appShell{background:transparent}
+.content{max-width:1480px}
+.sidebar{background:linear-gradient(180deg,rgba(11,23,34,.98),rgba(6,14,22,.98));border-right:1px solid var(--m-line);padding:28px 18px;display:flex;flex-direction:column}
+[dir="rtl"] .sidebar{border-right:0;border-left:1px solid var(--m-line)}
+.brandLockup{display:flex;align-items:center;gap:12px;padding:0 8px 28px;margin-bottom:12px;border-bottom:1px solid var(--m-line)}
+.brandLockup .brand{font-family:Georgia,serif;font-size:22px;letter-spacing:.08em;color:#fff}
+.brandLockup .tag{font-size:9px;letter-spacing:.14em;color:#718295;margin-top:2px}
+.brandMark{width:30px;height:30px;position:relative;transform:rotate(-18deg)}
+.brandMark span{position:absolute;width:16px;height:4px;border-radius:99px;background:linear-gradient(90deg,var(--m-warm),var(--m-sky));left:6px}
+.brandMark span:nth-child(1){top:6px;transform:rotate(45deg)}.brandMark span:nth-child(2){top:13px;left:10px}.brandMark span:nth-child(3){top:20px;transform:rotate(-45deg)}
+.sidebar nav{display:flex;flex-direction:column;gap:5px}
+.sidebar nav button{border:0;background:transparent;color:#8fa0b1;border-radius:12px;padding:11px 12px;display:flex;align-items:center;gap:12px;text-align:start;font-size:13px;font-weight:600}
+.sidebar nav button:hover{background:rgba(255,255,255,.035);color:#dfe7ef}
+.sidebar nav button.active{background:linear-gradient(90deg,rgba(239,193,134,.12),rgba(123,199,216,.05));color:#fff;box-shadow:inset 2px 0 var(--m-warm)}
+[dir="rtl"] .sidebar nav button.active{box-shadow:inset -2px 0 var(--m-warm)}
+.navIcon{width:20px;height:20px;display:grid;place-items:center}.navIcon svg{width:17px;height:17px;fill:currentColor}
+.sidebarJourney{margin-top:auto;padding:20px 9px 4px}.sidebarJourney small{font-size:8px;letter-spacing:.17em;color:#536577}.journeyLine{width:100%;height:1px;background:linear-gradient(90deg,var(--m-warm),var(--m-sky),transparent);margin-bottom:10px}
+.topBar{padding:3px 0 15px;border-bottom:1px solid rgba(255,255,255,.055);margin-bottom:24px}
+.dashboardPage{max-width:1220px;margin:0 auto}
+.morivoHero{min-height:430px;padding:56px 54px;display:grid;grid-template-columns:minmax(0,1.02fr) minmax(360px,.98fr);align-items:center;gap:30px;overflow:hidden;background:radial-gradient(circle at 82% 42%,rgba(123,199,216,.11),transparent 30%),radial-gradient(circle at 65% 75%,rgba(239,193,134,.07),transparent 28%),linear-gradient(145deg,#0c1925,#08121c);border:1px solid rgba(255,255,255,.085);border-radius:28px;box-shadow:0 30px 80px rgba(0,0,0,.22)}
+.morivoHero::before{background:linear-gradient(120deg,rgba(255,255,255,.045),transparent 35%)}
+.heroCopy{position:relative;z-index:2}.heroCopy .tag{font-size:10px;letter-spacing:.18em;margin-bottom:17px}
+.morivoHero h1{font-family:Georgia,serif;font-size:clamp(46px,5.2vw,74px);line-height:.98;letter-spacing:-.035em;max-width:690px;margin:0 0 22px;font-weight:500}
+.morivoHero h1 span{display:block;color:var(--m-warm);font-style:italic;font-weight:400}
+.morivoHero p{max-width:550px;color:#a7b5c4;font-size:16px;line-height:1.7;margin-bottom:30px}
+.heroActions{gap:10px}.heroActions button{border-radius:999px;padding:13px 20px;font-weight:700}
+.heroActions .aiCta{background:linear-gradient(135deg,#f1c894,#dca96d);border:0;color:#17202a;box-shadow:0 9px 30px rgba(239,193,134,.16)}.spark{margin-inline-end:7px}
+.heroActions .quietCta{background:transparent;border:1px solid rgba(255,255,255,.15);color:#dbe4ed}
+.heroJourney{position:relative;height:330px;direction:ltr}.heroJourney svg{position:absolute;inset:0;width:100%;height:100%;overflow:visible}
+.journeyPathGhost{fill:none;stroke:rgba(255,255,255,.06);stroke-width:10;stroke-linecap:round}
+.journeyPath{fill:none;stroke:url(#journeyGlow);stroke-width:2.2;stroke-linecap:round;stroke-dasharray:7 10;filter:drop-shadow(0 0 8px rgba(123,199,216,.32));animation:morivoRoute 16s linear infinite}
+@keyframes morivoRoute{to{stroke-dashoffset:-240}}
+.journeyPin{position:absolute;display:flex;flex-direction:column;align-items:center;gap:6px}.journeyPin i{width:43px;height:43px;border-radius:50%;display:grid;place-items:center;background:rgba(9,20,30,.92);border:1px solid rgba(255,255,255,.15);font-style:normal;color:var(--m-warm);box-shadow:0 8px 28px rgba(0,0,0,.25)}.journeyPin small{font-size:8px;letter-spacing:.16em;color:#73879a}
+.pinIdea{left:4%;top:70%}.pinPlace{left:29%;top:37%}.pinLive{left:59%;top:53%}.pinMemory{right:2%;top:14%}
+.heroBook{position:absolute;right:1%;top:46%;width:112px;height:82px;transform:rotate(5deg);filter:drop-shadow(0 18px 20px rgba(0,0,0,.28))}
+.heroBook span{position:absolute;inset:0;border:1px solid rgba(239,193,134,.35);border-radius:5px 12px 12px 5px;background:linear-gradient(145deg,#20303a,#101b25)}
+.heroBook span:nth-child(1){transform:translate(-8px,6px);opacity:.35}.heroBook span:nth-child(2){transform:translate(-4px,3px);opacity:.65}.heroBook b{position:absolute;inset:0;display:grid;place-items:center;font:500 9px Georgia,serif;letter-spacing:.13em;color:var(--m-warm);z-index:2}
+.dashboardKpis{margin:18px 0;display:grid;grid-template-columns:repeat(4,1fr);gap:10px}
+.dashboardKpis .kpiBtn{position:relative;text-align:start;border:1px solid var(--m-line);border-radius:16px;background:rgba(11,23,34,.72);padding:17px 18px;color:#fff;min-height:92px}
+.dashboardKpis .kpiBtn:hover{transform:translateY(-2px);border-color:rgba(239,193,134,.24);background:#0e1c29}
+.dashboardKpis small{display:block;color:#718497;font-size:9px;letter-spacing:.12em;text-transform:uppercase;margin-bottom:8px}.dashboardKpis b{font:500 29px Georgia,serif;color:#f5efe7}.dashboardKpis .kpiBtn>span{position:absolute;right:16px;bottom:16px;color:#536678}[dir="rtl"] .dashboardKpis .kpiBtn>span{right:auto;left:16px;transform:rotate(180deg)}
+.experiencePanel{background:rgba(10,21,31,.66);border:1px solid var(--m-line);border-radius:22px;padding:26px}
+.sectionHead{display:flex;align-items:center;justify-content:space-between;margin-bottom:18px}.sectionHead .tag{font-size:9px;letter-spacing:.15em}.sectionHead h2{font:500 26px Georgia,serif;margin:5px 0 0}.roundCreate{width:40px;height:40px;border-radius:50%;padding:0;border:1px solid rgba(239,193,134,.28);background:rgba(239,193,134,.08);color:var(--m-warm);font-size:21px}
+.experienceGrid{display:flex;flex-direction:column;gap:9px}.experiencePanel .experienceRow{display:grid;grid-template-columns:52px 1fr auto;align-items:center;gap:14px;margin:0;padding:12px;border-radius:15px;background:rgba(255,255,255,.018);border:1px solid rgba(255,255,255,.065)}.experiencePanel .experienceRow:hover{padding:12px;transform:translateY(-1px);background:rgba(255,255,255,.035)}
+.experienceThumb{width:52px;height:52px;border-radius:13px;display:grid;place-items:center;background:radial-gradient(circle at 30% 25%,rgba(239,193,134,.22),transparent 38%),linear-gradient(145deg,#172a37,#0c1924);border:1px solid rgba(255,255,255,.08);color:var(--m-warm)}.experienceInfo h3{font:500 18px Georgia,serif;margin:0 0 4px}.experienceInfo p{font-size:11px;color:#718497;margin:0}.experienceInfo p span{margin:0 5px}
+.experiencePanel .rowActions{display:flex;align-items:center;gap:7px}.experiencePanel .rowActions button{min-height:36px;border-radius:999px;font-size:11px;padding:7px 13px}.openExperience{background:transparent;border:1px solid rgba(255,255,255,.12);color:#dce5ed}.openExperience span{margin-inline-start:7px}.experiencePanel .danger{background:transparent;border:1px solid rgba(255,120,120,.12);color:#a87676}
+@media(max-width:1000px){.morivoHero{grid-template-columns:1fr;padding:42px}.heroJourney{height:270px}.dashboardKpis{grid-template-columns:repeat(2,1fr)}}
+@media(max-width:700px){.morivoHero{padding:30px 24px;min-height:auto}.morivoHero h1{font-size:43px}.heroJourney{height:235px;margin-top:8px}.dashboardKpis{grid-template-columns:1fr 1fr}.experiencePanel{padding:18px}.experiencePanel .experienceRow{grid-template-columns:46px 1fr}.experiencePanel .rowActions{grid-column:2}.experienceThumb{width:46px;height:46px}.sidebarJourney{display:none}}
