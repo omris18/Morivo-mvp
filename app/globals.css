@@ -472,3 +472,50 @@ body{background:radial-gradient(circle at 78% -10%,rgba(123,199,216,.08),transpa
 .portalCard .finishCard{background:linear-gradient(145deg,rgba(239,193,134,.1),rgba(88,211,155,.05));border:1px solid rgba(239,193,134,.2)}
 @media(max-width:600px){.portalShell{padding:12px}.portalCard{padding:20px 18px;border-radius:22px}.portalCard::before{inset:7px;border-radius:16px}.portalCard .portalLangSwitch{margin-bottom:16px}.portalCard .journeyPhone{padding:20px}.portalCard .journeyPhone h3{font-size:27px}}
 @media print{.portalShell::before,.portalCard::before{display:none}.portalCard{max-width:100%;border:0;box-shadow:none;background:#fff;backdrop-filter:none}.portalCard .journeyGreeting h2,.portalCard .participantHeader h2,.portalCard .journeyStopCard b{color:#111}.portalCard .journeyStopCard,.portalCard .familyPassport,.portalCard .flightsSection{background:#fff;border-color:#ddd}.portalCard .journeyStopMeta,.portalCard .journeyGreeting p{color:#555}}
+/* Runtime — warm, legible controls in the Morivo design system. */
+.runtimePage{max-width:1220px;margin:auto}
+.runtimePage .panel{padding:30px;border:1px solid var(--m-line);border-radius:24px;background:linear-gradient(155deg,#0d1d2b,#08131e);box-shadow:0 22px 60px rgba(0,0,0,.16);min-width:0}
+.runtimePage .runtimeTitle{align-items:flex-start;padding-bottom:24px;border-bottom:1px solid var(--m-line)}
+.runtimePage .runtimeTitle>div:first-child{min-width:0;flex:1}
+.runtimePage .runtimeTitle h2{font:500 clamp(32px,4vw,48px)/1.08 Georgia,serif;letter-spacing:-.03em;margin:10px 0 0;overflow-wrap:anywhere}
+.runtimePage .tag{color:var(--m-warm);font-size:10px;letter-spacing:.15em}
+.runtimePage .joinMini{display:grid;grid-template-columns:1fr 88px;column-gap:18px;align-items:center;padding:17px 20px;border:1px solid rgba(239,193,134,.24);border-radius:17px;background:rgba(239,193,134,.055);text-align:start;flex:none}
+.runtimePage .joinMini small{color:#b7a181;font-size:9px;letter-spacing:.14em}
+.runtimePage .joinMini b{grid-column:1;font:600 20px/1.35 ui-monospace,monospace;letter-spacing:.1em;color:#f5d7ad;overflow-wrap:anywhere;direction:ltr;text-align:start}
+.runtimePage .joinQr{grid-column:2;grid-row:1/3;width:88px;height:88px;margin:0;padding:5px;border-radius:10px}
+.runtimePage .joinMini:not(:has(img)){grid-template-columns:1fr}
+.runtimePage .runtimeStats{gap:12px;margin:24px 0}
+.runtimePage .runtimeStats>div{display:flex;flex-direction:column;gap:10px;min-width:0;padding:19px 20px;border-color:rgba(255,255,255,.07);border-radius:15px;background:rgba(255,255,255,.025)}
+.runtimePage .runtimeStats b{font:500 34px/1 Georgia,serif;color:#f7f2ea}
+.runtimePage .runtimeStats span{order:-1;font-size:10px;line-height:1.5;letter-spacing:.07em;color:#a2b3c2}
+.runtimePage .insightsRow{grid-template-columns:repeat(3,minmax(0,1fr));margin-top:-10px}
+.runtimePage .insightsRow>div{background:transparent;border-style:dashed}
+.runtimePage .insightsRow b{font-size:25px;color:var(--m-sky)}
+.runtimePage h3{font:500 25px Georgia,serif;margin:30px 0 16px}
+.runtimePage .journeyTable{border:1px solid var(--m-line);border-radius:15px;background:rgba(3,12,20,.3);padding:5px 15px 10px;scrollbar-color:#3a5060 #0a1722}
+.runtimePage .journeyTableHead{padding:14px 0;color:#9aacba;letter-spacing:.05em}
+.runtimePage .journeyTableRow{min-height:58px;padding:10px 0;border-color:rgba(255,255,255,.055);font-size:13px}
+.runtimePage .journeyTableRow:last-child{border-bottom:0}
+.runtimePage .cellActive{color:var(--m-warm);text-shadow:0 0 12px rgba(239,193,134,.3)}
+.runtimePage .cellDone{color:#71d4af}
+.runtimePage .rowActionBtns button{min-height:34px;min-width:34px;padding:5px;border:1px solid rgba(255,255,255,.12);border-radius:9px;background:rgba(255,255,255,.035)}
+.runtimePage .actions{gap:9px;margin-top:23px;padding-top:20px;border-top:1px solid var(--m-line)}
+.runtimePage .actions button,.runtimePage .rosterActions button{border-radius:999px;background:rgba(255,255,255,.025);border:1px solid rgba(255,255,255,.12);color:#c9d5df}
+.runtimePage .actions .primary{margin-inline-start:auto;background:linear-gradient(135deg,#f1c894,#dda96d);color:#17202a;border:0;font-weight:700}
+.runtimePage .feed{gap:10px}
+.runtimePage .feed>div{padding:15px 17px;border-color:rgba(255,255,255,.07);border-inline-start:2px solid rgba(239,193,134,.4);background:rgba(255,255,255,.02);color:#b6c5d2;font-size:13px;line-height:1.6}
+.runtimePage .runtimeMedia{gap:10px}
+.runtimePage .runtimeMedia img,.runtimePage .runtimeMedia video{border:1px solid rgba(255,255,255,.1);border-radius:13px}
+.runtimePage .missionPerfRow{display:grid;grid-template-columns:minmax(130px,1fr) minmax(100px,1.5fr) 45px;gap:18px;padding:10px 0}
+.runtimePage .missionPerfRow b{min-width:0;font-weight:500;line-height:1.5;color:#c6d1dc}
+.runtimePage .missionPerfBar{height:5px;background:#1a2b39}
+.runtimePage .missionPerfBar span{background:linear-gradient(90deg,var(--m-warm),var(--m-sky))}
+.runtimePage .rosterHint{max-width:750px;font-size:13px;line-height:1.7;color:#94a8b9}
+.runtimePage .reviseBar{max-width:620px;margin:20px 0}
+.runtimePage .reviseBar input{font-size:16px;border-color:rgba(255,255,255,.13);background:#071723}
+.runtimePage .reviseBar button{border-radius:12px;background:rgba(239,193,134,.12);border:1px solid rgba(239,193,134,.3);color:var(--m-warm)}
+.runtimePage .rosterRow{padding:15px 17px;border-color:rgba(255,255,255,.08);background:rgba(255,255,255,.025)}
+.runtimePage button:focus-visible,.runtimePage input:focus-visible{outline:2px solid var(--m-warm);outline-offset:3px}
+.runtimePage button:disabled{opacity:.5}
+@media(max-width:800px){.runtimePage .runtimeTitle{flex-direction:column;gap:22px}.runtimePage .joinMini{width:100%}.runtimePage .runtimeStats{grid-template-columns:repeat(2,minmax(0,1fr))}.runtimePage .insightsRow{grid-template-columns:1fr}.runtimePage .panel{padding:22px}.runtimePage .actions .primary{margin-inline-start:0}}
+@media(max-width:500px){.runtimePage .panel{padding:18px;border-radius:20px}.runtimePage .runtimeStats{gap:8px}.runtimePage .runtimeStats>div{padding:15px}.runtimePage .actions{display:grid;grid-template-columns:1fr}.runtimePage .actions button{width:100%;min-height:46px}.runtimePage .missionPerfRow{grid-template-columns:minmax(0,1fr) 40px;gap:8px}.runtimePage .missionPerfRow b{grid-column:1/-1}.runtimePage .rosterActions{width:100%;margin:0}.runtimePage .rosterActions button{min-height:42px}.runtimePage .joinMini{padding:14px}}
