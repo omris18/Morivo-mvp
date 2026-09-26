@@ -62,7 +62,13 @@ export default function Participant({experience,setExperience,setView,setActiveI
  const experienceName=translated?.name||experience.name;
  const rawFlow=experience.flow||[];
  const flow=translated?rawFlow.map(m=>translated.flow.find(x=>x.id===m.id)||m):rawFlow;
- const idx=Math.min(prog.currentMissionIndex||0,Math.max(flow.length-1,0)), mission=flow[idx], finished=flow.length>0&&(prog.completedMissionIds||[]).length>=flow.length;
+ const rawIdx=prog.currentMissionIndex||0;
+ // A branch mission can jump the participant straight past the end of the array (skipping
+ // whatever missions their path didn't take), so "finished" has to mean "position is past the
+ // last mission", not "every mission in the array got completed" - that second definition
+ // would never trigger once a path leaves some missions unvisited.
+ const finished=flow.length>0&&rawIdx>=flow.length;
+ const idx=Math.min(rawIdx,Math.max(flow.length-1,0)), mission=finished?null:flow[idx];
  const badges=computeBadges(prog,flow);
  useEffect(()=>{setQuizAnswer(null);setNoteText("");setPuzzleAnswer("");setLocStatus(null);setQrVerified(false);stopScan()},[idx]);
  useEffect(()=>()=>stopScan(),[]);
@@ -118,6 +124,17 @@ export default function Participant({experience,setExperience,setView,setActiveI
    if(firebaseConfigured)await completeJourneyMission(eid,mission,idx,name);else setProg(pr=>({completedMissionIds:[...pr.completedMissionIds,mission.id],currentMissionIndex:idx+1,points:pr.points+(mission.points||100)}));
    setFile(null);setPct(0);setQuizAnswer(null);setNoteText("");
  }catch(e){alert(e.message)}finally{setBusy(false)}}
+ async function chooseBranch(option){
+  if(!mission||busy)return;
+  if(experience.paused)return alert(p.pausedByOrganizer);
+  const target=option.next?flow.findIndex(m=>m.id===option.next):flow.length;
+  const nextIndex=target<0?flow.length:target;
+  setBusy(true);
+  try{
+   if(firebaseConfigured)await completeJourneyMission(eid,mission,idx,name,nextIndex);
+   else setProg(pr=>({completedMissionIds:[...pr.completedMissionIds,mission.id],currentMissionIndex:nextIndex,points:pr.points+(mission.points||0)}));
+  }catch(e){alert(e.message)}finally{setBusy(false)}
+ }
  if(portal&&portalResolving){
   return <div className="portalShell" dir={dir} style={{backgroundImage:experienceGradient(portalCode)}}><div className="portalLoading">⏳ {p.portalResolving}</div></div>;
  }
@@ -181,7 +198,8 @@ export default function Participant({experience,setExperience,setView,setActiveI
  {!hasGpsCheckpoint&&!hasQrCheckpoint&&<div className="mapMock">📍<span>{p.locationCheckpoint}</span></div>}
 </>}{mission.type==="puzzle"&&<div className="puzzleBox">🧩<input value={puzzleAnswer} placeholder={p.puzzleAnswerPlaceholder} onChange={e=>setPuzzleAnswer(e.target.value)}/></div>}
  {mission.type==="note"&&<textarea className="noteInput" placeholder={p.writeMemory} value={noteText} onChange={e=>setNoteText(e.target.value)}/>}
- {busy&&(mission.type==="photo"||mission.type==="video")&&<div className="uploadProgress"><div style={{width:`${pct}%`}}></div><span>{pct}%</span></div>}<div className="mission">{p.reward}: {mission.reward||`${mission.points||100} pts`}</div><button className="primary" disabled={busy||experience.paused} onClick={complete}>{busy?p.saving:p.completeContinue}</button></div>}</>;
+ {mission.type==="branch"&&<div className="branchChoices">{(mission.options||[]).map(o=><button key={o.id} type="button" className="branchChoiceBtn" disabled={busy||experience.paused} onClick={()=>chooseBranch(o)}>{o.label}</button>)}</div>}
+ {mission.type!=="branch"&&<>{busy&&(mission.type==="photo"||mission.type==="video")&&<div className="uploadProgress"><div style={{width:`${pct}%`}}></div><span>{pct}%</span></div>}<div className="mission">{p.reward}: {mission.reward||`${mission.points||100} pts`}</div><button className="primary" disabled={busy||experience.paused} onClick={complete}>{busy?p.saving:p.completeContinue}</button></>}</div>}</>;
 
  const joinForm=<><h2>{p.joinTitle}</h2><label>{p.yourName}</label><input value={name} placeholder={p.namePlaceholder} onChange={e=>setName(e.target.value)}/><label>{p.joinCode}</label><input value={code} onChange={e=>setCode(e.target.value.toUpperCase())} onKeyDown={e=>e.key==="Enter"&&join()}/><div className="actions centerActions"><button className="primary" disabled={joining} onClick={join}>{joining?p.joining:p.joinBtn}</button></div></>;
 

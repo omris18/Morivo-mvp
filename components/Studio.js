@@ -140,6 +140,10 @@ export default function Studio({ experience, setExperience, setView, t }) {
       text: "",
       reward: `100 ${s.pointsSuffix}`,
       points: 100,
+      ...(type === "branch" ? { options: [
+        { id: `opt-${Date.now()}-1`, label: "", next: "" },
+        { id: `opt-${Date.now()}-2`, label: "", next: "" },
+      ] } : {}),
     };
 
     persist({
@@ -148,6 +152,23 @@ export default function Studio({ experience, setExperience, setView, t }) {
     });
 
     setSelected(newAtom.id);
+  }
+
+  function addBranchOption() {
+    if (!atom) return;
+    const options = [...(atom.options || []), { id: `opt-${Date.now()}`, label: "", next: "" }];
+    patch({ options });
+  }
+
+  function updateBranchOption(optionId, values) {
+    if (!atom) return;
+    const options = (atom.options || []).map((o) => o.id === optionId ? { ...o, ...values } : o);
+    patch({ options });
+  }
+
+  function removeBranchOption(optionId) {
+    if (!atom) return;
+    patch({ options: (atom.options || []).filter((o) => o.id !== optionId) });
   }
 
   function move(direction) {
@@ -268,7 +289,7 @@ export default function Studio({ experience, setExperience, setView, t }) {
         </div>
 
         <div className="atomBar">
-          {["photo", "video", "map", "quiz", "puzzle", "note", "reward", "story"].map(
+          {["photo", "video", "map", "quiz", "puzzle", "note", "reward", "story", "branch"].map(
             (type) => (
               <button key={type} onClick={() => add(type)}>
                 ＋ {type}
@@ -371,6 +392,32 @@ export default function Studio({ experience, setExperience, setView, t }) {
               </>
             )}
 
+            {atom.type === "branch" && (
+              <div className="branchEditor">
+                <label>{s.branchOptionsLabel}</label>
+                {(atom.options || []).map((o) => (
+                  <div className="branchOptionRow" key={o.id}>
+                    <input
+                      value={o.label || ""}
+                      placeholder={s.branchOptionPlaceholder}
+                      onChange={(e) => updateBranchOption(o.id, { label: e.target.value })}
+                    />
+                    <select
+                      value={o.next || ""}
+                      onChange={(e) => updateBranchOption(o.id, { next: e.target.value })}
+                    >
+                      <option value="">{s.branchEndJourney}</option>
+                      {flow.filter((m) => m.id !== atom.id).map((m) => (
+                        <option key={m.id} value={m.id}>{m.title || m.type}</option>
+                      ))}
+                    </select>
+                    <button type="button" className="danger" onClick={() => removeBranchOption(o.id)}>✕</button>
+                  </div>
+                ))}
+                <button type="button" onClick={addBranchOption}>+ {s.branchAddOption}</button>
+              </div>
+            )}
+
             {atom.type === "map" && (
               <div className="gpsCheckpoint">
                 <label>{s.gpsCheckpoint}</label>
@@ -465,13 +512,25 @@ export default function Studio({ experience, setExperience, setView, t }) {
             <h3>{atom.title}</h3>
             <p>{atom.text ? <LinkifiedText text={atom.text} /> : s.instructionPlaceholder}</p>
 
-            <div className="mission">
-              {atom.reward
-                ? `${s.rewardPrefix} ${atom.reward}`
-                : `${atom.points || 100} ${s.pointsSuffix}`}
-            </div>
+            {atom.type === "branch" ? (
+              <div className="branchChoices">
+                {(atom.options || []).map((o) => (
+                  <button key={o.id} type="button" className="branchChoiceBtn" disabled>
+                    {o.label || s.branchOptionPlaceholder}
+                  </button>
+                ))}
+              </div>
+            ) : (
+              <>
+                <div className="mission">
+                  {atom.reward
+                    ? `${s.rewardPrefix} ${atom.reward}`
+                    : `${atom.points || 100} ${s.pointsSuffix}`}
+                </div>
 
-            <button className="primary">{s.completeMission}</button>
+                <button className="primary">{s.completeMission}</button>
+              </>
+            )}
           </div>
         ) : (
           <div className="emptyBuilder">

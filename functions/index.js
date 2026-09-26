@@ -289,10 +289,13 @@ exports.translateExperience = onCall({ secrets: [openaiApiKey], cors: true, time
       id: m.id, type: m.type, title: m.title || "", text: m.text || "", reward: m.reward || "",
       ...(m.type === "puzzle" && m.answer ? { answer: m.answer } : {}),
       ...(m.hotel ? { hotel: m.hotel } : {}),
+      ...(m.type === "branch" && Array.isArray(m.options) && m.options.length
+        ? { options: m.options.map((o) => ({ id: o.id, label: o.label || "" })) }
+        : {}),
     })),
   };
 
-  const systemPrompt = `You translate content for an interactive experience app called Morivo into ${LANG_NAMES[targetLang]}, for a participant who doesn't speak the language it was originally written in. Translate naturally and idiomatically, not word-for-word - it should read like it was written natively in ${LANG_NAMES[targetLang]}. Translate every "name", "story", "title", "text" and "reward" field. A "hotel" field is a proper-noun hotel name - keep it exactly as-is, never translate or transliterate it. If a mission has an "answer" field (a puzzle's solution), translate it consistently with the translated "text" (the riddle) so the puzzle stays solvable: the translated answer must be exactly what a ${LANG_NAMES[targetLang]} speaker would naturally type as the answer to the translated riddle. Keep "id" and "type" fields completely unchanged - copy them through as given. Respond with STRICT JSON only, no markdown fencing, no commentary, matching exactly this shape: {"name":"...","story":"...","flow":[{"id":"...","type":"...","title":"...","text":"...","reward":"...","answer":"only if the input mission had one","hotel":"only if the input mission had one"}]}`;
+  const systemPrompt = `You translate content for an interactive experience app called Morivo into ${LANG_NAMES[targetLang]}, for a participant who doesn't speak the language it was originally written in. Translate naturally and idiomatically, not word-for-word - it should read like it was written natively in ${LANG_NAMES[targetLang]}. Translate every "name", "story", "title", "text" and "reward" field. A "hotel" field is a proper-noun hotel name - keep it exactly as-is, never translate or transliterate it. If a mission has an "answer" field (a puzzle's solution), translate it consistently with the translated "text" (the riddle) so the puzzle stays solvable: the translated answer must be exactly what a ${LANG_NAMES[targetLang]} speaker would naturally type as the answer to the translated riddle. If a mission has an "options" array (a branching choice), translate each option's "label" the same natural way; keep each option's "id" completely unchanged. Keep "id" and "type" fields completely unchanged - copy them through as given. Respond with STRICT JSON only, no markdown fencing, no commentary, matching exactly this shape: {"name":"...","story":"...","flow":[{"id":"...","type":"...","title":"...","text":"...","reward":"...","answer":"only if the input mission had one","hotel":"only if the input mission had one","options":"only if the input mission had one, same shape with translated label"}]}`;
 
   let completion;
   try {
@@ -330,6 +333,17 @@ exports.translateExperience = onCall({ secrets: [openaiApiKey], cors: true, time
       reward: t?.reward !== undefined ? String(t.reward).slice(0, 120) : m.reward,
       ...(m.type === "puzzle" && t?.answer ? { answer: String(t.answer).slice(0, 80) } : {}),
       ...(m.hotel && t?.hotel ? { hotel: String(t.hotel).slice(0, 120) } : {}),
+      ...(m.type === "branch" && Array.isArray(m.options) && m.options.length
+        ? {
+          options: (() => {
+            const translatedOptsById = new Map((Array.isArray(t?.options) ? t.options : []).map((o) => [o.id, o]));
+            return m.options.map((o) => ({
+              ...o,
+              label: translatedOptsById.get(o.id)?.label ? String(translatedOptsById.get(o.id).label).slice(0, 120) : o.label,
+            }));
+          })(),
+        }
+        : {}),
     };
   });
 
