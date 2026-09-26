@@ -256,8 +256,26 @@ button:active{transform:scale(.96)}
   radial-gradient(circle at 50% 105%,rgba(239,193,134,.16),transparent 55%),
   linear-gradient(160deg,#101f36,#08131f);
 }
-.constellation:before,.constellation:after{background:linear-gradient(90deg,transparent,rgba(125,92,255,.75),rgba(95,205,248,.75),transparent);filter:blur(.4px)}
-.constellation span{background:linear-gradient(150deg,#1a2d4d,#0d1b2e);border-color:rgba(255,255,255,.18);box-shadow:0 0 34px rgba(125,92,255,.25),inset 0 0 0 1px rgba(255,255,255,.07);font-size:22px;animation:constellationFloat 5.5s ease-in-out infinite}
+.constellation{margin-bottom:46px;direction:ltr}
+.constellation:before,.constellation:after{content:none}
+/* The svg line-layer added above is now the constellation's first child, which shifts every
+   span's nth-child position by one - re-target by tag type instead so it can't drift again. */
+.constellation span:nth-child(n){left:auto;top:auto}
+.constellation span:nth-of-type(1){left:5%;top:18%}
+.constellation span:nth-of-type(2){left:25%;top:4%}
+.constellation span:nth-of-type(3){left:43%;top:22%}
+.constellation span:nth-of-type(4){left:60%;top:0%}
+.constellation span:nth-of-type(5){left:76%;top:18%}
+.constellation span:nth-of-type(6){left:88%;top:0%}
+.constellationLines{position:absolute;inset:0;width:100%;height:100%;z-index:0}
+.constLine{fill:none;stroke:url(#constLineGrad);stroke-width:1.5;stroke-linecap:round;stroke-dasharray:4 9;animation:constFlowDash 2.6s linear infinite;opacity:.85}
+.cl2{animation-delay:.25s}
+.cl3{animation-delay:.5s}
+.cl4{animation-delay:.75s}
+.cl5{animation-delay:1s}
+.cl6{animation-delay:1.25s}
+@keyframes constFlowDash{to{stroke-dashoffset:-26}}
+.constellation span{position:relative;z-index:1;background:linear-gradient(150deg,#1a2d4d,#0d1b2e);border-color:rgba(255,255,255,.18);box-shadow:0 0 34px rgba(125,92,255,.25),inset 0 0 0 1px rgba(255,255,255,.07);font-size:22px;animation:constellationFloat 5.5s ease-in-out infinite}
 .constellation span:nth-child(2){animation-delay:-1s}
 .constellation span:nth-child(3){animation-delay:-2s}
 .constellation span:nth-child(4){animation-delay:-3s}

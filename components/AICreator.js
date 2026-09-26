@@ -102,6 +102,23 @@ export default function AICreator({setExperience,setView,setActiveId,user,lang,t
    {isFamilyTrip&&<div className="interestsField"><label>{a.interests}</label><div className="chipRow">{Object.keys(a.interestOptions).map(key=><button type="button" key={key} className={"chip "+(form.interests.includes(key)?"selected":"")} onClick={()=>toggleInterest(key)}>{a.interestOptions[key]}</button>)}</div></div>}
    <div className="actions"><button onClick={()=>setView("create")}>{a.blank}</button><button className="primary aiBuildButton" onClick={build}>✦ {a.build}</button></div>
   </div>
-  <div className="panel aiPromise"><div className="constellation"><span>📍</span><span>📸</span><span>❓</span><span>🧩</span><span>🏆</span><span>📖</span></div><h2>{a.promiseTitle1}<br/>{a.promiseTitle2}</h2><p>{a.promiseDesc}</p></div>
+  <div className="panel aiPromise"><div className="constellation">
+    <svg className="constellationLines" viewBox="0 0 100 100" preserveAspectRatio="none">
+     <defs>
+      <linearGradient id="constLineGrad" x1="0" y1="0" x2="1" y2="1">
+       <stop offset="0%" stopColor="#efc186" stopOpacity="0"/>
+       <stop offset="50%" stopColor="#5fcdf8" stopOpacity=".95"/>
+       <stop offset="100%" stopColor="#7d5cff" stopOpacity="0"/>
+      </linearGradient>
+     </defs>
+     <path className="constLine cl1" vectorEffect="non-scaling-stroke" d="M15,28 Q25,20 35,14"/>
+     <path className="constLine cl2" vectorEffect="non-scaling-stroke" d="M35,14 Q52,12 70,10"/>
+     <path className="constLine cl3" vectorEffect="non-scaling-stroke" d="M35,14 Q44,24 53,32"/>
+     <path className="constLine cl4" vectorEffect="non-scaling-stroke" d="M53,32 Q70,30 86,28"/>
+     <path className="constLine cl5" vectorEffect="non-scaling-stroke" d="M70,10 Q84,9 95,10"/>
+     <path className="constLine cl6" vectorEffect="non-scaling-stroke" d="M86,28 Q92,18 95,10"/>
+    </svg>
+    <span>📍</span><span>📸</span><span>❓</span><span>🧩</span><span>🏆</span><span>📖</span>
+   </div><h2>{a.promiseTitle1}<br/>{a.promiseTitle2}</h2><p>{a.promiseDesc}</p></div>
  </section>
 }
