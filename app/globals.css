@@ -249,3 +249,18 @@ button:active{transform:scale(.96)}
 .chipRow{display:flex;flex-wrap:wrap;gap:8px;margin-top:8px}
 .chip{border:1px solid rgba(255,255,255,.14);background:#0b1725;color:#b7c2d2;padding:9px 14px;border-radius:999px;font-size:13px;min-height:auto;transition:border-color .15s ease,color .15s ease,background-color .15s ease}
 .chip.selected{border-color:rgba(239,193,134,.5);background:rgba(239,193,134,.12);color:#efc186}
+.aiPromise{
+ background:
+  radial-gradient(circle at 22% 25%,rgba(125,92,255,.3),transparent 42%),
+  radial-gradient(circle at 78% 70%,rgba(95,205,248,.24),transparent 46%),
+  radial-gradient(circle at 50% 105%,rgba(239,193,134,.16),transparent 55%),
+  linear-gradient(160deg,#101f36,#08131f);
+}
+.constellation:before,.constellation:after{background:linear-gradient(90deg,transparent,rgba(125,92,255,.75),rgba(95,205,248,.75),transparent);filter:blur(.4px)}
+.constellation span{background:linear-gradient(150deg,#1a2d4d,#0d1b2e);border-color:rgba(255,255,255,.18);box-shadow:0 0 34px rgba(125,92,255,.25),inset 0 0 0 1px rgba(255,255,255,.07);font-size:22px;animation:constellationFloat 5.5s ease-in-out infinite}
+.constellation span:nth-child(2){animation-delay:-1s}
+.constellation span:nth-child(3){animation-delay:-2s}
+.constellation span:nth-child(4){animation-delay:-3s}
+.constellation span:nth-child(5){animation-delay:-4s}
+.constellation span:nth-child(6){animation-delay:-.6s}
+@keyframes constellationFloat{0%,100%{transform:translateY(0)}50%{transform:translateY(-10px)}}

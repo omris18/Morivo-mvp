@@ -55,7 +55,7 @@ export default function Participant({experience,setExperience,setView,setActiveI
   if(!firebaseConfigured||!joined||!eid||eid==="thailand-demo")return;
   if(experience.lang===lang)return;
   let alive=true;
-  translateExperienceRemote(eid,lang).then(result=>{if(alive&&result)setTranslated(result)}).catch(()=>{});
+  translateExperienceRemote(eid,lang).then(result=>{if(alive&&result)setTranslated(result)}).catch(e=>{if(alive)console.error("Translation failed:",e)});
   return ()=>{alive=false};
  },[joined,eid,lang,experience.lang]);
  const latestMessage=messages.find(m=>!dismissed.includes(m.id));
