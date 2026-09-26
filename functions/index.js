@@ -59,7 +59,6 @@ function bookingSearchUrl(name, location, opts) {
   const { checkin, checkout, adults, children, childrenAges, rooms } = opts || {};
   if (checkin) params.set("checkin", checkin);
   if (checkout) params.set("checkout", checkout);
-  params.set("group_adults", String(Math.max(1, Number(adults) || 2)));
   const adultCount = Math.max(1, Number(adults) || 2);
   const childCount = Math.max(0, Number(children) || 0);
   params.set("group_adults", String(adultCount));
@@ -67,7 +66,7 @@ function bookingSearchUrl(name, location, opts) {
   params.set("group_children", String(childCount));
   if (childCount && Array.isArray(childrenAges)) {
     const ages = childrenAges.slice(0, childCount).map((age) => Math.max(0, Math.min(17, Number(age) || 0)));
-    if (ages.length) params.set("age", ages.join(","));
+    for (const age of ages) params.append("age", String(age));
   }
   params.set("selected_currency", "ILS");
   params.set("lang", "he");
@@ -123,7 +122,10 @@ async function suggestHotel({ location, prompt, people, duration, lang, startDat
   const hotelPrompt = `Suggest 2 to 3 specific, realistic accommodation options in or near "${location}" that would suit this group: "${prompt}"${people ? ` (${people} people)` : ""}${duration ? `, staying for ${duration}` : ""}. For each option give a real, findable hotel/accommodation name or a specific well-known area, and a 1-2 sentence reason it fits this exact group - practical and specific, not generic travel-blog language. Write in the same language as the group description above (detect it automatically). Respond with STRICT JSON only, no markdown fencing, no commentary, matching exactly this shape: {"options":[{"name":"hotel or area name","why":"1-2 sentence reason"}]}`;
   const data = await askGeminiJSON(hotelPrompt, "hotel suggestion");
   if (!Array.isArray(data?.options) || !data.options.length) return null;
-  const stayAdults = Math.max(1, Number(adults) || Number(people) || 2);\n  const stayChildren = Math.max(0, Number(children) || 0);\n  const rooms = Math.max(1, Math.ceil((stayAdults + stayChildren) / 4));\n  const text = optionsToMissionText(data.options, 3, bookingSearchUrl, location, { checkin: startDate, checkout: endDate, adults: stayAdults, children: stayChildren, childrenAges, rooms });
+  const stayAdults = Math.max(1, Number(adults) || Number(people) || 2);
+  const stayChildren = Math.max(0, Number(children) || 0);
+  const rooms = Math.max(1, Math.ceil((stayAdults + stayChildren) / 4));
+  const text = optionsToMissionText(data.options, 3, bookingSearchUrl, location, { checkin: startDate, checkout: endDate, adults: stayAdults, children: stayChildren, childrenAges, rooms });
   if (!text) return null;
   return {
     id: `story-${Date.now()}-hotel`,
