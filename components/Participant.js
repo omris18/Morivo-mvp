@@ -15,7 +15,7 @@ function formatStopDate(dateStr,lang){
  try{ return new Intl.DateTimeFormat(lang==="he"?"he-IL":lang,{day:"numeric",month:"short"}).format(new Date(dateStr+"T00:00:00")); }
  catch{ return dateStr; }
 }
-export default function Participant({experience,setExperience,setView,setActiveId,deepLinkCode,t,lang,setLang,dir,portal,portalCode,chromeless}){
+export default function Participant({experience,setExperience,setView,setActiveId,deepLinkCode,t,lang,setLang,country,selectLang,dir,portal,portalCode,chromeless}){
  const p=t.participant;
  const [code,setCode]=useState(deepLinkCode||experience.joinCode||""),[name,setName]=useState("Guest"),[joined,setJoined]=useState(false),[eid,setEid]=useState(experience.id),[uid,setUid]=useState("");
  const [portalResolving,setPortalResolving]=useState(!!portal);
@@ -186,7 +186,7 @@ export default function Participant({experience,setExperience,setView,setActiveI
  const joinForm=<><h2>{p.joinTitle}</h2><label>{p.yourName}</label><input value={name} onChange={e=>setName(e.target.value)}/><label>{p.joinCode}</label><input value={code} onChange={e=>setCode(e.target.value.toUpperCase())} onKeyDown={e=>e.key==="Enter"&&join()}/><div className="actions centerActions"><button className="primary" disabled={joining} onClick={join}>{joining?p.joining:p.joinBtn}</button></div></>;
 
  const portalLangSwitch=<div className="langSwitchGlobal portalLangSwitch">
-   {COUNTRY_FLAGS.map(f=><button key={f.country} className={lang===f.lang?"active":""} onClick={()=>setLang(f.lang)} title={f.label} aria-label={f.label}><FlagIcon code={f.country}/></button>)}
+   {COUNTRY_FLAGS.map(f=><button key={f.country} className={country===f.country?"active":""} onClick={()=>selectLang(f)} title={f.label} aria-label={f.label}><FlagIcon code={f.country}/></button>)}
   </div>;
 
  if(chromeless){

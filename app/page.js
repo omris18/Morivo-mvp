@@ -49,14 +49,25 @@ export default function Home(){
   const [deepLinkCode,setDeepLinkCode]=useState("");
   const [portalCode,setPortalCode]=useState("");
   const [lang,setLang]=useState("en");
+ const [country,setCountry]=useState("US");
 
  useEffect(()=>{
    const saved=window.localStorage?.getItem("morivo_lang");
    if(saved && STRINGS[saved]) setLang(saved);
+   const savedCountry=window.localStorage?.getItem("morivo_country");
+   if(savedCountry && COUNTRY_FLAGS.some(f=>f.country===savedCountry)) setCountry(savedCountry);
+   else if(saved && STRINGS[saved]){
+     const match=COUNTRY_FLAGS.find(f=>f.lang===saved);
+     if(match) setCountry(match.country);
+   }
  },[]);
  useEffect(()=>{
    try{ window.localStorage?.setItem("morivo_lang", lang); }catch{}
  },[lang]);
+ useEffect(()=>{
+   try{ window.localStorage?.setItem("morivo_country", country); }catch{}
+ },[country]);
+ function selectLang(f){ setLang(f.lang); setCountry(f.country); }
 
  useEffect(()=>{
    const params=new URLSearchParams(window.location.search);
@@ -94,7 +105,7 @@ export default function Home(){
 
  const t=STRINGS[lang];
  const dir=getDir(lang);
- const props={experience,setExperience,setView,user,experiences,setExperiences,activeId,setActiveId,openExperience,deepLinkCode,lang,setLang,t,dir};
+ const props={experience,setExperience,setView,user,experiences,setExperiences,activeId,setActiveId,openExperience,deepLinkCode,lang,setLang,country,selectLang,t,dir};
 
  const Screen=useMemo(()=>({
    dashboard:<Dashboard {...props}/>,
@@ -122,7 +133,7 @@ export default function Home(){
        <div className="topBarRight">
          <div className="langSwitchGlobal">
            {COUNTRY_FLAGS.map(f=>(
-             <button key={f.country} className={lang===f.lang?"active":""} onClick={()=>setLang(f.lang)} title={f.label} aria-label={f.label}><FlagIcon code={f.country}/></button>
+             <button key={f.country} className={country===f.country?"active":""} onClick={()=>selectLang(f)} title={f.label} aria-label={f.label}><FlagIcon code={f.country}/></button>
            ))}
          </div>
          <Account user={user} t={t}/>
