@@ -41,4 +41,4 @@ jobs:
         run: node --check functions/index.js
 
       - name: Deploy experience generator
-        run: npx --yes firebase-tools@14 deploy --only functions:generateExperience --project morivo-mvp --non-interactive
+        run: npx --yes firebase-tools@14 deploy --only functions:generateExperience --project morivo-mvp --non-interactive --force
