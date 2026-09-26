@@ -34,7 +34,7 @@ function generateDraft(f){
 
 export default function AICreator({setExperience,setView,setActiveId,user,lang,t,dir}){
  const a=t.aiCreator;
- const [form,setForm]=useState({prompt:"",type:"",location:"",duration:"",startDate:"",endDate:"",people:"",peopleDetails:"",hotelBooked:false,interests:[]}),[building,setBuilding]=useState(false),[step,setStep]=useState(0);
+ const [form,setForm]=useState({prompt:"",type:"",location:"",duration:"",startDate:"",endDate:"",people:"",peopleDetails:"",hotelBooked:false,interests:[],adults:"2",children:"0",childrenAges:[]}),[building,setBuilding]=useState(false),[step,setStep]=useState(0);
  const isFamilyTrip=form.type===TYPE_OPTIONS.en[0]||form.type===TYPE_OPTIONS.he[0];
  const tripDays=isFamilyTrip?daysBetween(form.startDate,form.endDate):0;
  const [heroArt,setHeroArt]=useState(null),[loadingArt,setLoadingArt]=useState(null),[generatingKey,setGeneratingKey]=useState(null);
@@ -48,6 +48,11 @@ export default function AICreator({setExperience,setView,setActiveId,user,lang,t
   try{const url=await generateBrandImageRemote(key,artContext);if(url)setCustom(url)}catch(e){alert(e.message)}finally{setGeneratingKey(null)}
  }
  const shownHeroArt=customHeroArt||heroArt,shownLoadingArt=customLoadingArt||loadingArt;
+ function setChildrenCount(value){
+  const count=Math.max(0,Math.min(8,Number(value)||0));
+  setForm(f=>({...f,children:String(count),childrenAges:Array.from({length:count},(_,i)=>f.childrenAges[i]??"")}));
+ }
+ function setChildAge(index,value){setForm(f=>({...f,childrenAges:f.childrenAges.map((x,i)=>i===index?value:x)}))}
  function toggleInterest(key){
   setForm(f=>({...f,interests:f.interests.includes(key)?f.interests.filter(x=>x!==key):[...f.interests,key]}));
  }
@@ -62,7 +67,7 @@ export default function AICreator({setExperience,setView,setActiveId,user,lang,t
    await ensureUser();
    const generate=httpsCallable(functions,"generateExperience");
    const needsHotel=isFamilyTrip&&!form.hotelBooked;
-   const result=await generate({prompt:form.prompt,type:form.type,location:form.location,duration:isFamilyTrip?(tripDays?`${tripDays} days`:""):form.duration,startDate:isFamilyTrip?form.startDate:null,endDate:isFamilyTrip?form.endDate:null,people:form.people,peopleDetails:form.peopleDetails,lang,multiDay:isFamilyTrip,needsHotel,interests:isFamilyTrip?form.interests:[]});
+   const result=await generate({prompt:form.prompt,type:form.type,location:form.location,duration:isFamilyTrip?(tripDays?`${tripDays} days`:""):form.duration,startDate:isFamilyTrip?form.startDate:null,endDate:isFamilyTrip?form.endDate:null,people:form.people,peopleDetails:form.peopleDetails,adults:isFamilyTrip?Number(form.adults||0):null,children:isFamilyTrip?Number(form.children||0):null,childrenAges:isFamilyTrip?form.childrenAges.map(Number).filter(Number.isFinite):[],lang,multiDay:isFamilyTrip,needsHotel,interests:isFamilyTrip?form.interests:[]});
    flow=result.data.flow;name=result.data.name;usedAI=true;
   }catch(e){
    console.error("AI generation failed, falling back to the draft generator",e);
@@ -116,6 +121,7 @@ export default function AICreator({setExperience,setView,setActiveId,user,lang,t
     :<div className="fieldRow"><div><label>{a.duration}</label><select value={form.duration} onChange={e=>setForm({...form,duration:e.target.value})}><option value=""></option>{DURATION_OPTIONS[lang].map(x=><option key={x} value={x}>{x}</option>)}</select></div><div><label>{a.people}</label><input type="number" value={form.people} onChange={e=>setForm({...form,people:e.target.value})}/></div></div>}
    {isFamilyTrip&&<div className="fieldRow"><div><label>{a.days}</label><div className="tripLengthDisplay">{tripDays?a.tripLength(tripDays):"—"}</div></div><div><label>{a.people}</label><input type="number" value={form.people} onChange={e=>setForm({...form,people:e.target.value})}/></div></div>}
    <label>{a.peopleDetails}</label><textarea className="peopleDetailsInput" placeholder={a.peopleDetailsPlaceholder} value={form.peopleDetails} onChange={e=>setForm({...form,peopleDetails:e.target.value})}/>
+   {isFamilyTrip&&<div className="hotelPartyBox"><div className="tag">{lang==="he"?"הרכב לאירוח":"Stay party"}</div><div className="fieldRow"><div><label>{lang==="he"?"מבוגרים":"Adults"}</label><input type="number" min="1" max="12" value={form.adults} onChange={e=>setForm({...form,adults:e.target.value})}/></div><div><label>{lang==="he"?"ילדים":"Children"}</label><input type="number" min="0" max="8" value={form.children} onChange={e=>setChildrenCount(e.target.value)}/></div></div>{Number(form.children)>0&&<div className="childrenAges"><label>{lang==="he"?"גילי הילדים — כדי למצוא חדר ומחיר מתאימים":"Children ages — for accurate rooms and pricing"}</label><div className="ageGrid">{form.childrenAges.map((age,i)=><input key={i} type="number" min="0" max="17" placeholder={(lang==="he"?"ילד ":"Child ")+(i+1)} value={age} onChange={e=>setChildAge(i,e.target.value)}/>)}</div></div>}</div>}
    {isFamilyTrip&&<label className="hotelCheck"><input type="checkbox" checked={form.hotelBooked} onChange={e=>setForm({...form,hotelBooked:e.target.checked})}/> {a.hotel}</label>}
    {isFamilyTrip&&<div className="interestsField"><label>{a.interests}</label><div className="chipRow">{Object.keys(a.interestOptions).map(key=><button type="button" key={key} className={"chip "+(form.interests.includes(key)?"selected":"")} onClick={()=>toggleInterest(key)}>{a.interestOptions[key]}</button>)}</div></div>}
    <div className="actions"><button onClick={()=>setView("create")}>{a.blank}</button><button className="primary aiBuildButton" onClick={build}>✦ {a.build}</button></div>
