@@ -2,7 +2,7 @@
 import {useEffect,useState} from "react";
 import {httpsCallable} from "firebase/functions";
 import {firebaseConfigured,functions} from "../lib/firebase";
-import {createExperienceRemote,ensureUser} from "../lib/morivoData";
+import {createExperienceRemote,ensureUser,subscribeSiteAsset,generateBrandImageRemote} from "../lib/morivoData";
 
 const TYPE_OPTIONS={
  en:["Family Trip","Birthday","Team Building","School","Museum"],
@@ -37,6 +37,12 @@ export default function AICreator({setExperience,setView,setActiveId,user,lang,t
  const [form,setForm]=useState({prompt:"",type:"",location:"",duration:"",startDate:"",endDate:"",people:"",peopleDetails:"",hotelBooked:false,interests:[]}),[building,setBuilding]=useState(false),[step,setStep]=useState(0);
  const isFamilyTrip=form.type===TYPE_OPTIONS.en[0]||form.type===TYPE_OPTIONS.he[0];
  const tripDays=isFamilyTrip?daysBetween(form.startDate,form.endDate):0;
+ const [heroArt,setHeroArt]=useState(null),[loadingArt,setLoadingArt]=useState(null),[generatingKey,setGeneratingKey]=useState(null);
+ useEffect(()=>{const a=subscribeSiteAsset("aiCreatorHero",setHeroArt),b=subscribeSiteAsset("bookBuildingHero",setLoadingArt);return()=>{a();b()}},[]);
+ async function generateArt(key){
+  setGeneratingKey(key);
+  try{await generateBrandImageRemote(key)}catch(e){alert(e.message)}finally{setGeneratingKey(null)}
+ }
  function toggleInterest(key){
   setForm(f=>({...f,interests:f.interests.includes(key)?f.interests.filter(x=>x!==key):[...f.interests,key]}));
  }
@@ -71,7 +77,8 @@ export default function AICreator({setExperience,setView,setActiveId,user,lang,t
   }catch(e){alert(e.message);setBuilding(false)}
  }
  if(building)return <section className="aiThinking" dir={dir}>
-   <div className="thinkingWorld">
+   <div className={"thinkingWorld "+(loadingArt?"thinkingWorldArt":"")} style={loadingArt?{backgroundImage:`url(${loadingArt})`}:undefined}>
+    {!loadingArt&&<>
     <svg className="thinkingLines" viewBox="0 0 600 540" preserveAspectRatio="none">
      <defs>
       <linearGradient id="lineGrad" x1="0" y1="0" x2="1" y2="1">
@@ -89,6 +96,7 @@ export default function AICreator({setExperience,setView,setActiveId,user,lang,t
     <div className="coreGlowWrap" style={{transform:`scale(${(0.85+step*0.06).toFixed(2)})`}}><div className="coreGlow"></div></div>
     <div className="orb orb1">📍</div><div className="orb orb2">📸</div><div className="orb orb3">🧩</div><div className="orb orb4">🏆</div><div className="orb orb5">📖</div>
     <div className="bookBuild"><span></span><span></span><span></span></div>
+    </>}
    </div>
    <div className="thinkingCopy"><div className="tag">{a.tag}</div><h1>{a.thinking[step]}</h1><p>{form.prompt}</p><div className="thinkingSteps">{a.thinking.map((x,i)=><i className={i<=step?"on":""} key={x}></i>)}</div></div>
   </section>;
@@ -107,7 +115,8 @@ export default function AICreator({setExperience,setView,setActiveId,user,lang,t
    {isFamilyTrip&&<div className="interestsField"><label>{a.interests}</label><div className="chipRow">{Object.keys(a.interestOptions).map(key=><button type="button" key={key} className={"chip "+(form.interests.includes(key)?"selected":"")} onClick={()=>toggleInterest(key)}>{a.interestOptions[key]}</button>)}</div></div>}
    <div className="actions"><button onClick={()=>setView("create")}>{a.blank}</button><button className="primary aiBuildButton" onClick={build}>✦ {a.build}</button></div>
   </div>
-  <div className="panel aiPromise"><div className="constellation">
+  <div className={"panel aiPromise "+(heroArt?"aiPromiseArt":"")} style={heroArt?{backgroundImage:`url(${heroArt})`}:undefined}>
+   {heroArt?<div className="aiPromiseShade"></div>:<div className="constellation">
     <svg className="constellationLines" viewBox="0 0 100 100" preserveAspectRatio="none">
      <defs>
       <linearGradient id="constLineGrad" x1="0" y1="0" x2="1" y2="1">
@@ -124,6 +133,12 @@ export default function AICreator({setExperience,setView,setActiveId,user,lang,t
      <path className="constLine cl6" vectorEffect="non-scaling-stroke" d="M86,28 Q92,18 95,10"/>
     </svg>
     <span>📍</span><span>📸</span><span>❓</span><span>🧩</span><span>🏆</span><span>📖</span>
-   </div><h2>{a.promiseTitle1}<br/>{a.promiseTitle2}</h2><p>{a.promiseDesc}</p></div>
+   </div>}
+   <h2>{a.promiseTitle1}<br/>{a.promiseTitle2}</h2><p>{a.promiseDesc}</p>
+   {(!heroArt||!loadingArt)&&<div className="brandArtRow">
+    {!heroArt&&<button type="button" className="brandArtBtn" disabled={!!generatingKey} onClick={()=>generateArt("aiCreatorHero")}>{generatingKey==="aiCreatorHero"?(lang==="he"?"✨ יוצר תמונה…":"✨ Generating…"):(lang==="he"?"✨ ייצר תמונת רקע ב-AI":"✨ Generate hero art with AI")}</button>}
+    {!loadingArt&&<button type="button" className="brandArtBtn brandArtBtnGhost" disabled={!!generatingKey} onClick={()=>generateArt("bookBuildingHero")}>{generatingKey==="bookBuildingHero"?(lang==="he"?"✨ יוצר תמונה…":"✨ Generating…"):(lang==="he"?"✨ ייצר רקע למסך הטעינה":"✨ Generate loading-screen art")}</button>}
+   </div>}
+  </div>
  </section>
 }

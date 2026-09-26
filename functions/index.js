@@ -572,3 +572,62 @@ exports.moderateParticipantAnswer = onDocumentCreated(
     }
   }
 );
+
+// Site-wide brand/marketing art (hero panels, loading-screen backdrops). These are shared
+// visual assets, not per-user or per-experience content - the prompt is always one of a
+// fixed, server-defined set below, never client-supplied text, so a signed-in caller can only
+// ever (re)generate one of these known images, not arbitrary AI-image content on our bill.
+const BRAND_IMAGE_SPECS = {
+  aiCreatorHero: {
+    prompt: "A dreamy, abstract 3D illustration for a premium travel-and-events app's hero panel. Softly glowing golden and purple light forms drifting in a dark navy space, with real depth, soft bokeh and cinematic lighting, evoking the feeling of a journey coming to life. Faint glowing silhouettes of a camera, a map pin, a jigsaw puzzle piece, a trophy and an open book gently floating in the scene, connected by soft trails of light. No text, no logos, no readable words, no real people. Elegant, premium, three-dimensional, a genuine wow first impression.",
+    size: "1024x1024",
+  },
+  bookBuildingHero: {
+    prompt: "A bombastic, cinematic 3D illustration of a magical storybook assembling itself in mid-air: glowing pages turning and swirling into place, warm golden light particles, soft purple and teal magical energy swirling around the book, dramatic dark elegant background with real depth and volumetric light. No text, no readable words, no real people. Premium mobile-app loading-screen art style.",
+    size: "1024x1024",
+  },
+  landingHero: {
+    prompt: "A warm, cinematic lifestyle photo of a family of five - two parents and three children of different ages - walking together away from the camera along a tropical beach at golden-hour sunset, holding hands, silhouetted against a warm gold and orange sky with palm trees to one side. Wide establishing shot, editorial travel-photography style, faces not clearly visible, generic stock-photo feel rather than a specific identifiable place or real people. Warm, emotional, premium travel-app marketing photography.",
+    size: "1536x1024",
+  },
+};
+
+exports.generateBrandImage = onCall({ secrets: [openaiApiKey], cors: true, timeoutSeconds: 120 }, async (request) => {
+  if (!request.auth) {
+    throw new HttpsError("unauthenticated", "Sign in before generating brand art.");
+  }
+
+  const { key } = request.data || {};
+  const spec = BRAND_IMAGE_SPECS[key];
+  if (!spec) {
+    throw new HttpsError("invalid-argument", "Unknown image key.");
+  }
+
+  const client = new OpenAI({ apiKey: openaiApiKey.value().trim() });
+  let result;
+  try {
+    result = await client.images.generate({ model: "gpt-image-1", prompt: spec.prompt, size: spec.size, n: 1 });
+  } catch (err) {
+    console.error("OpenAI image generation failed", err);
+    throw new HttpsError("unavailable", "Image generation failed. Please try again.");
+  }
+
+  const b64 = result?.data?.[0]?.b64_json;
+  if (!b64) {
+    throw new HttpsError("internal", "The AI didn't return an image.");
+  }
+
+  const buffer = Buffer.from(b64, "base64");
+  const bucket = admin.storage().bucket();
+  const file = bucket.file(`brand/${key}.png`);
+  await file.save(buffer, { contentType: "image/png", metadata: { cacheControl: "public, max-age=3600" } });
+  await file.makePublic();
+  const url = `https://storage.googleapis.com/${bucket.name}/brand/${key}.png?v=${Date.now()}`;
+
+  await db.collection("siteAssets").doc(key).set({
+    url,
+    updatedAt: admin.firestore.FieldValue.serverTimestamp(),
+  });
+
+  return { url };
+});

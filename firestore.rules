@@ -84,6 +84,14 @@ service cloud.firestore {
       }
     }
 
+    // Generated site-wide brand/marketing art (hero panels, loading backdrops) - only the
+    // generateBrandImage Cloud Function writes here (via admin credentials, which bypass
+    // these rules entirely); clients may only ever read the current image URL.
+    match /siteAssets/{key} {
+      allow read: if signedIn();
+      allow write: if false;
+    }
+
     match /publicExperiences/{joinCode} {
       allow read: if signedIn();
       allow create, update: if signedIn() && request.resource.data.ownerUid == request.auth.uid;
