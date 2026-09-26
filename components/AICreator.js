@@ -78,7 +78,7 @@ export default function AICreator({setExperience,setView,setActiveId,user,lang,t
    name=form.prompt.trim().split(/[.!?\n]/)[0].slice(0,48)||"New Experience";
   }
   await minWait;
-  const data={name,type:form.type,location:form.location,people:Number(form.people||0),story:form.prompt,flow,status:"draft",aiGenerated:usedAI,lang,...(isFamilyTrip&&form.startDate?{startDate:form.startDate}:{}),...(isFamilyTrip&&form.endDate?{endDate:form.endDate}:{})};
+  const data={name,type:form.type,location:form.location,people:Number(form.people||0),story:form.prompt,flow,status:"draft",aiGenerated:usedAI,lang,...(isFamilyTrip?{adultsCount:Number(form.adults||0),childrenCount:Number(form.children||0),childrenAges:form.childrenAges.map(Number)}:{}),...(isFamilyTrip&&form.startDate?{startDate:form.startDate}:{}),...(isFamilyTrip&&form.endDate?{endDate:form.endDate}:{})};
   try{
    const u=user||await ensureUser(),id=await createExperienceRemote(u.uid,data);
    setExperience({...data,id,ownerUid:u.uid});setActiveId(id);
