@@ -17,7 +17,7 @@ function formatStopDate(dateStr,lang){
 }
 export default function Participant({experience,setExperience,setView,setActiveId,deepLinkCode,t,lang,setLang,country,selectLang,dir,portal,portalCode,chromeless}){
  const p=t.participant;
- const [code,setCode]=useState(deepLinkCode||experience.joinCode||""),[name,setName]=useState("Guest"),[joined,setJoined]=useState(false),[eid,setEid]=useState(experience.id),[uid,setUid]=useState("");
+ const [code,setCode]=useState(deepLinkCode||experience.joinCode||""),[name,setName]=useState(""),[joined,setJoined]=useState(false),[eid,setEid]=useState(experience.id),[uid,setUid]=useState("");
  const [portalResolving,setPortalResolving]=useState(!!portal);
  const [portalError,setPortalError]=useState(null);
  const [coverMedia,setCoverMedia]=useState([]);
@@ -183,7 +183,7 @@ export default function Participant({experience,setExperience,setView,setActiveI
  {mission.type==="note"&&<textarea className="noteInput" placeholder={p.writeMemory} value={noteText} onChange={e=>setNoteText(e.target.value)}/>}
  {busy&&(mission.type==="photo"||mission.type==="video")&&<div className="uploadProgress"><div style={{width:`${pct}%`}}></div><span>{pct}%</span></div>}<div className="mission">{p.reward}: {mission.reward||`${mission.points||100} pts`}</div><button className="primary" disabled={busy||experience.paused} onClick={complete}>{busy?p.saving:p.completeContinue}</button></div>}</>;
 
- const joinForm=<><h2>{p.joinTitle}</h2><label>{p.yourName}</label><input value={name} onChange={e=>setName(e.target.value)}/><label>{p.joinCode}</label><input value={code} onChange={e=>setCode(e.target.value.toUpperCase())} onKeyDown={e=>e.key==="Enter"&&join()}/><div className="actions centerActions"><button className="primary" disabled={joining} onClick={join}>{joining?p.joining:p.joinBtn}</button></div></>;
+ const joinForm=<><h2>{p.joinTitle}</h2><label>{p.yourName}</label><input value={name} placeholder={p.namePlaceholder} onChange={e=>setName(e.target.value)}/><label>{p.joinCode}</label><input value={code} onChange={e=>setCode(e.target.value.toUpperCase())} onKeyDown={e=>e.key==="Enter"&&join()}/><div className="actions centerActions"><button className="primary" disabled={joining} onClick={join}>{joining?p.joining:p.joinBtn}</button></div></>;
 
  const portalLangSwitch=<div className="langSwitchGlobal portalLangSwitch">
    {COUNTRY_FLAGS.map(f=><button key={f.country} className={country===f.country?"active":""} onClick={()=>selectLang(f)} title={f.label} aria-label={f.label}><FlagIcon code={f.country}/></button>)}
