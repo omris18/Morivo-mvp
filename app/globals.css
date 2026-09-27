@@ -549,3 +549,146 @@ body{background:radial-gradient(circle at 78% -10%,rgba(123,199,216,.08),transpa
 .runtimePage button:disabled{opacity:.5}
 @media(max-width:800px){.runtimePage .runtimeTitle{flex-direction:column;gap:22px}.runtimePage .joinMini{width:100%}.runtimePage .runtimeStats{grid-template-columns:repeat(2,minmax(0,1fr))}.runtimePage .insightsRow{grid-template-columns:1fr}.runtimePage .panel{padding:22px}.runtimePage .actions .primary{margin-inline-start:0}}
 @media(max-width:500px){.runtimePage .panel{padding:18px;border-radius:20px}.runtimePage .runtimeStats{gap:8px}.runtimePage .runtimeStats>div{padding:15px}.runtimePage .actions{display:grid;grid-template-columns:1fr}.runtimePage .actions button{width:100%;min-height:46px}.runtimePage .missionPerfRow{grid-template-columns:minmax(0,1fr) 40px;gap:8px}.runtimePage .missionPerfRow b{grid-column:1/-1}.runtimePage .rosterActions{width:100%;margin:0}.runtimePage .rosterActions button{min-height:42px}.runtimePage .joinMini{padding:14px}}
+
+/* Manual creation — a quiet blank canvas with a live cover preview. */
+.manualCreate{max-width:1220px;margin:auto;grid-template-columns:minmax(0,1.1fr) minmax(300px,.9fr);gap:18px;align-items:start}
+.manualCreate>.panel{border:1px solid var(--m-line);border-radius:24px;background:linear-gradient(155deg,#0d1d2b,#08131e);box-shadow:0 24px 65px rgba(0,0,0,.18);min-width:0}
+.manualCreate .manualCreateForm{padding:38px 40px}
+.manualCreate .tag{font-size:10px;letter-spacing:.15em;color:var(--m-warm)}
+.manualCreateForm h2{font:500 clamp(34px,4vw,48px)/1.06 Georgia,serif;letter-spacing:-.035em;margin:14px 0 30px}
+.manualCreateForm label{color:#a5b6c5;font-size:11px;letter-spacing:.05em;margin:18px 0 8px}
+.manualCreateForm input,.manualCreateForm select,.manualCreateForm textarea{background:#071723;border-color:rgba(255,255,255,.12);font:400 16px/1.5 Inter,system-ui,sans-serif;color:#f5f1e9;outline:none}
+.manualCreateForm input:focus-visible,.manualCreateForm select:focus-visible,.manualCreateForm textarea:focus-visible{border-color:var(--m-warm);box-shadow:0 0 0 3px rgba(239,193,134,.1)}
+.manualCreateForm .fieldRow{display:grid;grid-template-columns:minmax(0,1.4fr) minmax(0,1fr);gap:14px}
+.manualCreateForm .fieldRow>div{min-width:0}
+.manualCreateForm textarea{min-height:160px;resize:vertical}
+.manualCreateForm .actions{margin-top:26px;padding-top:23px;border-top:1px solid var(--m-line);justify-content:space-between}
+.manualCreateForm .actions button{border-radius:999px;min-height:46px;padding:12px 19px}
+.manualCreateForm .actions .primary{background:linear-gradient(135deg,#f1c894,#dda96d);color:#17202a;font-weight:700;box-shadow:0 10px 28px rgba(239,193,134,.13)}
+.manualCreateForm button:focus-visible{outline:2px solid var(--m-warm);outline-offset:3px}
+.manualCreateForm button:disabled{opacity:.6}
+.manualCreatePreview{position:sticky;top:24px;overflow:hidden;padding:28px;text-align:center}
+.manualCreatePreview>.tag{text-align:center;margin-bottom:22px}
+.manualCreatePreview .blankPreview{position:relative;display:flex;flex-direction:column;align-items:stretch;width:100%;max-width:320px;min-height:470px;margin:0 auto;padding:30px 26px;border:1px solid rgba(255,255,255,.14);border-radius:30px;background:radial-gradient(circle at 85% 22%,rgba(123,199,216,.11),transparent 40%),radial-gradient(circle at 15% 48%,rgba(239,193,134,.08),transparent 35%),#07131d;box-shadow:0 28px 55px rgba(0,0,0,.3),inset 0 0 0 5px rgba(255,255,255,.018);text-align:start}
+.manualPreviewBrand{font:500 22px Georgia,serif;letter-spacing:-.02em;color:#f6f1e8}
+.manualRoute{position:relative;display:flex;justify-content:space-between;align-items:center;width:100%;height:95px;margin:18px 0 8px;padding:0 6px;direction:ltr}
+.manualRoute::before{content:"";position:absolute;inset:50% 9px auto;height:1px;background:linear-gradient(90deg,var(--m-warm),var(--m-sky))}
+.manualRoute i{position:relative;width:11px;height:11px;border:1px solid #789aaa;border-radius:50%;background:#102333;box-shadow:0 0 0 7px rgba(123,199,216,.035)}
+.manualRoute i:first-child{background:var(--m-warm);border-color:var(--m-warm);box-shadow:0 0 0 7px rgba(239,193,134,.06)}
+.manualRoute i:last-child{background:var(--m-sky);border-color:var(--m-sky)}
+.manualPreviewType{color:var(--m-warm);font-size:10px;letter-spacing:.13em;line-height:1.6;margin-bottom:9px}
+.manualCreatePreview .blankPreview h3{font:500 32px/1.08 Georgia,serif;letter-spacing:-.03em;color:#f6f1e8;margin:0 0 17px;overflow-wrap:anywhere}
+.manualCreatePreview .blankPreview .manualPlaceholder{color:#8093a3}
+.manualPreviewMeta{display:flex;flex-wrap:wrap;gap:7px;margin-bottom:18px}
+.manualPreviewMeta span{padding:6px 9px;border:1px solid rgba(255,255,255,.09);border-radius:999px;color:#a3b6c5;font-size:10px}
+.manualCreatePreview .blankPreview .manualPreviewStory{font-size:13px;line-height:1.7;white-space:pre-wrap;overflow-wrap:anywhere;color:#b8c5d0;margin:0 0 22px}
+.manualPreviewEnd{display:flex;align-items:center;gap:12px;margin-top:auto;padding-top:30px;color:var(--m-warm)}
+.manualPreviewEnd span{height:1px;flex:1;background:rgba(239,193,134,.18)}
+.manualPreviewEnd i{font-style:normal;font-size:13px}
+.manualCreateLoading{min-height:470px;display:flex;flex-direction:column;justify-content:center;align-items:center;padding:25px}
+.manualCreateLoading h3{font:500 30px/1.15 Georgia,serif}
+.manualCreateLoading p{font-size:13px;line-height:1.6}
+.manualCreateLoading .manualRoute{max-width:200px}
+@media(max-width:900px){.manualCreate{grid-template-columns:1fr}.manualCreatePreview{position:relative;top:auto}.manualCreate .manualCreateForm{padding:28px}.manualCreatePreview .blankPreview{max-width:360px}}
+@media(max-width:500px){.manualCreate .manualCreateForm{padding:22px}.manualCreateForm .fieldRow{grid-template-columns:1fr;gap:0}.manualCreateForm .actions{flex-direction:column-reverse}.manualCreateForm .actions button{width:100%}.manualCreatePreview{padding:22px}}
+
+/* Memory book: keepsake pages within the Morivo navy and gold shell. */
+.memoryPage{max-width:960px;margin:0 auto;padding:8px 0 32px}
+.mbToolbar{display:flex;align-items:center;justify-content:space-between;gap:20px;margin-bottom:22px}
+.mbToolbarLabel{font-size:11px;font-weight:700;letter-spacing:.16em;color:var(--m-warm)}
+.memoryPage .mbActions{margin:0;gap:8px;justify-content:flex-end}
+.memoryPage .mbActions button{min-height:44px;font:inherit;font-size:13px;border-color:rgba(239,193,134,.2);cursor:pointer}
+.memoryPage .mbActions .primary{background:var(--m-warm);color:#15202a;font-weight:700;box-shadow:none}
+.memoryPage button:focus-visible,.memoryPage input:focus-visible{outline:3px solid #488696;outline-offset:3px}
+.memoryPage button:disabled{cursor:wait;opacity:.6}
+.memoryPage .memoryBook{max-width:none;border-radius:24px;background:linear-gradient(180deg,#faf6ed,#f0e7d6)}
+.memoryPage .memoryBook::after{width:18px;opacity:.5}
+.memoryPage .mbCover{min-height:330px;background-color:#0b1925;background-image:radial-gradient(ellipse at 82% 10%,rgba(123,199,216,.16),transparent 52%),linear-gradient(130deg,#183344,#09141e)}
+.memoryPage .mbCoverFrame{inset:16px;border-color:rgba(239,193,134,.3);border-radius:12px}
+.mbCoverArt{position:absolute;width:340px;height:340px;inset-block-start:-130px;inset-inline-end:-55px;border:1px solid rgba(239,193,134,.2);border-radius:50%;box-shadow:0 0 0 42px rgba(239,193,134,.045),0 0 0 84px rgba(123,199,216,.035)}
+.mbCoverArt span{position:absolute;inset-block-end:52px;inset-inline-start:80px;font-size:44px;color:#efc186}
+.memoryPage .mbCoverShade{background:linear-gradient(0deg,rgba(5,11,19,.83),rgba(5,11,19,.08))}
+.memoryPage .mbCoverContent{padding:44px;max-width:100%;overflow-wrap:anywhere}
+.memoryPage .mbCoverContent h1{font-size:clamp(32px,4vw,50px);line-height:1.15;margin-top:16px}
+.memoryPage .mbSub{color:#c6d2d8}
+.memoryPage .mbSection{padding:30px 44px;border-color:rgba(95,77,49,.16)}
+.memoryPage .mbStats{gap:12px}
+.memoryPage .statTileMB{border:1px solid rgba(95,77,49,.13);border-radius:14px;background:rgba(255,255,255,.48);box-shadow:none;padding:20px 10px}
+.memoryPage .statTileMB b{color:#233e49;font:500 32px/1.2 Georgia,serif}
+.memoryPage .statTileMB small{color:#72634f;line-height:1.5}
+.memoryPage .mbHeading{color:#87663b;letter-spacing:.13em}
+.memoryPage .mbStoryText{color:#423a2e;overflow-wrap:anywhere}
+.memoryPage .mbStoryEmpty .mbStoryText{font-family:inherit;font-size:15px;color:#776b59}
+.memoryPage .mbChapter{padding:22px 0;border-color:rgba(95,77,49,.16);break-inside:avoid}
+.memoryPage .mbChapter h3{color:#233e49;font-size:22px;overflow-wrap:anywhere}
+.memoryPage .polaroidRow{display:grid;grid-template-columns:repeat(auto-fit,minmax(160px,1fr));gap:24px;padding:14px 4px}
+.memoryPage .polaroid{width:100%;max-width:280px;box-shadow:0 8px 20px rgba(40,25,5,.12);transform:none!important;border:1px solid rgba(95,77,49,.12);border-radius:5px;padding:8px 8px 20px}
+.memoryPage .polaroid::before{display:none}
+.memoryPage .polaroid img,.memoryPage .polaroid video{height:190px}
+.memoryPage .mbQuote{border-inline-start:3px solid #bb9662;border-left-width:0;background:rgba(255,255,255,.45);border-radius:0 12px 12px 0;padding:18px 22px;margin:16px 0;color:#423a2e;overflow-wrap:anywhere}
+.memoryPage[dir="ltr"] .mbQuote{border-left-width:3px}
+.memoryPage[dir="rtl"] .mbQuote{border-radius:12px 0 0 12px}
+.memoryPage .mbShare{background:#102532;border:1px solid #2b4651;border-radius:18px;padding:26px}
+.memoryPage .mbShare .mbHeading{color:#efc186}
+.memoryPage .mbShareDesc{color:#c1cdd2;line-height:1.7}
+.memoryPage .mbShareBtn,.memoryPage .mbWriteBtn{background:#efc186;color:#192a33;border:1px solid #d6ad78;min-height:44px;padding:11px 18px;border-radius:10px;font-weight:700;cursor:pointer}
+.memoryPage .mbShareRow input{min-width:0;flex:1 1 230px;background:#091923;color:#e6eff2;border-color:#3c555f}
+.memoryPage .mbShareRow button{min-height:44px;padding:10px 14px;background:#183542;color:#edf2f3;border-color:#3c555f;white-space:normal;cursor:pointer}
+.memoryBookPublicState{padding:40px 24px;color:#514536}
+@media(max-width:700px){
+ .memoryPage{padding-top:0}
+ .mbToolbar{align-items:flex-start;flex-direction:column;gap:14px}
+ .memoryPage .mbActions{width:100%;justify-content:stretch}
+ .memoryPage .mbActions button{flex:1}
+ .memoryPage .mbCover{min-height:280px}
+ .memoryPage .mbCoverContent{padding:32px 26px}
+ .memoryPage .mbSection{padding:24px}
+ .memoryPage .mbStats{grid-template-columns:repeat(2,minmax(0,1fr));gap:10px}
+ .memoryPage .mbShare{padding:20px}
+ .memoryPage .polaroidRow{grid-template-columns:repeat(auto-fit,minmax(140px,1fr));gap:14px}
+ .memoryPage .polaroid img,.memoryPage .polaroid video{height:160px}
+}
+@media print{
+ .mbToolbar{display:none!important}
+ .memoryPage{max-width:none;padding:0}
+ .memoryPage .memoryBook{box-shadow:none}
+ .memoryPage .mbCover{min-height:280px}
+ .memoryPage .mbChapter,.memoryPage .polaroid,.memoryPage .mbQuote{break-inside:avoid}
+}
+
+/* Account controls share the app's navy, sky and warm-gold palette. */
+.accountBar{width:100%;border:1px solid var(--m-line);border-radius:16px;background:rgba(13,29,41,.72);padding:16px 18px;color:var(--m-text)}
+.accountGuest{display:block}
+.accountIntro{display:flex;align-items:center;gap:10px;margin-bottom:14px}
+.accountIntro .accountMark{display:grid;place-items:center;flex:0 0 28px;height:28px;border-radius:9px;background:rgba(239,193,134,.1);color:var(--m-warm);font-size:17px}
+.accountIntro .accountMessage{flex:1;color:#bac8d1;font-size:13px;line-height:1.6}
+.accountBar button{border:1px solid rgba(164,188,201,.2);border-radius:10px;background:#102330;color:#e9eef0;min-height:44px;padding:10px 15px;font:inherit;font-size:13px;line-height:1.4;cursor:pointer;transition:background .15s,border-color .15s}
+.accountBar button:hover:not(:disabled){background:#1a3542;border-color:rgba(123,199,216,.5)}
+.accountBar .accountSwitch{border:0;background:transparent;color:var(--m-sky);font-size:12px;text-decoration:underline;text-underline-offset:4px;padding:8px 0;min-height:36px}
+.accountBar .accountSwitch:hover:not(:disabled){background:transparent;color:#c1e6ed}
+.accountForm{display:grid;grid-template-columns:auto minmax(120px,1fr) minmax(120px,1fr) auto;gap:12px;align-items:end}
+.accountField{display:flex;flex-direction:column;gap:6px;min-width:0}
+.accountField span{color:#aebec9;font-size:11px}
+.accountBar .accountField input{width:100%;min-width:0;min-height:44px;padding:11px 13px;background:#07141f;border:1px solid #29404e;border-radius:10px;font:inherit;font-size:13px;color:#f3f5f6}
+.accountField input::placeholder{color:#778c9c}
+.accountBar .primary{background:#efc186;border-color:#efc186;color:#142530;font-weight:700;box-shadow:none}
+.accountBar .primary:hover:not(:disabled){background:#f6d6aa;border-color:#f6d6aa}
+.accountBar button:focus-visible,.accountBar input:focus-visible{outline:2px solid #7bc7d8;outline-offset:3px}
+.accountBar button:disabled,.accountBar input:disabled{opacity:.6;cursor:wait}
+.accountError{margin:12px 0 0;padding:10px 12px;border:1px solid rgba(255,151,140,.3);border-radius:9px;background:rgba(180,60,50,.1);color:#ffc3b9;font-size:13px;line-height:1.6;overflow-wrap:anywhere}
+.accountSignedIn{justify-content:space-between}
+.accountIdentity{display:flex;align-items:center;gap:8px;flex-wrap:wrap;min-width:0}
+.accountIdentity b{color:#e8eff2;overflow-wrap:anywhere}
+@media(max-width:760px){
+ .accountForm{grid-template-columns:repeat(2,minmax(0,1fr))}
+ .accountGoogle{grid-column:1/-1}
+ .accountForm>.primary{grid-column:1/-1}
+ .accountIntro{flex-wrap:wrap}
+ .accountIntro .accountMessage{flex-basis:calc(100% - 40px)}
+ .accountIntro .accountSwitch{margin-inline-start:38px}
+}
+@media(max-width:420px){
+ .accountBar{padding:14px}
+ .accountForm{grid-template-columns:minmax(0,1fr)}
+ .accountBar .accountField input{font-size:16px}
+}

@@ -77,10 +77,18 @@ export default function Memory({experience,setExperience,setView,t,user,publicVi
  if(publicView&&!publicLoaded)return <section className="memoryBook memoryBookPublicState" dir={dir}><p>⏳ {m2.publicLoading}</p></section>;
  if(publicView&&!localExp)return <section className="memoryBook memoryBookPublicState" dir={dir}><p>⚠ {m2.publicNotFound}</p></section>;
 
- return <>
+ return <div className="memoryPage" dir={dir}>
+ <div className="mbToolbar">
+  <span className="mbToolbarLabel">{m2.morivoMemoryBook}</span>
+  <div className="actions mbActions">
+   {!publicView&&<button onClick={()=>setView("runtime")}>{m2.backToRuntime}</button>}
+   <button className="primary" onClick={()=>window.print()}>{m2.exportPrint}</button>
+  </div>
+ </div>
  <section className="memoryBook" dir={dir}>
 
   <div className="mbCover" style={coverPhoto?{backgroundImage:`url(${coverPhoto.downloadURL})`}:undefined}>
+   {!coverPhoto&&<div className="mbCoverArt" aria-hidden="true"><span>✦</span></div>}
    <div className="mbCoverShade"></div>
    <div className="mbCoverFrame"></div>
    <div className="mbCoverContent">
@@ -111,7 +119,7 @@ export default function Memory({experience,setExperience,setView,t,user,publicVi
    <div className="statTileMB"><b>{flow.length}</b><small>{m2.missions}</small></div>
   </div>
 
-  <div className="mbSection mbStory">
+  <div className={"mbSection mbStory "+(!exp.memoryStory&&!exp.story?"mbStoryEmpty":"")}>
    <div className="mbHeading">{m2.ourStory}</div>
    <p className="mbStoryText"><LinkifiedText text={exp.memoryStory||exp.story||m2.noStoryYet}/></p>
    {canWriteStory&&<button className="mbWriteBtn" disabled={writing} onClick={writeStory}>{writing?m2.writing:exp.memoryStory?m2.rewriteWithAI:m2.writeWithAI}</button>}
@@ -132,7 +140,7 @@ export default function Memory({experience,setExperience,setView,t,user,publicVi
     <p className="mbShareDesc">{m2.shareDesc}</p>
     {exp.memoryPublic?
      <div className="mbShareRow">
-      <input readOnly value={shareUrl} onFocus={e=>e.target.select()}/>
+      <input aria-label={m2.shareTitle} dir="ltr" readOnly value={shareUrl} onFocus={e=>e.target.select()}/>
       <button disabled={sharing} onClick={copyShareLink}>{m2.shareCopyLink}</button>
       <button disabled={sharing} onClick={()=>setShared(false)}>{m2.shareUnpublish}</button>
      </div>
@@ -141,10 +149,6 @@ export default function Memory({experience,setExperience,setView,t,user,publicVi
   </div>}
  </section>
 
- <div className="actions mbActions">
-  <button className="primary" onClick={()=>window.print()}>{m2.exportPrint}</button>
-  {!publicView&&<button onClick={()=>setView("runtime")}>{m2.backToRuntime}</button>}
- </div>
  {publicView&&<div className="mbPoweredBy">{m2.poweredBy}</div>}
- </>;
+ </div>;
 }
