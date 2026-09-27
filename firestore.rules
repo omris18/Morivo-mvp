@@ -11,6 +11,13 @@ service cloud.firestore {
       return signedIn() && (isMaster() || get(/databases/$(database)/documents/experiences/$(experienceId)).data.ownerUid == request.auth.uid);
     }
 
+    function isParticipant(experienceId, participantId) {
+      let sessionPath = /databases/$(database)/documents/experiences/$(experienceId)/participantSessions/$(request.auth.uid);
+      return signedIn() && (exists(sessionPath)
+        ? get(sessionPath).data.participantId == participantId
+        : request.auth.uid == participantId);
+    }
+
     match /users/{uid} {
       allow read, write: if signedIn() && request.auth.uid == uid;
     }
@@ -24,15 +31,22 @@ service cloud.firestore {
         isMaster() ||
         resource.data.ownerUid == request.auth.uid ||
         exists(/databases/$(database)/documents/experiences/$(experienceId)/participants/$(request.auth.uid)) ||
+        exists(/databases/$(database)/documents/experiences/$(experienceId)/participantSessions/$(request.auth.uid)) ||
         resource.data.memoryPublic == true
       );
       allow update: if signedIn() && (isMaster() || resource.data.ownerUid == request.auth.uid)
         && request.resource.data.ownerUid == resource.data.ownerUid;
       allow delete: if signedIn() && (isMaster() || resource.data.ownerUid == request.auth.uid);
 
+      match /participantSessions/{uid} {
+        allow read: if signedIn() && request.auth.uid == uid;
+        allow write: if false;
+      }
       match /participants/{uid} {
         allow read: if signedIn();
-        allow create, update: if signedIn() && request.auth.uid == uid;
+        allow create: if false;
+        allow update: if isParticipant(experienceId, uid)
+          && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['pushToken']);
         allow delete: if signedIn() && (request.auth.uid == uid || isExperienceOwner(experienceId));
       }
 
@@ -44,13 +58,13 @@ service cloud.firestore {
 
       match /media/{mediaId} {
         allow read: if signedIn();
-        allow create: if signedIn() && request.resource.data.uid == request.auth.uid;
-        allow update: if signedIn() && (resource.data.uid == request.auth.uid || isMaster());
-        allow delete: if signedIn() && (resource.data.uid == request.auth.uid || isExperienceOwner(experienceId));
+        allow create: if signedIn() && isParticipant(experienceId, request.resource.data.uid);
+        allow update: if signedIn() && (isParticipant(experienceId, resource.data.uid) || isMaster());
+        allow delete: if signedIn() && (isParticipant(experienceId, resource.data.uid) || isExperienceOwner(experienceId));
       }
       match /progress/{uid} {
         allow read: if signedIn();
-        allow create: if signedIn() && request.auth.uid == uid
+        allow create: if isParticipant(experienceId, uid)
           && request.resource.data.points == 0
           && request.resource.data.completedMissionIds.size() == 0;
         // A participant can only ever move their own progress forward - points capped to a
@@ -58,7 +72,7 @@ service cloud.firestore {
         // done per write - so a client can't just set points/completedMissionIds to anything.
         allow update: if signedIn() && (
           isExperienceOwner(experienceId) ||
-          (request.auth.uid == uid
+          (isParticipant(experienceId, uid)
             && request.resource.data.points is number
             && request.resource.data.points >= resource.data.points
             && request.resource.data.points <= resource.data.points + 500
@@ -73,19 +87,19 @@ service cloud.firestore {
       // the organizer's final pick lives on the experience doc itself (locationDecisions).
       match /locationVotes/{voteId} {
         allow read: if signedIn();
-        allow create, update: if signedIn() && request.resource.data.uid == request.auth.uid
+        allow create, update: if isParticipant(experienceId, request.resource.data.uid)
           && request.resource.data.missionId is string
           && request.resource.data.optionIds is list;
-        allow delete: if signedIn() && (resource.data.uid == request.auth.uid || isExperienceOwner(experienceId));
+        allow delete: if signedIn() && (isParticipant(experienceId, resource.data.uid) || isExperienceOwner(experienceId));
       }
 
       match /answers/{answerId} {
         allow read: if signedIn();
-        allow create: if signedIn() && request.resource.data.uid == request.auth.uid
+        allow create: if signedIn() && isParticipant(experienceId, request.resource.data.uid)
           && request.resource.data.text is string && request.resource.data.text.size() <= 2000;
-        allow update: if signedIn() && resource.data.uid == request.auth.uid
+        allow update: if signedIn() && isParticipant(experienceId, resource.data.uid)
           && request.resource.data.text is string && request.resource.data.text.size() <= 2000;
-        allow delete: if signedIn() && (resource.data.uid == request.auth.uid || isExperienceOwner(experienceId));
+        allow delete: if signedIn() && (isParticipant(experienceId, resource.data.uid) || isExperienceOwner(experienceId));
       }
 
       match /messages/{messageId} {
@@ -121,9 +135,10 @@ service cloud.firestore {
     // Pre-registered personal codes (one per named participant, meant for NFC tags) -
     // resolved on tap without needing the shared join code.
     match /participantCodes/{code} {
-      allow read: if signedIn();
-      allow create: if signedIn() && (isMaster() || request.resource.data.ownerUid == request.auth.uid)
-        && request.resource.data.name is string && request.resource.data.name.size() <= 80;
+      // Bearer links may be resolved only by the callable. Do not expose every
+      // participant's resumable link to other participants through a collection query.
+      allow read: if signedIn() && (isMaster() || resource.data.ownerUid == request.auth.uid);
+      allow create, update: if false;
       allow delete: if signedIn() && (isMaster() || resource.data.ownerUid == request.auth.uid);
     }
   }

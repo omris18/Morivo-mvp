@@ -993,3 +993,19 @@ body .appShell .memoryPage .mbCoverShade,.memoryPage .mbCoverShade{background:li
 body .appShell .runtimePage .missionPerfRow b,body .appShell .runtimePage .rosterHint{color:#476974}
 body .appShell .runtimePage .missionPerfBar{background:#dce9df}
 body .appShell .runtimePage .missionPerfBar span{background:#459982}
+/* Live journey map: keep the progress matrix bright and scannable inside the warm runtime. */
+body .appShell .runtimePage .participantMatrix{background:#fbfdf8;border:1px solid #cfe1d5;box-shadow:0 10px 28px rgba(39,91,76,.08)}
+body .appShell .runtimePage .participantMatrix summary{display:flex;align-items:center;gap:10px;color:#1e6265;font-size:14px;padding:4px 2px}
+body .appShell .runtimePage .participantMatrix summary::before{content:"🧭";font-size:18px}
+body .appShell .runtimePage .participantMatrix .journeyTable{background:#f7fbf5;border:1px solid #d6e5d8;padding:8px 14px 12px;scrollbar-color:#79ad9a #e8f2e8}
+body .appShell .runtimePage .participantMatrix .journeyTableHead{color:#55736e;border-color:#cfe0d4;background:#edf6ee;border-radius:10px;padding:12px 8px;font-weight:700}
+body .appShell .runtimePage .participantMatrix .journeyTableRow{color:#244f55;border-color:#e1ebe1;padding:11px 8px;background:transparent}
+body .appShell .runtimePage .participantMatrix .journeyTableRow:nth-child(even){background:#f0f7f0}
+body .appShell .runtimePage .participantMatrix .journeyTableRow:hover{background:#e7f3ed}
+body .appShell .runtimePage .participantMatrix .cellDone{color:#23825f;font-weight:800}
+body .appShell .runtimePage .participantMatrix .cellActive{color:#c26c28;font-weight:800;text-shadow:none}
+body .appShell .runtimePage .participantMatrix .cellLocked{color:#a6b8ae}
+body .appShell .runtimePage .participantMatrix .lastActive{color:#6f8880}
+body .appShell .runtimePage .participantMatrix .rowActionBtns button{background:#fff;border-color:#c8ddd2;color:#35666a}
+body .appShell .runtimePage .participantMatrix .pendingTag{color:#9b6a28;background:#fff3d8;border-radius:999px;padding:4px 8px}
+@media(max-width:700px){body .appShell .runtimePage .participantMatrix{padding:12px 8px}.participantMatrix .journeyTable{padding-inline:8px}}
