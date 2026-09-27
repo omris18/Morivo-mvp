@@ -4,6 +4,7 @@ export const metadata = {
   applicationName: "Morivo",
   icons: { icon: "/morivo-icon.svg" },
   appleWebApp: { capable: true, statusBarStyle: "default", title: "Morivo" },
+  other: { "mobile-web-app-capable": "yes" },
 };
 export const viewport = {
   width: "device-width",
