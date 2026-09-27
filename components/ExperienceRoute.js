@@ -29,10 +29,12 @@ export default function ExperienceRoute({experience,people=[],media=[],answers=[
   flow.forEach((m,i)=>{
    const rawDay=m.day||m.dayNumber||m.date||((m.title||"").match(/(?:day|יום)\s*([0-9]+)/i)?.[1]);
    const destinations=Array.isArray(experience.destinations)?experience.destinations:[];
-   const destination=m.destination||((destinations.length&&flow.length)?destinations[Math.min(destinations.length-1,Math.floor(i/(flow.length/destinations.length)))]:"");
-   const key=String(rawDay||destination||"all");
+   const searchable=String(`${m.title||""} ${m.text||""} ${m.description||""}`).toLocaleLowerCase();
+   const matchedDestination=destinations.find(d=>String(d||"").trim().split(/[,\s]+/).filter(Boolean).some(word=>word.length>2&&searchable.includes(word.toLocaleLowerCase())));
+   const destination=String(m.destination||matchedDestination||"").trim();
+   const key=String(rawDay?`day-${rawDay}`:destination?`destination-${destination}`:"general");
    let g=out.find(x=>x.key===key);
-   if(!g){g={key,label:rawDay?(he?`יום ${rawDay}`:`Day ${rawDay}`):destination|| (he?"מסלול החוויה":"Experience route"),destination,missions:[]};out.push(g)}
+   if(!g){g={key,label:rawDay?(he?`יום ${rawDay}`:`Day ${rawDay}`):destination||(he?"משימות פתיחה":"Starting missions"),destination,missions:[]};out.push(g)}
    g.missions.push({m,i});
   });
   return out;
@@ -59,4 +61,3 @@ export default function ExperienceRoute({experience,people=[],media=[],answers=[
   </div>:<div className="routeEmpty"><DestinationBackdrop theme={theme}/><div><h3>{he?"המסלול שלכם עוד רגע מתחיל":"Your route is about to begin"}</h3><p>{he?"הוסיפו משימות לחוויה כדי לראות כאן תחנות, משתתפים וזיכרונות.":"Add missions to see your stops, participants and memories here."}</p><button onClick={onStudio}>{he?"בניית המסלול בסטודיו":"Build your route in Studio"}</button></div></div>}
  </section>;
 }
-
