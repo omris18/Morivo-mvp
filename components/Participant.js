@@ -22,7 +22,7 @@ function formatStopDate(dateStr,lang){
 export default function Participant({experience,setExperience,setView,setActiveId,deepLinkCode,t,lang,setLang,country,selectLang,dir,portal,portalCode,chromeless}){
  const p=t.participant;
  const [code,setCode]=useState(deepLinkCode||experience.joinCode||""),[name,setName]=useState(""),[joined,setJoined]=useState(false),[eid,setEid]=useState(experience.id),[uid,setUid]=useState("");
- const [portalResolving,setPortalResolving]=useState(!!portal);
+ const [portalResolving,setPortalResolving]=useState(!!portal||!!deepLinkCode);
  const [portalError,setPortalError]=useState(null);
  const [coverMedia,setCoverMedia]=useState([]);
  const [prog,setProg]=useState({completedMissionIds:[],currentMissionIndex:0,points:0}),[file,setFile]=useState(null),[busy,setBusy]=useState(false),[pct,setPct]=useState(0);
@@ -42,18 +42,32 @@ export default function Participant({experience,setExperience,setView,setActiveI
  const [translated,setTranslated]=useState(null);
  const [locationVotes,setLocationVotes]=useState([]);
  useEffect(()=>{if(deepLinkCode)setCode(deepLinkCode)},[deepLinkCode]);
+ function acceptIdentity(result){
+  setName(result.name);setUid(result.uid);setEid(result.experienceId);setActiveId(result.experienceId);setJoined(true);
+  setPersonalCode(result.personalCode);
+  const url=new URL(window.location.href);
+  url.searchParams.delete("join");url.searchParams.set("pcode",result.personalCode);
+  window.history.replaceState(window.history.state,"",url.toString());
+ }
+ const [personalCode,setPersonalCode]=useState(portalCode||"");
+ const [linkCopied,setLinkCopied]=useState(false);
+ const [resolveAttempt,setResolveAttempt]=useState(0);
  useEffect(()=>{
-  if(!portal||!portalCode)return;
+  if(!portalCode&&!deepLinkCode)return;
   if(!firebaseConfigured){setPortalError(p.needsFirebasePortal);setPortalResolving(false);return}
   let alive=true;
-  joinExperienceByPersonalCode(portalCode).then(result=>{
-   if(!alive)return;
-   setName(result.name);setUid(result.uid);setEid(result.experienceId);setActiveId(result.experienceId);setJoined(true);
-   if(result.renamedFrom)alert(p.identityReused(result.renamedFrom,result.name));
-  }).catch(e=>{if(alive)setPortalError(e.message)}).finally(()=>{if(alive)setPortalResolving(false)});
+  setPortalResolving(true);setPortalError(null);
+  const resolve=portalCode?joinExperienceByPersonalCode(portalCode):joinExperienceByCode(deepLinkCode);
+  resolve.then(result=>{if(alive&&!result.needsName)acceptIdentity(result)})
+   .catch(e=>{if(alive)setPortalError(e.message)})
+   .finally(()=>{if(alive)setPortalResolving(false)});
   return ()=>{alive=false};
- },[portal,portalCode]);
- useEffect(()=>{if(firebaseConfigured&&eid&&eid!=="thailand-demo")return subscribeExperience(eid,x=>x&&setExperience(x))},[eid]);
+ },[portalCode,deepLinkCode,resolveAttempt]);
+ async function copyMyLink(){
+  try{await navigator.clipboard.writeText(window.location.href);setLinkCopied(true)}
+  catch{window.prompt(lang==="he"?"הקישור האישי שלכם":"Your personal link",window.location.href)}
+ }
+ useEffect(()=>{if(firebaseConfigured&&joined&&eid&&eid!=="thailand-demo")return subscribeExperience(eid,x=>x&&setExperience(x))},[eid,joined]);
  useEffect(()=>{if(chromeless&&firebaseConfigured&&eid&&eid!=="thailand-demo")return subscribeMedia(eid,setCoverMedia)},[chromeless,eid]);
  useEffect(()=>{if(firebaseConfigured&&joined&&eid&&uid){initializeProgress(eid,uid);return subscribeMyProgress(eid,uid,setProg)}},[joined,eid,uid]);
  useEffect(()=>{if(firebaseConfigured&&joined&&eid)return subscribeMessages(eid,setMessages)},[joined,eid]);
@@ -135,11 +149,8 @@ export default function Participant({experience,setExperience,setView,setActiveI
   try{
    if(firebaseConfigured){
     const withTimeout=(promise)=>Promise.race([promise,new Promise((_,reject)=>setTimeout(()=>reject(new Error(p.joinTimedOut)),20000))]);
-    const u=await withTimeout(ensureUser());
-    setUid(u.uid);
     const result=await withTimeout(joinExperienceByCode(code,name.trim()));
-    setEid(result.experienceId);setActiveId(result.experienceId);
-    if(result.renamedFrom)alert(p.identityReused(result.renamedFrom,name.trim()));
+    acceptIdentity(result);
    }else setUid("demo");
    setJoined(true);
   }catch(e){alert(e.message)}finally{setJoining(false)}
@@ -198,17 +209,19 @@ export default function Participant({experience,setExperience,setView,setActiveI
    }catch(e){alert(e.message)}finally{setBusy(false);setQuizFeedback(null);setQuizAnswer(null)}
   },650);
  }
- if(portal&&portalResolving){
+ if(portalResolving){
   return <div className="portalShell" dir={dir} style={{backgroundImage:experienceGradient(portalCode)}}><div className="portalLoading">⏳ {p.portalResolving}</div></div>;
  }
- if(portal&&portalError){
-  return <div className="portalShell" dir={dir} style={{backgroundImage:experienceGradient(portalCode)}}><div className="portalLoading">⚠ {portalError}</div></div>;
+ if(portalError){
+  return <div className="portalShell" dir={dir} style={{backgroundImage:experienceGradient(portalCode)}}><div className="portalLoading">⚠ {portalError}<div><button onClick={()=>setResolveAttempt(x=>x+1)}>{lang==="he"?"ניסיון נוסף":"Try again"}</button></div></div></div>;
  }
  const coverPhoto=coverMedia.find(m=>!m.contentType?.startsWith("video/"));
  const portalBg=coverPhoto?`linear-gradient(180deg,rgba(5,11,19,.55),rgba(5,11,19,.92)),url(${coverPhoto.downloadURL})`:experienceGradient(experience.location||experience.type||experience.name);
  const completedCount=(prog.completedMissionIds||[]).length;
  const progressPct=flow.length?Math.round((completedCount/flow.length)*100):0;
  const joinedContent=<>
+ {personalCode&&<div className="participantPersonalLink"><p>{lang==="he"?"זה הקישור האישי שלכם — רענון או פתיחה מחדש מחזירים לאותה התקדמות. הקישור זמין גם אצל המארגן לתג NFC. שמרו אותו לעצמכם.":"This is your personal link. Refresh or reopen it to resume your progress. Your organizer has the same link for your NFC tag. Keep it private."}</p><code>{personalCode}</code><button onClick={copyMyLink}>{linkCopied?(lang==="he"?"הקישור הועתק":"Link copied"):(lang==="he"?"העתקת הקישור האישי":"Copy my personal link")}</button></div>}
+
  {chromeless&&<div className="journeyGreeting"><h2>{p.welcomeGreeting(name)}</h2><p>{experienceName}</p></div>}
  <div className="participantHeader"><div><small>{experienceName}</small><h2>{finished?p.journeyComplete:p.missionOf(idx+1,flow.length)}</h2></div><div className={"pointsBadge "+(bump?"bump":"")}>{prog.points||0}<small>PTS</small></div></div>
  {firebaseConfigured&&pushSupported&&pushState!=="on"&&<button className="pushEnable" disabled={pushState==="asking"} onClick={enableNotifications}>🔔 {pushState==="asking"?p.asking:p.enableNotifications}</button>}

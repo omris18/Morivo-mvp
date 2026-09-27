@@ -44,12 +44,13 @@ jobs:
 
       - name: Verify master authorization
         run: |
+          node tests/participantIdentity.test.cjs
           node tests/masterAccess.test.cjs
           node tests/reorderExperience.test.cjs
           node tests/experienceArtwork.test.cjs
 
       - name: Deploy experience generator
-        run: npx --yes firebase-tools@14 deploy --only functions:generateExperience,functions:generateExperienceArtwork,functions:reviseExperience,functions:translateExperience,functions:reorderExperience,functions:generateMemoryStory --project morivo-mvp --non-interactive --force
+        run: npx --yes firebase-tools@14 deploy --only functions:resolveParticipantIdentity,functions:generateExperience,functions:generateExperienceArtwork,functions:reviseExperience,functions:translateExperience,functions:reorderExperience,functions:generateMemoryStory --project morivo-mvp --non-interactive --force
 
       - name: Deploy access rules
         run: npx --yes firebase-tools@14 deploy --only firestore:rules,storage --project morivo-mvp --non-interactive

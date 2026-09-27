@@ -13,6 +13,7 @@ const geminiApiKey = defineSecret("GEMINI_API_KEY");
 const {normalizeMission} = require("./missionAnswers");
 exports.generateExperienceArtwork = require("./experienceArtwork")(admin, openaiApiKey);
 exports.reorderExperience = require("./reorderExperience")(admin);
+exports.resolveParticipantIdentity = require("./participantIdentity")(admin);
 
 const MISSION_TYPES = ["photo", "video", "quiz", "puzzle", "note", "map", "story", "reward"];
 

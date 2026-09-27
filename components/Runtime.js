@@ -77,7 +77,7 @@ export default function Runtime({experience,setExperience,setView,t,user,lang,is
    if(!name.trim())return;
    setGeneratingFor(p.id);
    try{
-     const code=await addParticipantCode(experience.id, experience.ownerUid||user?.uid, name);
+     const code=await addParticipantCode(experience.id, experience.ownerUid||user?.uid, name, p.id);
      await copyPersonalLink(code,name);
    }catch(e){ alert(e.message); }
    finally{ setGeneratingFor(null); }
@@ -114,7 +114,8 @@ export default function Runtime({experience,setExperience,setView,t,user,lang,is
  const merged=useMemo(()=>{
    const real=people.map(p=>journeyProgress.normalizeProgress({...p,...(progress.find(x=>x.uid===p.id)||{})},flow));
    const realNames=new Set(real.map(p=>p.name||p.participantName));
-   const pending=roster.filter(entry=>!realNames.has(entry.name)).map(entry=>({id:entry.code,name:entry.name,pending:true,points:0,currentMissionIndex:0,completedMissionIds:[]}));
+   const realIds=new Set(real.map(p=>p.id));
+   const pending=roster.filter(entry=>entry.participantId?!realIds.has(entry.participantId):!realNames.has(entry.name)).map(entry=>({id:entry.code,name:entry.name,pending:true,points:0,currentMissionIndex:0,completedMissionIds:[]}));
    return [...real,...pending];
  },[people,progress,roster,flow]);
  const missionPerf=useMemo(()=>flow.map((m,i)=>{
@@ -170,7 +171,7 @@ export default function Runtime({experience,setExperience,setView,t,user,lang,is
  {missionPerf.length>0&&<div className="panel" style={{marginTop:18}}><div className="tag">{r.missionPerformance}</div><div className="missionPerf">{missionPerf.map(m=><div className="missionPerfRow" key={m.id}><b>{m.title}</b><div className="missionPerfBar"><span style={{width:`${m.pct}%`}}></span></div><small>{m.pct}%</small></div>)}</div></div>}
  <div className="panel" style={{marginTop:18}}>
   <div className="tag">{r.roster} ({roster.length})</div>
-  <p className="rosterHint">{r.rosterHint}</p>
+  <p className="rosterHint">{lang==="he"?"לכל משתתף קישור אישי קבוע. גם מצטרפים דרך הקישור הכללי מופיעים כאן אוטומטית. העתיקו את הקישור או צרבו אותו על תג NFC — הוא מחזיר לאותו משתתף ולאותה התקדמות. אפשר גם להכין הזמנות מראש לפי שם.":"Every participant has a permanent personal link. People joining through the shared link appear here automatically. Copy or write their link to an NFC tag to resume the same journey. You can also prepare invitations by name."}</p>
   <div className="reviseBar"><input placeholder={r.rosterNamePlaceholder} value={rosterName} onChange={e=>setRosterName(e.target.value)} onKeyDown={e=>e.key==="Enter"&&addRoster()} disabled={addingRoster}/><button disabled={addingRoster||!rosterName.trim()} onClick={addRoster}>{addingRoster?r.saving:r.rosterAdd}</button></div>
   {roster.length>0&&<div className="rosterList">{roster.map(entry=>
    <div className="rosterRow" key={entry.code}>
