@@ -14,6 +14,7 @@ export const viewport = {
 };
 import "./globals.css";
 import "./morivo-refinement.css";
+import "./experience-guidance.css";
 export default function RootLayout({ children }) {
   return <html lang="en"><body>{children}</body></html>;
 }

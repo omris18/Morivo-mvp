@@ -6,10 +6,15 @@ import QRCode from "qrcode";
 import { firebaseConfigured, functions } from "../lib/firebase";
 import { publishExperienceRemote, updateExperienceRemote, reorderExperienceRemote } from "../lib/morivoData";
 import LinkifiedText from "./LinkifiedText";
+import ExperienceShare from "./ExperienceShare";
+import {missionLabels} from "../lib/experienceGuidance";
 import missionAnswers from "../functions/missionAnswers";
 import { getCurrentPosition } from "../lib/geo";
 
-export default function Studio({ experience, setExperience, setView, t }) {
+export default function Studio({ experience, setExperience, setView, t, lang }) {
+  const he=lang==="he",labels=missionLabels[he?"he":"en"];
+  const [justPublished,setJustPublished]=useState(false);
+  useEffect(()=>{if(justPublished)document.getElementById("experience-share")?.scrollIntoView({behavior:"smooth",block:"center"})},[justPublished]);
   const s = t.studio;
   const flow = experience.flow || [];
   const [selected, setSelected] = useState(flow[0]?.id || null);
@@ -152,7 +157,7 @@ export default function Studio({ experience, setExperience, setView, t }) {
     const newAtom = {
       id: `${type}-${Date.now()}`,
       type,
-      title: s.newMissionTitle(type),
+      title: s.newMissionTitle(labels[type]),
       text: "",
       reward: `100 ${s.pointsSuffix}`,
       points: 100,
@@ -286,7 +291,7 @@ export default function Studio({ experience, setExperience, setView, t }) {
         joinCode: code,
       });
 
-      alert(s.published(code));
+      setJustPublished(true);
     } catch (e) {
       alert(e.message);
     } finally {
@@ -297,6 +302,7 @@ export default function Studio({ experience, setExperience, setView, t }) {
   return (
     <section className="grid2 studioPage">
       <div className="panel studioWorkspace">
+        {justPublished&&<ExperienceShare experience={experience} lang={lang} setView={setView} afterPublish/>}
         <div className="studioHeader"><div><div className="tag">
           {s.savingTag} · {saving ? s.saving : saveError ? s.saveErrorTag : s.saved}
         </div><h2>{experience.name || s.untitled}</h2></div><div className={"savePill "+(saveError?"error":saving?"saving":"saved")}><i></i>{saving ? s.saving : saveError ? s.saveErrorTag : s.saved}</div></div>
@@ -332,11 +338,12 @@ export default function Studio({ experience, setExperience, setView, t }) {
           <button type="button" onClick={addFlight}>+ {s.addFlight}</button>
         </div>
 
+        <p className="contextHint">{he?"בחרו תחנה קיימת מהרשימה כדי לערוך אותה, או הוסיפו משימה חדשה מהאפשרויות הבאות.":"Select a stop below to edit it, or add a new mission using these options."}</p>
         <div className="atomBar">
           {["photo", "video", "map", "quiz", "puzzle", "note", "reward", "story", "branch"].map(
             (type) => (
               <button key={type} onClick={() => add(type)}>
-                ＋ {type}
+                ＋ {labels[type]}
               </button>
             )
           )}
@@ -373,7 +380,7 @@ export default function Studio({ experience, setExperience, setView, t }) {
                 }
                 onClick={() => setSelected(item.id)}
               >
-                <small>{item.type}</small>
+                <small>{labels[item.type]||item.type}</small>
                 <b>{item.title}</b>
                 <span>{item.text ? (item.text.length > 90 ? item.text.slice(0, 90) + "…" : item.text) : s.noInstructionYet}</span>
               </button>
@@ -578,13 +585,15 @@ export default function Studio({ experience, setExperience, setView, t }) {
         <div className="actions">
           <button onClick={() => setView("dashboard")}>{s.dashboardBtn}</button>
           <button onClick={() => setView("runtime")}>{s.runtimeBtn}</button>
-          <button className="primary" disabled={publishing} onClick={publish}>
-            {publishing ? s.publishing : s.publish}
+          <button id="publish-experience" className="primary" disabled={publishing||saving||saveError||!flow.length} onClick={()=>experience.status==="live"&&experience.joinCode?setView("runtime"):publish()}>
+            {publishing ? s.publishing : experience.status==="live"&&experience.joinCode?(he?"שיתוף וניהול החוויה":"Share & manage experience"):s.publish}
           </button>
         </div>
+        <p className="contextHint">{saving?(he?"ממתינים לסיום השמירה לפני הפרסום.":"Wait for changes to save before publishing."):saveError?(he?"השמירה נכשלה. תקנו או שמרו שוב לפני הפרסום.":"Saving failed. Save your changes successfully before publishing."):!flow.length?(he?"הוסיפו לפחות משימה אחת כדי לפרסם.":"Add at least one mission to publish."):experience.status==="live"?(he?"החוויה פעילה. השינויים נשמרים ומתעדכנים אצל המשתתפים מיד.":"This experience is live. Saved changes update for participants immediately."):he?"הפרסום ייצור קישור וקוד הצטרפות. אפשר להמשיך לערוך גם אחרי הפרסום.":"Publishing creates a join link and code. You can keep editing after publishing."}</p>
       </div>
 
       <div className="panel studioPreviewPanel">
+        <p className="contextHint">{he?"תצוגה מקדימה בלבד — כך ייראה תוכן התחנה. כדי להשתתף בפועל, פתחו את קישור ההצטרפות אחרי הפרסום.":"Preview only — this shows the stop's content. To participate, open the join link after publishing."}</p>
         <div className="previewHeader"><div><div className="tag">{s.liveParticipantPreview}</div><span>LIVE EXPERIENCE</span></div><i></i></div>
 
         {atom ? (
@@ -618,7 +627,7 @@ export default function Studio({ experience, setExperience, setView, t }) {
                     : `${atom.points || 100} ${s.pointsSuffix}`}
                 </div>
 
-                <button className="primary">{s.completeMission}</button>
+                <button className="primary" disabled>{s.completeMission}</button>
               </>
             )}
           </div>

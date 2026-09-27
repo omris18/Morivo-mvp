@@ -40,16 +40,20 @@ export default function AICreator({setExperience,setView,setActiveId,user,lang,t
  const [form,setForm]=useState({prompt:"",type:"",location:"",duration:"",startDate:"",endDate:"",people:"",peopleDetails:"",hotelBooked:false,interests:[],adults:"2",children:"0",childrenAges:[]}),[building,setBuilding]=useState(false),[step,setStep]=useState(0);
  const TOTAL_STEPS=3;
  const [formStep,setFormStep]=useState(1);
+ const [stepError,setStepError]=useState("");
+ const stepTitles=lang==="he"?["מה החוויה שלכם?","מתי ומי מגיעים?","מה יהפוך אותה למיוחדת?"]:["What's the experience?","When, and who's coming?","What makes it special?"];
+ useEffect(()=>{if(formStep>1){const el=document.getElementById("ai-step-heading");el?.scrollIntoView({behavior:"smooth",block:"start"});el?.focus({preventScroll:true})}},[formStep]);
  const [phase,setPhase]=useState("form");
  const [itinerary,setItinerary]=useState(null);
  const [planError,setPlanError]=useState(null);
  const [selectedAttractionIds,setSelectedAttractionIds]=useState(new Set());
  const [selectedHotelIndex,setSelectedHotelIndex]=useState(-1);
  function goNext(){
-  if(formStep===1&&!form.prompt.trim())return alert(a.describeFirst);
+  if(formStep===1&&!form.prompt.trim()){setStepError(a.describeFirst);document.querySelector('.aiPrompt')?.focus();return}
+  setStepError("");
   setFormStep(s=>Math.min(TOTAL_STEPS,s+1));
  }
- function goBack(){setFormStep(s=>Math.max(1,s-1))}
+ function goBack(){setStepError("");setFormStep(s=>Math.max(1,s-1))}
  const isMultiDayFamilyTrip=form.type===TYPE_OPTIONS.en[0]||form.type===TYPE_OPTIONS.he[0];
  const isSingleDayFamilyTrip=form.type===TYPE_OPTIONS.en[1]||form.type===TYPE_OPTIONS.he[1];
  const isFamilyTrip=isMultiDayFamilyTrip||isSingleDayFamilyTrip;
@@ -146,6 +150,7 @@ export default function AICreator({setExperience,setView,setActiveId,user,lang,t
   <div className="panel">
    <div className="aiTop"><div className="tag">{a.tag}</div></div>
    <h1>{a.reviewTitle}</h1><p>{a.reviewDesc}</p>
+   <p className="contextHint">{lang==="he"?"זו תוכנית לבדיקה, עדיין לא חוויה שפורסמה. אפשר לערוך את הטקסט ולבחור הצעות. לחצו על אישור ובנייה כדי ליצור את המשימות בסטודיו.":"This is a plan to review, not a published experience. Edit the text and select suggestions, then approve and build to create the missions in the studio."}</p>
    <div className="itineraryPlan">
     {itinerary.plan.map(p=><div className="itineraryStep" key={p.step}>
      <div className="itineraryStepBadge">{isMultiDayFamilyTrip?a.dayBadge(p.step):a.partBadge(p.step)}</div>
@@ -182,8 +187,10 @@ export default function AICreator({setExperience,setView,setActiveId,user,lang,t
   <div className="panel">
    <div className="aiTop"><div className="tag">{a.tag}</div></div>
    <h1>{a.title}</h1><p>{a.desc}</p>
+   <div className="aiStepIntro"><small>{lang==="he"?`שלב ${formStep} מתוך 3`:`Step ${formStep} of 3`}</small><h2 id="ai-step-heading" tabIndex={-1}>{stepTitles[formStep-1]}</h2><p>{lang==="he"?(formStep===1?"תארו את הרעיון בכמה מילים. התיאור הוא שדה חובה; סוג ומיקום עוזרים להתאים את החוויה.":formStep===2?"הוסיפו זמן והרכב משתתפים כדי להתאים את המסלול. בטיול עם לינה, תאריכים וגילי ילדים עוזרים לדייק את החיפוש.":"הוסיפו תחומי עניין, גילאים או בקשות מיוחדות. אפשר להשאיר ריק ולהמשיך לתכנון."):(formStep===1?"Describe your idea. A description is required; type and location help personalize it.":formStep===2?"Add timing and participants to tailor the route. For overnight trips, dates and children's ages help refine searches.":"Add interests, ages or special requests. You can leave this blank and continue to planning.")}</p></div>
+   {stepError&&<p className="guidanceError" role="alert">{stepError}</p>}
    <div className={"aiFormStep "+(formStep===1?"active":"")} data-step="1">
-    <label>{a.prompt}</label><textarea className="aiPrompt" value={form.prompt} onChange={e=>setForm({...form,prompt:e.target.value})}/>
+    <label htmlFor="ai-description">{a.prompt} *</label><textarea id="ai-description" className="aiPrompt" aria-required="true" aria-invalid={!!stepError} placeholder={lang==="he"?"לדוגמה: יום כיף בחי פארק עם ילדים בני 7–10, חידות קלילות ומשימות צילום.":"For example: a family day at the zoo with ages 7–10, easy riddles and photo missions."} value={form.prompt} onChange={e=>{setForm({...form,prompt:e.target.value});setStepError("")}}/>
     <div className="fieldRow"><div><label>{a.type}</label><select value={form.type} onChange={e=>setForm({...form,type:e.target.value})}><option value=""></option>{TYPE_OPTIONS[lang].map(x=><option key={x} value={x}>{x}</option>)}</select></div><div><label>{a.location}</label><input value={form.location} onChange={e=>setForm({...form,location:e.target.value})}/></div></div>
     {/birthday|יום הולדת/i.test(form.type)&&<CelebrationPhotoPicker file={portraitFile} onChange={setPortraitFile} lang={lang}/>}
    </div>
@@ -208,12 +215,12 @@ export default function AICreator({setExperience,setView,setActiveId,user,lang,t
     <span className="stepIndicator">{lang==="he"?`שלב ${formStep} מתוך ${TOTAL_STEPS}`:`Step ${formStep} of ${TOTAL_STEPS}`}</span>
     <div className="stepNavBtns">
      {formStep>1&&<button type="button" onClick={goBack}>{lang==="he"?"→ הקודם":"← Back"}</button>}
-     {formStep<TOTAL_STEPS&&<button type="button" className="primary" onClick={goNext}>{lang==="he"?"הבא ←":"Next →"}</button>}
+     {formStep<TOTAL_STEPS&&<button type="button" className="primary" onClick={goNext}>{lang==="he"?(formStep===1?"המשך לזמן ולמשתתפים ←":"המשך להעדפות ←"):(formStep===1?"Next: timing & people →":"Next: preferences →")}</button>}
     </div>
    </div>
 
    {planError&&<div className="planError">⚠ {planError}</div>}
-   <div className="actions finalActions"><button className="primary aiBuildButton" onClick={goPlan}>✦ {a.planTrip}</button></div>
+   {formStep===TOTAL_STEPS&&<><div className="actions finalActions"><button className="primary aiBuildButton" onClick={goPlan}>✦ {a.planTrip}</button></div><p className="contextHint">{lang==="he"?"קודם תקבלו תוכנית לאישור. החוויה לא תפורסם בלי שתבחרו לפרסם אותה.":"You'll review a plan first. The experience won't be published until you choose to publish it."}</p></>}
   </div>
   <div className="panel aiPromise photoPromise">
    <PhotoJourney image={shownHeroArt||undefined}/>
