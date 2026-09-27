@@ -63,8 +63,8 @@ export default function Studio({ experience, setExperience, setView, t, lang }) 
   }, [atom?.qrCode, atom?.type]);
 
   function generateQr() {
-    const code = Math.random().toString(36).slice(2, 10).toUpperCase();
-    patch({ qrCode: code });
+    if (!Number.isFinite(atom?.lat) || !Number.isFinite(atom?.lng)) return;
+    patch({ qrCode: `https://www.google.com/maps/search/?api=1&query=${atom.lat},${atom.lng}` });
   }
 
   useEffect(() => {
@@ -622,29 +622,21 @@ export default function Studio({ experience, setExperience, setView, t, lang }) 
 
               <div className="qrCheckpoint">
                 <label>{s.qrCheckpoint}</label>
-                {!hasGps ? (
-                  <p className="gpsStatus">{s.qrNeedsGpsFirst}</p>
-                ) : <>
-                  <div className="fieldRow">
-                    <div>
-                      <input
-                        value={atom.qrCode || ""}
-                        placeholder={s.qrSetTo}
-                        onChange={(e) => patch({ qrCode: e.target.value.trim() || null })}
-                      />
-                    </div>
-                    <div>
-                      <button type="button" onClick={generateQr}>{s.generateQr}</button>
-                    </div>
+                {!hasGps && <p className="gpsStatus">{s.qrNeedsGpsFirst}</p>}
+                <div className="fieldRow">
+                  <div>
+                    <button type="button" disabled={!hasGps} onClick={generateQr}>{s.generateQr}</button>
                   </div>
-                  {atom.qrCode && qrImgUrl && (
+                </div>
+                {hasGps && atom.qrCode && qrImgUrl && (
+                  <>
+                    <p className="gpsStatus">{s.qrNavHint}</p>
                     <div className="qrPreviewWrap">
                       <img className="qrPreview" src={qrImgUrl} alt="QR code" />
-                      <a href={qrImgUrl} download={`morivo-checkpoint-${atom.qrCode}.png`}>{s.downloadQr}</a>
-                      <button type="button" onClick={() => patch({ qrCode: null })}>{s.clearQr}</button>
+                      <a href={qrImgUrl} download={`morivo-checkpoint-${atom.id}.png`}>{s.downloadQr}</a>
                     </div>
-                  )}
-                </>}
+                  </>
+                )}
               </div>
               </>;
             })()}
