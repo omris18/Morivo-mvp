@@ -558,6 +558,16 @@ export default function Studio({ experience, setExperience, setView, t, lang }) 
               </div>
             )}
 
+            <label className="organizerDecidesCheck">
+              <input
+                type="checkbox"
+                checked={!!atom.stamp}
+                onChange={(e) => patch({ stamp: e.target.checked })}
+              />
+              {s.stampMissionLabel}
+            </label>
+            <p className="organizerDecidesHint">{s.stampMissionHint}</p>
+
             <label>{s.reward}</label>
             <input
               value={atom.reward || ""}

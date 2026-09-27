@@ -4,6 +4,7 @@ import {createPortal} from "react-dom";
 import ExperienceRoute from "./ExperienceRoute";
 import ExperienceShare from "./ExperienceShare";
 import {journeyFinished,missionDone,missionActive} from "../lib/experienceVisuals";
+import {missionLabels} from "../lib/experienceGuidance";
 import {reorderExperienceRemote,updateMissionRemote} from "../lib/morivoData";
 import journeyProgress from "../functions/journeyProgress";
 import QRCode from "qrcode";
@@ -142,6 +143,13 @@ export default function Runtime({experience,setExperience,setView,t,user,lang,is
  const canManage=!experience.id||user?.uid===experience.ownerUid||isMaster;
  async function swapMissions(firstId,secondId){const order=flow.map(m=>m.id),a=order.indexOf(firstId),b=order.indexOf(secondId);if(a<0||b<0)return;[order[a],order[b]]=[order[b],order[a]];if(firebaseConfigured&&experience.id)await reorderExperienceRemote(experience.id,order,flow.map(m=>m.id));else setExperience(prev=>({...prev,flow:order.map(id=>prev.flow.find(m=>m.id===id))}));}
  async function saveMission(original,edited){if(firebaseConfigured&&experience.id)await updateMissionRemote(experience.id,original,edited);else setExperience(prev=>({...prev,flow:prev.flow.map(m=>m.id===original.id?{...edited,id:original.id}:m)}));}
+ async function toggleStampByType(type){
+  const matching=flow.filter(m=>m.type===type);
+  const allOn=matching.length>0&&matching.every(m=>m.stamp);
+  const nextFlow=flow.map(m=>m.type===type?{...m,stamp:!allOn}:m);
+  if(firebaseConfigured&&experience.id)await updateExperienceRemote(experience.id,{flow:nextFlow}).catch(e=>alert(e.message));
+  else setExperience(prev=>({...prev,flow:nextFlow}));
+ }
  const merged=useMemo(()=>{
    const real=people.map(p=>journeyProgress.normalizeProgress({...p,...(progress.find(x=>x.uid===p.id)||{})},flow));
    const realNames=new Set(real.map(p=>p.name||p.participantName));
@@ -247,6 +255,23 @@ export default function Runtime({experience,setExperience,setView,t,user,lang,is
  <div className="grid2" style={{marginTop:18}}><div className="panel"><div className="tag">{r.liveActivity}</div><div className="feed">{feed.map((x,i)=><div key={i}>{x}</div>)}</div></div><div className="panel"><div className="tag">{r.latestMemories}</div>{media.length?<div className="runtimeMedia">{media.slice(0,6).map(m=>m.contentType?.startsWith("video/")?<video key={m.id} src={m.downloadURL} muted/>:<img key={m.id} src={m.downloadURL} alt="memory"/>)}</div>:<p>{r.noPhotosYet}</p>}</div></div>
  {answers.length>0&&<div className="panel" style={{marginTop:18}}><div className="tag">{r.sharedMemories}</div><div className="feed">{answers.slice(0,8).map(a=><div key={a.id}><b>{a.participantName}</b> — {a.text}</div>)}</div></div>}
  {missionPerf.length>0&&<div className="panel" style={{marginTop:18}}><div className="tag">{r.missionPerformance}</div><div className="missionPerf">{missionPerf.map(m=><div className="missionPerfRow" key={m.id}><b>{m.title}</b><div className="missionPerfBar"><span style={{width:`${m.pct}%`}}></span></div><small>{m.pct}%</small></div>)}</div></div>}
+ {canManage&&flow.length>0&&(()=>{
+   const labels=missionLabels[lang==="he"?"he":"en"];
+   const typeIcons={photo:"📸",video:"🎬",map:"🗺️",quiz:"✅",puzzle:"🧩",note:"✍️",story:"📖",branch:"🔀"};
+   const typesPresent=[...new Set(flow.map(m=>m.type))].filter(type=>type!=="branch");
+   return typesPresent.length>0&&<div className="panel stampsPanel" style={{marginTop:18}}>
+    <div className="tag">{lang==="he"?"חותמות דרכון":"Passport stamps"}</div>
+    <p className="rosterHint">{lang==="he"?"יעדים בטיול מקבלים חותמת דרכון אוטומטית. אפשר גם לסמן כאן במהירות אילו סוגי משימות יקבלו חותמת, בלי להיכנס לעריכה של כל משימה בנפרד.":"Destinations in the trip earn a passport stamp automatically. You can also quickly choose here which mission types earn a stamp, without opening each mission's editor separately."}</p>
+    <div className="stampTypeToggles">{typesPresent.map(type=>{
+      const matching=flow.filter(m=>m.type===type);
+      const allOn=matching.every(m=>m.stamp);
+      const someOn=!allOn&&matching.some(m=>m.stamp);
+      return <button type="button" key={type} className={"stampTypeChip"+(allOn?" on":someOn?" partial":"")} onClick={()=>toggleStampByType(type)}>
+       <span>{typeIcons[type]||"⭐"}</span> {labels[type]||type} <small>{matching.length}</small>
+      </button>;
+    })}</div>
+   </div>;
+ })()}
  <div className="panel" style={{marginTop:18}}>
   <div className="tag">{r.roster} ({roster.length})</div>
   <p className="rosterHint">{lang==="he"?"לכל משתתף קישור אישי קבוע. גם מצטרפים דרך הקישור הכללי מופיעים כאן אוטומטית. העתיקו את הקישור או צרבו אותו על תג NFC — הוא מחזיר לאותו משתתף ולאותה התקדמות. אפשר גם להכין הזמנות מראש לפי שם.":"Every participant has a permanent personal link. People joining through the shared link appear here automatically. Copy or write their link to an NFC tag to resume the same journey. You can also prepare invitations by name."}</p>

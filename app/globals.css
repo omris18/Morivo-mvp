@@ -433,6 +433,11 @@ button:active{transform:scale(.96)}
  .journeyGreeting p,.journeyStopMeta,.journeyStopHotel,.flightItem span{color:#444!important}
 }
 .rosterHint{color:#9eaabd;font-size:13px;margin:0 0 6px}
+.stampTypeToggles{display:flex;flex-wrap:wrap;gap:9px;margin-top:10px}
+.stampTypeChip{display:inline-flex;align-items:center;gap:7px;padding:8px 14px;border-radius:999px;border:1px solid rgba(255,255,255,.14);background:#0a1624;color:#9eaabd;font-size:13px;cursor:pointer;transition:background .2s,border-color .2s,color .2s}
+.stampTypeChip small{opacity:.7;font-size:11px}
+.stampTypeChip.partial{border-color:rgba(239,193,134,.4);color:#efc186}
+.stampTypeChip.on{background:rgba(239,193,134,.16);border-color:#efc186;color:#efc186}
 .rosterList{margin-top:14px;display:flex;flex-direction:column;gap:8px}
 .rosterRow{display:flex;align-items:center;gap:12px;padding:10px 14px;border:1px solid rgba(255,255,255,.1);border-radius:12px;background:#0a1624;flex-wrap:wrap}
 .rosterName{font-weight:700;min-width:110px}
@@ -1106,6 +1111,9 @@ body .appShell .memoryPage .mbCoverShade,.memoryPage .mbCoverShade{background:li
 body .appShell .runtimePage .missionPerfRow b,body .appShell .runtimePage .rosterHint{color:#476974}
 body .appShell .runtimePage .missionPerfBar{background:#dce9df}
 body .appShell .runtimePage .missionPerfBar span{background:#459982}
+body .appShell .stampTypeChip{background:#eef6f0;border-color:#cde1d8;color:#476974}
+body .appShell .stampTypeChip.partial{border-color:#e0b264;color:#b3781f}
+body .appShell .stampTypeChip.on{background:#fbeed9;border-color:#e0b264;color:#b3781f}
 /* Live journey map: keep the progress matrix bright and scannable inside the warm runtime. */
 body .appShell .runtimePage .participantMatrix{background:#fbfdf8;border:1px solid #cfe1d5;box-shadow:0 10px 28px rgba(39,91,76,.08)}
 body .appShell .runtimePage .participantMatrix summary{display:flex;align-items:center;gap:10px;color:#1e6265;font-size:14px;padding:4px 2px}

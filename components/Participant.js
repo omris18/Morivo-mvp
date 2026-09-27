@@ -17,6 +17,7 @@ import {enablePushNotifications,pushSupported} from "../lib/push";
 import {experienceGradient} from "../lib/theme";
 import {COUNTRY_FLAGS} from "../lib/i18n";
 import FlagIcon from "./FlagIcon";
+import {isStampMission} from "../lib/stampMissions";
 function formatStopDate(dateStr,lang){
  try{ return new Intl.DateTimeFormat(lang==="he"?"he-IL":lang,{day:"numeric",month:"short"}).format(new Date(dateStr+"T00:00:00")); }
  catch{ return dateStr; }
@@ -30,7 +31,7 @@ function navUrl(m){
  if(m.hotel)return `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent([m.hotel,m.destination||m.location].filter(Boolean).join(", "))}`;
  return null;
 }
-const stampIcons={photo:"📸",video:"🎬",map:"🗺️",quiz:"🧩",puzzle:"🔐",note:"✍️",story:"📖",branch:"🧭"};
+const stampIcons={photo:"📸",video:"🎬",map:"🗺️",quiz:"✅",puzzle:"🧩",note:"✍️",story:"📖",branch:"🧭"};
 export default function Participant({experience,setExperience,setView,setActiveId,deepLinkCode,t,lang,setLang,country,selectLang,dir,portal,portalCode,chromeless}){
  const p=t.participant;
  const [code,setCode]=useState(deepLinkCode||experience.joinCode||""),[name,setName]=useState(""),[joined,setJoined]=useState(false),[eid,setEid]=useState(experience.id),[uid,setUid]=useState("");
@@ -116,6 +117,7 @@ export default function Participant({experience,setExperience,setView,setActiveI
  const finished=flow.length>0&&rawIdx>=flow.length;
  const idx=Math.min(rawIdx,Math.max(flow.length-1,0)), mission=finished?null:flow[idx];
  const badges=computeBadges(prog,flow);
+ const earnedStamps=flow.filter(m=>isStampMission(m)&&(prog.completedMissionIds||[]).includes(m.id));
  useEffect(()=>{setQuizAnswer(null);setQuizFeedback(null);setQuizWrongAttempts(0);setNoteText("");setPuzzleAnswer("");setLocStatus(null);setQrVerified(false);setSuggestText("");setMissionPopupOpen(false);setFiles([]);setUploadNotice("");stopScan()},[mission?.id]);
  useEffect(()=>{setRevisitFiles([]);setRevisitNotice("");setRevisitPct(0)},[revisitMission?.id]);
  const branchResolvingRef=useRef(false);
@@ -341,10 +343,10 @@ export default function Participant({experience,setExperience,setView,setActiveI
   <div className="passportCrest">🛂</div>
   <div className="missionPopupMeta">{p.passportKicker}</div>
   <h3>{experienceName}</h3>
-  <div className="passportStampsHead"><span>{p.passportStampsTitle}</span><small>{p.stampsCount((prog.completedMissionIds||[]).length)}</small></div>
-  {(prog.completedMissionIds||[]).length===0
+  <div className="passportStampsHead"><span>{p.passportStampsTitle}</span><small>{p.stampsCount(earnedStamps.length)}</small></div>
+  {earnedStamps.length===0
    ? <p className="passportEmpty">{p.passportEmptyHint}</p>
-   : <div className="passportStampGrid">{flow.filter(m=>(prog.completedMissionIds||[]).includes(m.id)).map(m=><div className="passportStamp" key={m.id}><span className="passportStampIcon">{stampIcons[m.type]||"⭐"}</span><b>{m.day?(lang==="he"?`יום ${m.day}`:`Day ${m.day}`):m.title}</b></div>)}</div>}
+   : <div className="passportStampGrid">{earnedStamps.map(m=><div className="passportStamp" key={m.id}><span className="passportStampIcon">{stampIcons[m.type]||"⭐"}</span><b>{m.day?(lang==="he"?`יום ${m.day}`:`Day ${m.day}`):m.title}</b></div>)}</div>}
   {badges.length>0&&<div className="badgeRow">{badges.map(b=><div className="badge" key={b.id} title={b.label}><span>{b.icon}</span><small>{b.label}</small></div>)}</div>}
  </div></div>,document.body)}
  {albumOpen&&typeof document!=="undefined"&&createPortal(<div className="missionPopupOverlay" role="presentation" onClick={()=>setAlbumOpen(false)}><div className="missionPopupCard albumCard" role="dialog" aria-modal="true" onClick={e=>e.stopPropagation()}><button type="button" className="missionPopupClose" aria-label={lang==="he"?"סגירה":"Close"} onClick={()=>setAlbumOpen(false)}>×</button>
