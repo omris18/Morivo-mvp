@@ -492,7 +492,6 @@ body{background:radial-gradient(circle at 78% -10%,rgba(123,199,216,.08),transpa
 @media(max-width:1050px){.studioPage{grid-template-columns:1fr}.studioPreviewPanel{position:relative;top:auto;min-height:auto}.atomBar{grid-template-columns:repeat(4,1fr)}}
 @media(max-width:650px){.studioWorkspace{padding:20px}.studioHeader{flex-direction:column}.atomBar{grid-template-columns:repeat(2,1fr)}.flowNode{grid-template-columns:64px 1fr!important}.studioPreviewPanel{padding:16px}}
 
-
 /* Participant journey — the same navy, warm light and route language as Studio. */
 .portalShell{position:relative;align-items:flex-start;padding:clamp(16px,4vw,48px);background-color:#071019;isolation:isolate}
 .portalShell::before{content:"";position:fixed;inset:0;z-index:-1;background:linear-gradient(180deg,rgba(5,13,22,.18),rgba(5,13,22,.7) 55%,#06111b);pointer-events:none}
