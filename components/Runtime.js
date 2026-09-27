@@ -1,6 +1,7 @@
 "use client";
 import {useEffect,useMemo,useState} from "react";
 import ExperienceRoute from "./ExperienceRoute";
+import ExperienceShare from "./ExperienceShare";
 import {journeyFinished,missionDone,missionActive} from "../lib/experienceVisuals";
 import {reorderExperienceRemote,updateMissionRemote} from "../lib/morivoData";
 import journeyProgress from "../functions/journeyProgress";
@@ -127,6 +128,8 @@ export default function Runtime({experience,setExperience,setView,t,user,lang,is
  const organizerBranches=flow.filter(m=>m.type==="branch"&&m.organizerDecides);
  const locationPolls=flow.filter(m=>m.isLocationPoll);
  return <section className="runtimePage">
+ <ExperienceShare experience={experience} lang={lang} setView={setView}/>
+ {!people.length&&experience.status==="live"&&<p className="contextHint">{lang==="he"?"עדיין לא הצטרפו משתתפים. שתפו את הקישור שלמעלה; הרשימה תתעדכן אוטומטית כשיצטרפו.":"No participants yet. Share the link above; this view updates automatically when they join."}</p>}
  {locationPolls.length>0&&<div className="panel routeDecisionsPanel"><div className="tag">{r.locationPollsTitle}</div><p className="rosterHint">{r.locationPollsHint}</p>
   {locationPolls.map(m=>{
     const decided=experience.locationDecisions?.[m.id];

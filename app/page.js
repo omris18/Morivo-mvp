@@ -1,6 +1,7 @@
 "use client";
 import { useEffect, useMemo, useState } from "react";
 import Sidebar from "../components/Sidebar";
+import ScreenGuidance from "../components/ScreenGuidance";
 import Dashboard from "../components/Dashboard";
 import MasterDashboard from "../components/MasterDashboard";
 import masterAccess from "../functions/masterAccess";
@@ -35,6 +36,7 @@ export default function Home(){
  const [view,setView]=useState("dashboard");
  const [user,setUser]=useState(null);
  const [isMaster,setIsMaster]=useState(false);
+ useEffect(()=>{window.scrollTo({top:0,behavior:"auto"});document.getElementById("screen-guide-title")?.focus({preventScroll:true})},[view]);
  const [experiences,setExperiences]=useState([]);
  const [experience,setExperience]=useState({
     id: null,
@@ -154,7 +156,7 @@ export default function Home(){
        </div>
      </div>
      {isMaster&&activeId&&experience.ownerUid!==user?.uid&&["studio","runtime","memory"].includes(view)&&<div className="masterContext"><span>{lang==="he"?"מצב מאסטר · ניהול חוויה של משתמש אחר":"Master mode · managing another user's experience"}</span><button onClick={()=>setView("master")}>{lang==="he"?"כל החוויות":"All experiences"}</button></div>}
-     <div className="viewFade" key={view}>{Screen}</div>
+     <div className="viewFade" key={view}><ScreenGuidance {...props} view={view}/>{(!["studio","runtime","memory"].includes(view)||experience.id)&&Screen}</div>
    </main>
  </div>;
 }
