@@ -17,7 +17,8 @@ export default function Runtime({experience,setExperience,setView,t,user,lang,is
  const [people,setPeople]=useState([]),[feed,setFeed]=useState([]),[media,setMedia]=useState([]),[progress,setProgress]=useState([]),[answers,setAnswers]=useState([]),[locationVotes,setLocationVotes]=useState([]),[pendingAttractionPicks,setPendingAttractionPicks]=useState({});
  const [qrDataUrl,setQrDataUrl]=useState(null);
  const [roster,setRoster]=useState([]),[rosterName,setRosterName]=useState(""),[addingRoster,setAddingRoster]=useState(false);
- const [writingCode,setWritingCode]=useState(null),[writeStatus,setWriteStatus]=useState("");\n const [surveyMission,setSurveyMission]=useState(null);
+ const [writingCode,setWritingCode]=useState(null),[writeStatus,setWriteStatus]=useState("");
+ const [surveyMission,setSurveyMission]=useState(null);
  const [generatingFor,setGeneratingFor]=useState(null);
  function personalLink(code){
    return `${window.location.origin}${window.location.pathname}?pcode=${code}`;
