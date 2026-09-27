@@ -4,6 +4,7 @@ import {missionLabels,participantHint} from "../lib/experienceGuidance";
 import missionAnswers from "../functions/missionAnswers";
 import journeyProgress from "../functions/journeyProgress";
 import {useEffect,useRef,useState} from "react";
+import {createPortal} from "react-dom";
 import jsQR from "jsqr";
 import {firebaseConfigured} from "../lib/firebase";
 import {joinExperienceByCode,joinExperienceByPersonalCode,subscribeExperience,subscribeMyProgress,initializeProgress,completeJourneyMission,saveMissionAnswer,subscribeMessages,translateExperienceRemote,subscribeLocationVotes,castLocationVote} from "../lib/morivoData";
@@ -18,6 +19,10 @@ import FlagIcon from "./FlagIcon";
 function formatStopDate(dateStr,lang){
  try{ return new Intl.DateTimeFormat(lang==="he"?"he-IL":lang,{day:"numeric",month:"short"}).format(new Date(dateStr+"T00:00:00")); }
  catch{ return dateStr; }
+}
+function popupMeta(m,lang){
+ const parts=[m.location||m.destination,m.date?formatStopDate(m.date,lang):null].filter(Boolean);
+ return parts.join(" · ");
 }
 export default function Participant({experience,setExperience,setView,setActiveId,deepLinkCode,t,lang,setLang,country,selectLang,dir,portal,portalCode,chromeless}){
  const p=t.participant;
@@ -42,6 +47,8 @@ export default function Participant({experience,setExperience,setView,setActiveI
  const [translated,setTranslated]=useState(null);
  const [locationVotes,setLocationVotes]=useState([]);
  const [suggestText,setSuggestText]=useState("");
+ const [missionPopupOpen,setMissionPopupOpen]=useState(false);
+ const [viewingMission,setViewingMission]=useState(null);
  useEffect(()=>{if(deepLinkCode)setCode(deepLinkCode)},[deepLinkCode]);
  function acceptIdentity(result){
   setName(result.name);setUid(result.uid);setEid(result.experienceId);setActiveId(result.experienceId);setJoined(true);
@@ -93,7 +100,7 @@ export default function Participant({experience,setExperience,setView,setActiveI
  const finished=flow.length>0&&rawIdx>=flow.length;
  const idx=Math.min(rawIdx,Math.max(flow.length-1,0)), mission=finished?null:flow[idx];
  const badges=computeBadges(prog,flow);
- useEffect(()=>{setQuizAnswer(null);setQuizFeedback(null);setQuizWrongAttempts(0);setNoteText("");setPuzzleAnswer("");setLocStatus(null);setQrVerified(false);setSuggestText("");stopScan()},[mission?.id]);
+ useEffect(()=>{setQuizAnswer(null);setQuizFeedback(null);setQuizWrongAttempts(0);setNoteText("");setPuzzleAnswer("");setLocStatus(null);setQrVerified(false);setSuggestText("");setMissionPopupOpen(false);stopScan()},[mission?.id]);
  const branchResolvingRef=useRef(false);
  const locationPollResolvingRef=useRef(false);
  useEffect(()=>{branchResolvingRef.current=false;locationPollResolvingRef.current=false},[mission?.id]);
@@ -248,14 +255,17 @@ export default function Participant({experience,setExperience,setView,setActiveI
  <div className="journeyProgressBar"><div className="journeyProgressFill" style={{width:`${progressPct}%`}}></div></div>
  <div className="journeyMap">{flow.map((m,i)=>{
    const done=(prog.completedMissionIds||[]).includes(m.id),active=!finished&&i===idx;
-   const hasNav=active&&Number.isFinite(m.lat)&&Number.isFinite(m.lng);
-   return <div className={"journeyStop "+(done?"done":active?"active":"locked")} key={m.id}>
+   const hasNav=Number.isFinite(m.lat)&&Number.isFinite(m.lng);
+   return <div className={"journeyStop "+(done?"done":active?"active":"locked")} key={m.id} role="button" tabIndex={0} onClick={()=>active?setMissionPopupOpen(true):setViewingMission(m)} onKeyDown={e=>{if(e.key==="Enter"||e.key===" "){e.preventDefault();active?setMissionPopupOpen(true):setViewingMission(m)}}}>
     <div className="journeyStopDot">{done?"✓":active?"★":i+1}</div>
     <div className="journeyStopCard">
      {(m.day||m.date)&&<div className="journeyStopMeta">{m.day?p.dayBadge(m.day):""}{m.day&&m.date?" · ":""}{m.date?formatStopDate(m.date,lang):""}</div>}
      <b>{m.title}</b>
      {m.hotel&&<div className="journeyStopHotel">🏨 {m.hotel}</div>}
-     {hasNav&&<a className="journeyNavigateBtn" href={`https://www.google.com/maps/search/?api=1&query=${m.lat},${m.lng}`} target="_blank" rel="noopener noreferrer">🧭 {p.navigate}</a>}
+     <div className="journeyStopActions">
+      <button type="button" className="journeyStopOpenBtn">{p.openMission}</button>
+      {hasNav&&<a className="journeyNavigateBtn" href={`https://www.google.com/maps/search/?api=1&query=${m.lat},${m.lng}`} target="_blank" rel="noopener noreferrer" onClick={e=>e.stopPropagation()}>🧭 {p.navigate}</a>}
+     </div>
     </div>
    </div>;
  })}</div>
@@ -278,9 +288,13 @@ export default function Participant({experience,setExperience,setView,setActiveI
   })}
  </div>}
  {chromeless&&<button type="button" className="printJourneyBtn noPrint" onClick={()=>window.print()}>🖨 {p.downloadJourneyPdf}</button>}
- {finished?<div className="finishCard viewFade" key="finish"><div className="confetti">{Array.from({length:16}).map((_,i)=><span key={i}></span>)}</div><div className="finishIcon">🏆</div><h2>{p.journeyCompleteTitle}</h2><p>{p.journeyCompleteSub}</p>{badges.length>0&&<div className="badgeRow">{badges.map(b=><div className="badge" key={b.id} title={b.label}><span>{b.icon}</span><small>{b.label}</small></div>)}</div>}<button className="primary" onClick={()=>document.getElementById("finished-memory-book")?.scrollIntoView({behavior:"smooth"})}>{p.openMemoryBook}</button><div id="finished-memory-book" className="finishedMemoryBook"><Memory experience={experience} setExperience={setExperience} setView={setView} t={t} dir={dir} participantView/></div></div>:mission&&<div className="phone journeyPhone viewFade" key={mission.id}><div className="missionType">{missionLabels[lang==="he"?"he":"en"][mission.type]||mission.type}</div><h3>{mission.title}</h3><p className="participantInstruction">{participantHint(mission,lang)}</p><p><LinkifiedText text={mission.text}/></p>
- {mission.type==="photo"&&<label className="uploadBox"><span>{p.choosePhoto}</span><input type="file" accept="image/*" capture="environment" onChange={e=>setFile(e.target.files?.[0]||null)}/></label>}
- {mission.type==="video"&&<label className="uploadBox"><span>{p.chooseVideo}</span><input type="file" accept="video/*" capture="environment" onChange={e=>setFile(e.target.files?.[0]||null)}/></label>}
+ {finished&&<div className="finishCard viewFade" key="finish"><div className="confetti">{Array.from({length:16}).map((_,i)=><span key={i}></span>)}</div><div className="finishIcon">🏆</div><h2>{p.journeyCompleteTitle}</h2><p>{p.journeyCompleteSub}</p>{badges.length>0&&<div className="badgeRow">{badges.map(b=><div className="badge" key={b.id} title={b.label}><span>{b.icon}</span><small>{b.label}</small></div>)}</div>}<button className="primary" onClick={()=>document.getElementById("finished-memory-book")?.scrollIntoView({behavior:"smooth"})}>{p.openMemoryBook}</button><div id="finished-memory-book" className="finishedMemoryBook"><Memory experience={experience} setExperience={setExperience} setView={setView} t={t} dir={dir} participantView/></div></div>}
+ {missionPopupOpen&&mission&&!finished&&typeof document!=="undefined"&&createPortal(<div className="missionPopupOverlay" role="presentation" onClick={()=>setMissionPopupOpen(false)}><div className="missionPopupCard" role="dialog" aria-modal="true" onClick={e=>e.stopPropagation()}><button type="button" className="missionPopupClose" aria-label={lang==="he"?"סגירה":"Close"} onClick={()=>setMissionPopupOpen(false)}>×</button>{mission.day?<div className="missionPopupBadge">{mission.day}</div>:null}{popupMeta(mission,lang)&&<div className="missionPopupMeta">{popupMeta(mission,lang)}</div>}<div className="missionType">{missionLabels[lang==="he"?"he":"en"][mission.type]||mission.type}</div><h3>{mission.title}</h3><p className="participantInstruction">{participantHint(mission,lang)}</p><p><LinkifiedText text={mission.text}/></p>{mission.hotel&&<div className="journeyStopHotel">🏨 {mission.hotel}</div>}{Number.isFinite(mission.lat)&&Number.isFinite(mission.lng)&&<a className="journeyNavigateBtn" href={`https://www.google.com/maps/search/?api=1&query=${mission.lat},${mission.lng}`} target="_blank" rel="noopener noreferrer">🧭 {p.navigate}</a>}
+ {(mission.type==="photo"||mission.type==="video")&&<div className="uploadChoiceGrid">
+  <label className="uploadChoiceCard"><input type="file" accept={mission.type==="photo"?"image/*":"video/*"} onChange={e=>setFile(e.target.files?.[0]||null)}/><span className="uploadChoiceIcon">🖼️</span><b>{p.chooseFromGallery}</b><small>{p.chooseFromGalleryHint}</small></label>
+  <label className="uploadChoiceCard"><input type="file" accept={mission.type==="photo"?"image/*":"video/*"} capture="environment" onChange={e=>setFile(e.target.files?.[0]||null)}/><span className="uploadChoiceIcon">📷</span><b>{p.takeNewMedia}</b><small>{p.takeNewMediaHint}</small></label>
+ </div>}
+ {file&&(mission.type==="photo"||mission.type==="video")&&<div className="uploadChosenFile">✓ {file.name}</div>}
  {mission.type==="quiz"&&<>
  <div className={"choiceGrid "+(quizFeedback==="wrong"?"quizShake":"")}>{(mission.options||[]).map(opt=><button key={opt} type="button" aria-pressed={quizAnswer===opt} disabled={busy||!!quizFeedback} className={quizAnswer===opt?"selected "+(quizFeedback||""):""} onClick={()=>evaluateQuiz(opt)}>{opt}</button>)}</div>
  {quizFeedback==="wrong"&&<div className="quizFeedbackMsg wrong">✗ {p.wrongAnswer}</div>}
@@ -341,7 +355,9 @@ export default function Participant({experience,setExperience,setView,setActiveI
     </div>;
    })()}
  {mission.type!=="branch"&&!(mission.type==="story"&&mission.organizerDecides)&&<div className="mission">{p.reward}: {mission.reward||`${mission.points||100} pts`}</div>}
- {mission.type!=="branch"&&mission.type!=="quiz"&&!(mission.type==="story"&&mission.organizerDecides)&&<>{busy&&(mission.type==="photo"||mission.type==="video")&&<div className="uploadProgress"><div style={{width:`${pct}%`}}></div><span>{pct}%</span></div>}<button className="primary" disabled={busy||experience.paused} onClick={complete}>{busy?p.saving:p.completeContinue}</button></>}</div>}</>;
+ {mission.type!=="branch"&&mission.type!=="quiz"&&!(mission.type==="story"&&mission.organizerDecides)&&<>{busy&&(mission.type==="photo"||mission.type==="video")&&<div className="uploadProgress"><div style={{width:`${pct}%`}}></div><span>{pct}%</span></div>}<button className="primary" disabled={busy||experience.paused} onClick={complete}>{busy?p.saving:p.completeContinue}</button></>}</div></div>,document.body)}
+ {viewingMission&&typeof document!=="undefined"&&createPortal(<div className="missionPopupOverlay" role="presentation" onClick={()=>setViewingMission(null)}><div className="missionPopupCard" role="dialog" aria-modal="true" onClick={e=>e.stopPropagation()}><button type="button" className="missionPopupClose" aria-label={lang==="he"?"סגירה":"Close"} onClick={()=>setViewingMission(null)}>×</button>{viewingMission.day?<div className="missionPopupBadge">{viewingMission.day}</div>:null}{popupMeta(viewingMission,lang)&&<div className="missionPopupMeta">{popupMeta(viewingMission,lang)}</div>}<div className="missionType">{missionLabels[lang==="he"?"he":"en"][viewingMission.type]||viewingMission.type}</div><h3>{viewingMission.title}</h3><p><LinkifiedText text={viewingMission.text}/></p>{viewingMission.hotel&&<div className="journeyStopHotel">🏨 {viewingMission.hotel}</div>}{Number.isFinite(viewingMission.lat)&&Number.isFinite(viewingMission.lng)&&<a className="journeyNavigateBtn" href={`https://www.google.com/maps/search/?api=1&query=${viewingMission.lat},${viewingMission.lng}`} target="_blank" rel="noopener noreferrer">🧭 {p.navigate}</a>}<div className={"missionPopupStatus "+((prog.completedMissionIds||[]).includes(viewingMission.id)?"done":"locked")}>{(prog.completedMissionIds||[]).includes(viewingMission.id)?`✓ ${p.missionDoneHint}`:`🔒 ${p.missionLockedHint}`}</div></div></div>,document.body)}
+ </>;
 
  const joinForm=<div className="participantJoin"><div className="participantJoinMark" aria-hidden="true"><span></span><span></span><span></span></div><div className="participantJoinEyebrow">MORIVO · EXPERIENCE</div><h2>{p.joinTitle}</h2><p className="joinInstructions">{lang==="he"?(code?"הקוד כבר מוכן. כתבו את השם שיופיע למארגן ולחצו על הצטרפות.":"קיבלתם קישור או קוד מהמארגן? הזינו שם וקוד כדי להתחיל. אין צורך ליצור חשבון."):(code?"Your code is ready. Enter the name the organizer should see, then join.":"Enter your name and the code from your organizer to get started. No account is needed.")}</p><label htmlFor="participant-name">{p.yourName}</label><input id="participant-name" autoComplete="name" value={name} placeholder={p.namePlaceholder} onChange={e=>setName(e.target.value)}/><label htmlFor="participant-code">{p.joinCode}</label><input id="participant-code" autoCapitalize="characters" value={code} onChange={e=>setCode(e.target.value.toUpperCase())} onKeyDown={e=>e.key==="Enter"&&join()}/><div className="actions centerActions"><button className="primary" disabled={joining} onClick={join}>{joining?p.joining:p.joinBtn}</button></div></div>;
 
