@@ -1,5 +1,6 @@
 "use client";
 import PhotoJourney from "./PhotoJourney";
+import CelebrationPhotoPicker from "./CelebrationPhotoPicker";
 import {useEffect,useState} from "react";
 import {httpsCallable} from "firebase/functions";
 import {firebaseConfigured,functions} from "../lib/firebase";
@@ -35,6 +36,7 @@ function generateDraft(f){
 
 export default function AICreator({setExperience,setView,setActiveId,user,lang,t,dir}){
  const a=t.aiCreator;
+ const [portraitFile,setPortraitFile]=useState(null);
  const [form,setForm]=useState({prompt:"",type:"",location:"",duration:"",startDate:"",endDate:"",people:"",peopleDetails:"",hotelBooked:false,interests:[],adults:"2",children:"0",childrenAges:[]}),[building,setBuilding]=useState(false),[step,setStep]=useState(0);
  const TOTAL_STEPS=3;
  const [formStep,setFormStep]=useState(1);
@@ -126,7 +128,7 @@ export default function AICreator({setExperience,setView,setActiveId,user,lang,t
   await minWait;
   const data={name,type:form.type,location:form.location,people:isFamilyTrip?Number(form.adults||0)+Number(form.children||0):Number(form.people||0),story:form.prompt,flow,status:"draft",aiGenerated:usedAI,lang,...(isFamilyTrip?{adultsCount:Number(form.adults||0),childrenCount:Number(form.children||0),childrenAges:form.childrenAges.map(Number)}:{}),...(isFamilyTrip&&form.startDate?{startDate:form.startDate}:{}),...(isFamilyTrip&&form.endDate?{endDate:form.endDate}:{})};
   try{
-   const u=user||await ensureUser(),id=await createExperienceRemote(u.uid,data);
+   const u=user||await ensureUser(),id=await createExperienceRemote(u.uid,data,/birthday|יום הולדת/i.test(form.type)?portraitFile:null);
    setExperience({...data,id,ownerUid:u.uid});setActiveId(id);
    setView("studio");
    if(aiError)alert(a.aiFailedNote+aiError);
@@ -182,6 +184,7 @@ export default function AICreator({setExperience,setView,setActiveId,user,lang,t
    <div className={"aiFormStep "+(formStep===1?"active":"")} data-step="1">
     <label>{a.prompt}</label><textarea className="aiPrompt" value={form.prompt} onChange={e=>setForm({...form,prompt:e.target.value})}/>
     <div className="fieldRow"><div><label>{a.type}</label><select value={form.type} onChange={e=>setForm({...form,type:e.target.value})}><option value=""></option>{TYPE_OPTIONS[lang].map(x=><option key={x} value={x}>{x}</option>)}</select></div><div><label>{a.location}</label><input value={form.location} onChange={e=>setForm({...form,location:e.target.value})}/></div></div>
+    {/birthday|יום הולדת/i.test(form.type)&&<CelebrationPhotoPicker file={portraitFile} onChange={setPortraitFile} lang={lang}/>}
    </div>
 
    <div className={"aiFormStep "+(formStep===2?"active":"")} data-step="2">

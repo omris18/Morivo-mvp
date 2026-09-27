@@ -1,11 +1,13 @@
 "use client";
 import {useState} from "react";
+import CelebrationPhotoPicker from "./CelebrationPhotoPicker";
 import { firebaseConfigured } from "../lib/firebase";
 import { createExperienceRemote, ensureUser } from "../lib/morivoData";
 
 export default function CreateExperience({setExperience,setView,user,setActiveId,t,lang}){
  const [form,setForm]=useState({name:"",type:"",location:"",people:"",story:""});
  const [thinking,setThinking]=useState(false);
+ const [portraitFile,setPortraitFile]=useState(null);
  const c=t.create;
  async function create(){
    setThinking(true);
@@ -13,7 +15,7 @@ export default function CreateExperience({setExperience,setView,user,setActiveId
    try{
      if(firebaseConfigured){
        const u=user || await ensureUser();
-       const id=await createExperienceRemote(u.uid,data);
+       const id=await createExperienceRemote(u.uid,data,form.type===c.typeBirthday?portraitFile:null);
        setExperience({...data,id,ownerUid:u.uid,status:"draft"});
        setActiveId(id);
      }else{
@@ -27,6 +29,7 @@ export default function CreateExperience({setExperience,setView,user,setActiveId
    <div className="tag">{c.createBlank}</div><h2>{c.title}</h2>
    <label htmlFor="create-name">{c.name}</label><input id="create-name" value={form.name} onChange={e=>setForm({...form,name:e.target.value})}/>
    <label htmlFor="create-type">{c.type}</label><select id="create-type" value={form.type} onChange={e=>setForm({...form,type:e.target.value})}><option value=""></option><option>{c.typeFamilyTrip}</option><option>{c.typeBirthday}</option><option>{c.typeTeamBuilding}</option><option>{c.typeSchool}</option><option>{c.typeMuseum}</option></select>
+   {form.type===c.typeBirthday&&<CelebrationPhotoPicker file={portraitFile} onChange={setPortraitFile} lang={lang}/>}
    <div className="fieldRow">
     <div><label htmlFor="create-location">{c.location}</label><input id="create-location" value={form.location} onChange={e=>setForm({...form,location:e.target.value})}/></div>
     <div><label htmlFor="create-people">{c.participants}</label><input id="create-people" type="number" min="0" value={form.people} onChange={e=>setForm({...form,people:+e.target.value})}/></div>

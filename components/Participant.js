@@ -1,5 +1,6 @@
 "use client";
 import Memory from "./Memory";
+import missionAnswers from "../functions/missionAnswers";
 import {useEffect,useRef,useState} from "react";
 import jsQR from "jsqr";
 import {firebaseConfigured} from "../lib/firebase";
@@ -61,8 +62,8 @@ export default function Participant({experience,setExperience,setView,setActiveI
  },[joined,eid,lang,experience.lang]);
  const latestMessage=messages.find(m=>!dismissed.includes(m.id));
  const experienceName=translated?.name||experience.name;
- const rawFlow=experience.flow||[];
- const flow=translated?rawFlow.map(m=>translated.flow.find(x=>x.id===m.id)||m):rawFlow;
+ const rawFlow=(experience.flow||[]).map(missionAnswers.normalizeMission);
+ const flow=translated?rawFlow.map(m=>missionAnswers.normalizeMission({...m,...translated.flow.find(x=>x.id===m.id),...(m.responseMode==="open"?{type:"note",responseMode:"open"}:{})})):rawFlow;
  const rawIdx=prog.currentMissionIndex||0;
  // A branch mission can jump the participant straight past the end of the array (skipping
  // whatever missions their path didn't take), so "finished" has to mean "position is past the
@@ -119,9 +120,9 @@ export default function Participant({experience,setExperience,setView,setActiveI
   }catch(e){alert(e.message)}finally{setJoining(false)}
  }
  async function enableNotifications(){setPushState("asking");try{await enablePushNotifications(eid,uid);setPushState("on")}catch(e){alert(e.message);setPushState("idle")}}
- async function complete(){if(!mission)return;if(experience.paused)return alert(p.pausedByOrganizer);const isMedia=mission.type==="photo"||mission.type==="video";if(isMedia&&!file)return alert(p.chooseFirst(mission.type));if(mission.type==="quiz"&&!quizAnswer)return alert(p.chooseAnswerFirst);if(mission.type==="quiz"&&mission.answer&&quizAnswer!==mission.answer)return alert(p.wrongAnswer);if(mission.type==="note"&&!noteText.trim())return alert(p.writeSomethingFirst);if(mission.type==="puzzle"&&mission.answer&&puzzleAnswer.trim().toLowerCase()!==String(mission.answer).trim().toLowerCase())return alert(p.wrongAnswer);if(mission.type==="map"&&(hasGpsCheckpoint||hasQrCheckpoint)&&!((hasGpsCheckpoint&&locStatus&&locStatus.within)||(hasQrCheckpoint&&qrVerified)))return alert(p.getCloserFirst);setBusy(true);try{
+ async function complete(){if(!mission)return;if(experience.paused)return alert(p.pausedByOrganizer);const isMedia=mission.type==="photo"||mission.type==="video";if(isMedia&&!file)return alert(p.chooseFirst(mission.type));if(mission.type==="quiz"&&!quizAnswer)return alert(p.chooseAnswerFirst);if(mission.type==="quiz"&&mission.answer&&!missionAnswers.answerMatches(quizAnswer,mission.answer))return alert(p.wrongAnswer);if(mission.type==="note"&&!noteText.trim())return alert(p.writeSomethingFirst);if(mission.type==="puzzle"&&!puzzleAnswer.trim())return alert(p.writeSomethingFirst);if(mission.type==="puzzle"&&mission.answer&&!missionAnswers.answerMatches(puzzleAnswer,mission.answer))return alert(p.wrongAnswer);if(mission.type==="map"&&(hasGpsCheckpoint||hasQrCheckpoint)&&!((hasGpsCheckpoint&&locStatus&&locStatus.within)||(hasQrCheckpoint&&qrVerified)))return alert(p.getCloserFirst);setBusy(true);try{
    if(isMedia&&firebaseConfigured)await uploadMissionPhoto({experienceId:eid,mission,file,participantName:name,onProgress:setPct});
-   if(mission.type==="note"&&firebaseConfigured)await saveMissionAnswer(eid,mission,noteText.trim(),name);
+   if(["note","quiz","puzzle"].includes(mission.type)&&firebaseConfigured)await saveMissionAnswer(eid,mission,mission.type==="note"?noteText.trim():mission.type==="quiz"?quizAnswer:puzzleAnswer.trim(),name);
    if(firebaseConfigured)await completeJourneyMission(eid,mission,idx,name);else setProg(pr=>({completedMissionIds:[...pr.completedMissionIds,mission.id],currentMissionIndex:idx+1,points:pr.points+(mission.points||100)}));
    setFile(null);setPct(0);setQuizAnswer(null);setNoteText("");
  }catch(e){alert(e.message)}finally{setBusy(false)}}
@@ -188,7 +189,7 @@ export default function Participant({experience,setExperience,setView,setActiveI
  {finished?<div className="finishCard viewFade" key="finish"><div className="confetti">{Array.from({length:16}).map((_,i)=><span key={i}></span>)}</div><div className="finishIcon">🏆</div><h2>{p.journeyCompleteTitle}</h2><p>{p.journeyCompleteSub}</p>{badges.length>0&&<div className="badgeRow">{badges.map(b=><div className="badge" key={b.id} title={b.label}><span>{b.icon}</span><small>{b.label}</small></div>)}</div>}<button className="primary" onClick={()=>document.getElementById("finished-memory-book")?.scrollIntoView({behavior:"smooth"})}>{p.openMemoryBook}</button><div id="finished-memory-book" className="finishedMemoryBook"><Memory experience={experience} setExperience={setExperience} setView={setView} t={t} dir={dir} participantView/></div></div>:mission&&<div className="phone journeyPhone viewFade" key={mission.id}><div className="missionType">{mission.type}</div><h3>{mission.title}</h3><p><LinkifiedText text={mission.text}/></p>
  {mission.type==="photo"&&<label className="uploadBox"><span>{p.choosePhoto}</span><input type="file" accept="image/*" capture="environment" onChange={e=>setFile(e.target.files?.[0]||null)}/></label>}
  {mission.type==="video"&&<label className="uploadBox"><span>{p.chooseVideo}</span><input type="file" accept="video/*" capture="environment" onChange={e=>setFile(e.target.files?.[0]||null)}/></label>}
- {mission.type==="quiz"&&<div className="choiceGrid">{(mission.options&&mission.options.length?mission.options:["A","B","C"]).map(opt=><button key={opt} type="button" className={quizAnswer===opt?"selected":""} onClick={()=>setQuizAnswer(opt)}>{opt}</button>)}</div>}{mission.type==="map"&&<>
+ {mission.type==="quiz"&&<div className="choiceGrid">{mission.options.map(opt=><button key={opt} type="button" aria-pressed={quizAnswer===opt} className={quizAnswer===opt?"selected":""} onClick={()=>setQuizAnswer(opt)}>{opt}</button>)}</div>}{mission.type==="map"&&<>
  {hasGpsCheckpoint&&<div className="mapMock gpsReal">📍<span>{locStatus==="checking"?p.checkingLocation:locStatus?.within?p.arrived:locStatus?p.metersAway(Math.round(locStatus.distance)):p.getToCheckpoint}</span><button type="button" disabled={locStatus==="checking"} onClick={checkLocation}>{p.checkMyLocation}</button></div>}
  {hasQrCheckpoint&&<div className="qrScanBox">
   {qrVerified&&<div className="qrVerifiedMsg">✅ {p.qrVerified}</div>}
@@ -198,7 +199,7 @@ export default function Participant({experience,setExperience,setView,setActiveI
  </div>}
  {!hasGpsCheckpoint&&!hasQrCheckpoint&&<div className="mapMock">📍<span>{p.locationCheckpoint}</span></div>}
 </>}{mission.type==="puzzle"&&<div className="puzzleBox">🧩<input value={puzzleAnswer} placeholder={p.puzzleAnswerPlaceholder} onChange={e=>setPuzzleAnswer(e.target.value)}/></div>}
- {mission.type==="note"&&<textarea className="noteInput" placeholder={p.writeMemory} value={noteText} onChange={e=>setNoteText(e.target.value)}/>}
+ {mission.type==="note"&&<><p>{lang==="he"?"זו שאלה פתוחה — כל תשובה אישית מתקבלת.":"This is an open question — share your own answer."}</p><textarea className="noteInput" maxLength={2000} placeholder={p.writeMemory} value={noteText} onChange={e=>setNoteText(e.target.value)}/></>}
  {mission.type==="branch"&&<div className="branchChoices">{(mission.options||[]).map(o=><button key={o.id} type="button" className="branchChoiceBtn" disabled={busy||experience.paused} onClick={()=>chooseBranch(o)}>{o.label}</button>)}</div>}
  {mission.type!=="branch"&&<>{busy&&(mission.type==="photo"||mission.type==="video")&&<div className="uploadProgress"><div style={{width:`${pct}%`}}></div><span>{pct}%</span></div>}<div className="mission">{p.reward}: {mission.reward||`${mission.points||100} pts`}</div><button className="primary" disabled={busy||experience.paused} onClick={complete}>{busy?p.saving:p.completeContinue}</button></>}</div>}</>;
 

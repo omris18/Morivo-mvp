@@ -1,0 +1,17 @@
+const assert=require('node:assert/strict');
+const {normalizeMission,answerMatches}=require('../functions/missionAnswers');
+const open=normalizeMission({id:'last',type:'puzzle',text:'מה למדת היום בחי פארק?',answer:'חיות'});
+assert.equal(open.type,'note');assert.equal(open.answer,'');assert.equal(open.id,'last');
+assert.equal(normalizeMission({type:'quiz',text:'What did you learn today?',options:['A','B','C'],answer:'A'}).type,'note');
+assert.equal(normalizeMission({type:'puzzle',text:'כמה רגליים יש לפיל?',answer:'4'}).type,'puzzle');
+assert.equal(normalizeMission({type:'puzzle',responseMode:'open',text:'ספרו דבר אחד',answer:'x'}).type,'note');
+assert.equal(normalizeMission({type:'puzzle',responseMode:'graded',text:'מה למדת?',answer:'x'}).type,'puzzle');
+const quiz=normalizeMission({type:'quiz',options:['פיל','ג׳ירפה','אריה'],answer:'B'});
+assert.deepEqual(quiz.options,['פיל','ג׳ירפה','אריה']);assert.equal(quiz.answer,'ג׳ירפה');
+const old=normalizeMission({type:'quiz',text:'מי הכי גבוה?\nA. פיל\nB. ג׳ירפה\nC. אריה',options:['A','B','C'],answer:'B'});
+assert.equal(old.answer,'ג׳ירפה');assert.equal(old.options.length,3);
+assert.equal(normalizeMission({type:'quiz',options:['A','B','C'],answer:'B'}).type,'note');
+assert.equal(normalizeMission({type:'quiz',options:['פיל','אריה'],answer:'לא ידוע'}).answer,'');
+assert.equal(normalizeMission({type:'quiz',options:[{label:'פיל'},{text:'אריה'}],answer:'אריה'}).answer,'אריה');
+assert.ok(answerMatches('  Elephant! ','elephant'));assert.ok(answerMatches('פִּיל','פיל'));assert.ok(!answerMatches('אריה','פיל'));
+console.log('16 legacy question, open response and answer checks passed');

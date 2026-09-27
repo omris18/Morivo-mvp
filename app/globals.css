@@ -831,6 +831,12 @@ body .appShell .accountBar .accountSwitch{background:transparent;border:0;color:
 
 /* Destination-aware live routes and automatically collected memory albums. */
 .destinationBackdrop{position:absolute;inset:0;background:linear-gradient(135deg,#cce7da,#ebf2d9 50%,#9dccc9);background-repeat:no-repeat;pointer-events:none}
+.routeArtStatus{font-size:13px;color:#31565a;margin:0 0 14px;display:flex;align-items:center;gap:12px;flex-wrap:wrap}
+.routePortraitUpload,.celebrationPhotoPicker{padding:16px;background:#f5f5ec;border:1px solid #dce6de;border-radius:18px;margin:12px 0;display:grid;gap:10px;color:#24494e}
+.routePortraitUpload label,.celebrationPhotoPicker label{display:grid;gap:8px}.celebrationPhotoPicker img{width:100px;height:100px;object-fit:cover;border-radius:20px}
+.celebrationPortraitFrame{position:absolute;right:3%;bottom:5%;width:clamp(90px,23%,185px);aspect-ratio:4/5;padding:7px;background:#fff9ed;border:3px solid #ecb653;border-radius:45% 45% 20px 20px;box-shadow:0 8px 25px #193e4030;transform:rotate(5deg)}
+.celebrationPortraitFrame img{width:100%;height:100%;object-fit:cover;border-radius:inherit}.celebrationPortraitFrame span{position:absolute;bottom:-12px;inset-inline:0;text-align:center;font-size:24px}
+.answerModeEditor{margin:16px 0;padding:12px;border-radius:12px;background:#eef7f2}.answerModeEditor p{font-size:13px;color:#305752}
 .destination-celebration{background:radial-gradient(circle at 15% 20%,#f9c97e 0,transparent 28%),radial-gradient(circle at 80% 60%,#e9b5c2 0,transparent 35%),linear-gradient(140deg,#ffe5c7,#faf0e5)}
 .destination-learning{background:radial-gradient(circle at 80% 12%,#dfd2f2 0,transparent 38%),linear-gradient(145deg,#e1f0dd,#d2e6e8)}
 .destination-nature{background:radial-gradient(ellipse at 5% 100%,#8cb099,transparent 60%),linear-gradient(145deg,#e3f1db,#a5ced1)}

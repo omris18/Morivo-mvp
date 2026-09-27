@@ -6,6 +6,7 @@ import QRCode from "qrcode";
 import { firebaseConfigured, functions } from "../lib/firebase";
 import { publishExperienceRemote, updateExperienceRemote } from "../lib/morivoData";
 import LinkifiedText from "./LinkifiedText";
+import missionAnswers from "../functions/missionAnswers";
 import { getCurrentPosition } from "../lib/geo";
 
 export default function Studio({ experience, setExperience, setView, t }) {
@@ -431,6 +432,8 @@ export default function Studio({ experience, setExperience, setView, t }) {
                 />
               </>
             )}
+
+            {["quiz","puzzle","note"].includes(atom.type) && <div className="answerModeEditor"><label>{experience.lang==="he"?"אופן המענה":"Answer mode"}</label><select value={atom.type==="note"||atom.responseMode==="open"?"open":"graded"} onChange={e=>patch(e.target.value==="open"?{type:"note",responseMode:"open",answer:"",options:[]}:{type:"puzzle",responseMode:"graded",answer:""})}><option value="open">{experience.lang==="he"?"שאלה פתוחה — כל תשובה אישית מתקבלת":"Open question — any personal answer"}</option><option value="graded">{experience.lang==="he"?"חידה — תשובה נכונה מוגדרת":"Riddle — a specific correct answer"}</option></select>{missionAnswers.normalizeMission(atom).type!==atom.type&&<p role="status">{experience.lang==="he"?"השאלה מזוהה כשאלה פתוחה ותוצג כך למשתתפים. אפשר לשמור זאת באמצעות הבחירה למעלה.":"This question is treated as open for participants. Use the selector to save that mode."}</p>}{missionAnswers.normalizeMission(atom).needsAnswerReview&&<p role="status">{experience.lang==="he"?"יש להשלים אפשרויות מילוליות ותשובה נכונה. עד אז לא תוצג בחירה באותיות.":"Add meaningful choices and a correct answer. Letter-only choices will not be shown."}</p>}</div>}
 
             {atom.type === "quiz" && (
               <div className="quizEditor">

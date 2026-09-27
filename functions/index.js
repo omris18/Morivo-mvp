@@ -9,6 +9,8 @@ const db = admin.firestore();
 
 const openaiApiKey = defineSecret("OPENAI_API_KEY");
 const geminiApiKey = defineSecret("GEMINI_API_KEY");
+const {normalizeMission} = require("./missionAnswers");
+exports.generateExperienceArtwork = require("./experienceArtwork")(admin, openaiApiKey);
 
 const MISSION_TYPES = ["photo", "video", "quiz", "puzzle", "note", "map", "story", "reward"];
 
@@ -16,6 +18,7 @@ function sanitizeFlow(rawFlow) {
   return (rawFlow || [])
     .filter((m) => m && typeof m === "object")
     .map((m, i) => {
+      m = normalizeMission(m);
       const type = MISSION_TYPES.includes(m.type) ? m.type : "story";
       const atom = {
         id: `${type}-${Date.now()}-${i}`,
@@ -33,7 +36,7 @@ function sanitizeFlow(rawFlow) {
         if (options.length >= 2) {
           const rawAnswer = String(m.answer || "").slice(0, 120);
           atom.options = options;
-          atom.answer = options.includes(rawAnswer) ? rawAnswer : options[0];
+          atom.answer = options.includes(rawAnswer) ? rawAnswer : "";
         }
       }
       return atom;
@@ -52,7 +55,7 @@ If a "Who's joining" section is provided below the description, listing names, a
 Vary the mission types meaningfully:
 ${MISSION_TYPES.join(", ")}
 - "photo"/"video": ask participants to capture something specific and evocative, tied to a real detail from the description - not just "take a photo".
-- "note": ask for a short written memory, reflection or answer that only makes sense for this specific group and occasion.
+- "note": ALL personal reflections, opinions, feelings and closing questions such as "what did you learn today?" MUST use this type. Every personal answer is valid. NEVER use quiz or puzzle for these; omit answer/options.
 - "map": a lightweight in-context challenge, written using real names/places/facts from the description where possible (the app currently renders this as a simple generic prompt, so keep the mission's "text" self-contained and understandable without extra UI).
 - "quiz": a specific multiple-choice question built from a real detail in the description (a name, place, date, shared fact) - "text" is the question itself. Include an "options" array of exactly 3 or 4 short answer choices (a few words each, no "A."/"1." prefixes, no duplicates) and an "answer" field that is the exact text of the one correct option, copied character-for-character from "options". Exactly one option must be unambiguously correct given the description.
 - "puzzle": write a short, solvable riddle, cipher or word puzzle in "text" (built from a real detail in the description when possible - a name, place or shared memory), and include its solution as a separate "answer" field (a single word or short phrase, lowercase, no punctuation) - the app validates the participant's typed answer against it, so the riddle must have exactly one unambiguous correct answer.
@@ -641,7 +644,7 @@ exports.reviseExperience = onCall({ secrets: [openaiApiKey], cors: true, timeout
     completion = await client.chat.completions.create({
       model: "gpt-4o-mini",
       messages: [
-        { role: "system", content: REVISE_SYSTEM_PROMPT },
+        { role: "system", content: REVISE_SYSTEM_PROMPT + '\nPersonal reflections, opinions, feelings and closing questions such as what did you learn MUST be type note with no answer or options. Never grade a personal reflection. Only factual questions and riddles may have one correct answer.' },
         { role: "user", content: userPrompt },
       ],
       response_format: { type: "json_object" },
