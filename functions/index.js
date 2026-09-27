@@ -196,28 +196,17 @@ async function suggestAttractions({ location, prompt, people, duration, lang, in
   };
 }
 
-// Attractions are always a group poll: participants mark whichever ones they're excited about
-// (any number), the organizer sees the tally and confirms the final picks in Runtime, and only
-// then does the mission resolve for everyone - see organizerDecides handling in Participant.js.
-function attractionsPollMission(selected, location, lang) {
-  const options = (Array.isArray(selected) ? selected : []).slice(0, 6).map((o, i) => {
-    const name = String(o?.name || "").trim().slice(0, 100);
-    if (!name) return null;
-    return { id: `attr-${i}`, name, why: String(o?.why || "").trim().slice(0, 220), url: mapsSearchUrl(name, location) };
-  }).filter(Boolean);
-  if (!options.length) return null;
+function attractionsMissionFromSelection(selected, location, lang) {
+  if (!Array.isArray(selected) || !selected.length) return null;
+  const text = optionsToMissionText(selected, selected.length, mapsSearchUrl, location);
+  if (!text) return null;
   return {
-    id: `story-${Date.now()}-attractionspoll-${Math.random().toString(36).slice(2, 7)}`,
+    id: `story-${Date.now()}-attractions`,
     type: "story",
-    title: lang === "he" ? "מה נעשה?" : "What should we do?",
-    text: lang === "he"
-      ? "הצביעו על האטרקציות שהכי מעניינות אתכם - אפשר לבחור כמה שרוצים. המארגן יאשר את הבחירה הסופית, ומשם ממשיכים."
-      : "Vote for the attractions you're most excited about - pick as many as you like. The organizer will confirm the final picks, and then everyone continues.",
+    title: lang === "he" ? "מה לעשות" : "Things to Do",
+    text: text.slice(0, 1400),
     reward: "",
     points: 0,
-    isAttractionsPoll: true,
-    organizerDecides: true,
-    options,
   };
 }
 
@@ -234,10 +223,6 @@ function hotelMissionFromSelection(selected, location, lang, opts, destinationLa
     text,
     reward: "",
     points: 0,
-    // The organizer already picked this hotel during planning - participants only need to see
-    // it, not "complete" it like a real task. organizerDecides makes them wait until the
-    // organizer confirms it in Runtime, then everyone advances together (see Participant.js).
-    organizerDecides: true,
   };
 }
 
@@ -266,6 +251,9 @@ function hotelPollMission(candidates, location, lang, opts, destinationLabel) {
     isLocationPoll: true,
     organizerDecides: true,
     options,
+    destination: destinationLabel || location || "",
+    // Runtime uses this metadata to place the poll beside the relevant destination/day.
+    isDestinationPoll: true,
   };
 }
 
@@ -425,7 +413,7 @@ exports.generateExperience = onCall({ secrets: [openaiApiKey, geminiApiKey], cor
             : hotelMissionFromSelection(approvedItinerary.selectedHotel, location, lang, hotelUrlOpts)].filter(Boolean))
     : (needsHotel && location) ? suggestHotel({ location, prompt, people, duration, lang, startDate, endDate, adults, children, childrenAges }).then((m) => m ? [m] : []) : Promise.resolve([]);
   const attractionsMissionPromise = hasApprovedPlan
-    ? Promise.resolve(attractionsPollMission(approvedItinerary.selectedAttractions, location, lang))
+    ? Promise.resolve(attractionsMissionFromSelection(approvedItinerary.selectedAttractions, location, lang))
     : (multiDay && location) ? suggestAttractions({ location, prompt, people, duration, lang, interests }) : Promise.resolve(null);
 
   let completion;
@@ -460,10 +448,25 @@ exports.generateExperience = onCall({ secrets: [openaiApiKey, geminiApiKey], cor
 
   const [hotelMissions, attractionsMission] = await Promise.all([hotelMissionsPromise, attractionsMissionPromise]);
   const extras = [...hotelMissions, attractionsMission].filter(Boolean);
+  // Keep destination-specific approvals inside the matching part of a multi-day route.
+  // They must not become a global first step before the trip starts.
+  const routeFlow = [...flow];
+  for (const extra of extras) {
+    const destination = String(extra.destination || "").trim().toLowerCase();
+    if (!destination) { routeFlow.push(extra); continue; }
+    const words = destination.split(/[,/\s]+/).filter(Boolean);
+    const at = routeFlow.findIndex(m => {
+      const title = String(m.title || "").toLowerCase();
+      const text = String(m.text || "").toLowerCase();
+      return words.some(word => word.length > 2 && (title.includes(word) || text.includes(word)));
+    });
+    if (at >= 0) routeFlow.splice(at, 0, extra);
+    else routeFlow.push(extra);
+  }
 
   return {
     name: String(data.name || prompt).slice(0, 120),
-    flow: extras.length ? [...extras, ...flow] : flow,
+    flow: routeFlow,
   };
 });
 
