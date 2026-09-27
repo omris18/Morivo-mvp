@@ -496,7 +496,8 @@ exports.translateExperience = onCall({ secrets: [openaiApiKey], cors: true, time
           const translated = Array.isArray(t?.options) ? t.options.map((o) => String(o || "").slice(0, 120)) : [];
           const options = translated.length === m.options.length ? translated : m.options;
           const rawAnswer = t?.answer ? String(t.answer).slice(0, 120) : "";
-          return { options, answer: options.includes(rawAnswer) ? rawAnswer : options[0] };
+          const correctIndex = m.options.indexOf(normalizeMission(m).answer);
+          return { options, answer: options.includes(rawAnswer) ? rawAnswer : (options[correctIndex] || "") };
         })()
         : {}),
       ...(m.hotel && t?.hotel ? { hotel: String(t.hotel).slice(0, 120) } : {}),

@@ -4,7 +4,7 @@ const isLabel = value => /^[A-Dא-ד1-4][.)\]:-]?$/i.test(plain(value));
 const cleanOption = value => plain(typeof value === "object" ? value?.label || value?.text || value?.value : value).replace(/^[A-Dא-ד1-4][.)\]:-]\s*/i, "").trim();
 function normalizeMission(m = {}) {
   if (!["quiz", "puzzle", "note"].includes(m.type)) return m;
-  const reflection = /מה\s+(?:למדת(?:ם|ן)?|אהבת(?:ם|ן)?|הרגשת(?:ם|ן)?|גילית(?:ם|ן)?)|מה היה.*(?:הכי|אהוב)|שתפו.*(?:למד|חוויה|הרגש)|what (?:did you learn|have you learned|was your favou?rite)|how did you feel/i.test(`${m.title || ""} ${m.text || ""}`);
+  const reflection = /(?:מה|איזה).{0,30}(?:למדת(?:ם|ן)?|אהבת(?:ם|ן)?|הרגשת(?:ם|ן)?|גילית(?:ם|ן)?)|מה היה.*(?:הכי|אהוב)|(?:ספרו|כתבו|שתפו).{0,100}(?:למדת|גילית|הרגשת|אהבת|זיכרון|חוויה)|what (?:did you learn|have you learned|was your favou?rite)|how did you feel/i.test(`${m.title || ""} ${m.text || ""}`);
   if (m.type === "note" || m.responseMode === "open" || (m.responseMode !== "graded" && reflection)) {
     return {...m, type:"note", responseMode:"open", answer:"", options:[]};
   }
