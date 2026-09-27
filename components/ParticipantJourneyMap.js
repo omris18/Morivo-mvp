@@ -1,5 +1,4 @@
 "use client";
-import {useEffect,useRef,useState} from "react";
 import {buildRouteGroups} from "../lib/routeGroups";
 
 const ROUTE_D="M92 60 C470 95, 500 180, 135 235 S95 390, 470 420 S500 585, 130 635 S115 760, 500 780";
@@ -15,19 +14,16 @@ function dayRangeText(missions,lang){
 export default function ParticipantJourneyMap({experience,flow,prog,idx,finished,lang,p,onOpenMission}){
  const he=lang==="he";
  const groups=buildRouteGroups(experience,flow,he);
- const pathRef=useRef(null);
- const [points,setPoints]=useState([]);
- const groupsKey=groups.map(g=>g.key).join("|");
- useEffect(()=>{
-  if(!pathRef.current||!groups.length)return;
-  const total=pathRef.current.getTotalLength();
-  const n=groups.length;
-  setPoints(groups.map((_,i)=>{
-   const t=n<=1?0.5:0.13+(i/(n-1))*0.68;
-   const pt=pathRef.current.getPointAtLength(total*t);
-   return {x:Math.max(29,Math.min(71,(pt.x/600)*100)),y:(pt.y/820)*100};
-  }));
- },[groupsKey,flow.length]);
+ // Stops are placed at evenly spaced heights (never following the curve's raw y), so two
+ // stops can never land close enough to overlap regardless of how the decorative path winds.
+ // X alternates left/right for the same "winding road" look without any collision risk.
+ const n=groups.length;
+ const points=groups.map((_,i)=>{
+  const t=n<=1?0.5:i/(n-1);
+  const y=12+t*76;
+  const x=n<=1?50:(i%2===0?38:62);
+  return {x,y};
+ });
  const completedIds=prog.completedMissionIds||[];
  const activeGroupIndex=finished?groups.length:groups.findIndex(g=>g.missions.some(({i})=>i===idx));
  const progress=groups.length<=1?(finished?1:0):Math.max(0,Math.min(1,(finished?groups.length-1:activeGroupIndex)/Math.max(1,groups.length-1)));
@@ -37,18 +33,19 @@ export default function ParticipantJourneyMap({experience,flow,prog,idx,finished
   <div className="mapTitle"><div><strong>{he?"מתקדמים בין היעדים":"Moving between stops"}</strong><small>{statusText}</small></div><span>🗺️</span></div>
   <svg className="routeSvg" viewBox="0 0 600 820" preserveAspectRatio="none" aria-hidden="true">
    <defs><linearGradient id="participantProgressGradient" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stopColor="#7c3aed"/><stop offset="55%" stopColor="#ec4899"/><stop offset="100%" stopColor="#f97316"/></linearGradient></defs>
-   <path ref={pathRef} className="routePath" d={ROUTE_D}/>
+   <path className="routePath" d={ROUTE_D}/>
    <path className="routeDash" d={ROUTE_D}/>
    <path className="routeProgress" pathLength="1" style={{strokeDashoffset:1-progress}} d={ROUTE_D}/>
   </svg>
   <div className="mapStopsLayer">
    {groups.map((g,gi)=>{
-    const pos=points[gi]||{x:50,y:8+gi*(84/Math.max(1,groups.length-1||1))};
+    const pos=points[gi];
     const done=g.missions.every(({m})=>completedIds.includes(m.id));
     const current=!finished&&g.missions.some(({i})=>i===idx);
     const state=done?"completed":current?"current":"future";
     const hotel=g.missions.map(({m})=>m.hotel).find(Boolean);
-    const navMission=g.missions.find(({m})=>Number.isFinite(m.lat)&&Number.isFinite(m.lng))?.m;
+    const gpsMission=g.missions.find(({m})=>Number.isFinite(m.lat)&&Number.isFinite(m.lng))?.m;
+    const navHref=gpsMission?`https://www.google.com/maps/search/?api=1&query=${gpsMission.lat},${gpsMission.lng}`:hotel?`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent([hotel,g.destination||g.label].filter(Boolean).join(", "))}`:null;
     const rangeText=dayRangeText(g.missions,lang);
     const defaultMission=(g.missions.find(({i})=>i===idx)||g.missions[0]).m;
     const openDefault=()=>onOpenMission(defaultMission,defaultMission.id===flow[idx]?.id&&!finished);
@@ -60,7 +57,7 @@ export default function ParticipantJourneyMap({experience,flow,prog,idx,finished
        <div className="mapStopCopy"><strong>{g.label}</strong><small>{hotel||(he?"תחנה במסע":"A stop on the journey")}</small></div>
       </div>
       <div className="mapStopActions">
-       {navMission&&<a className="mapMiniBtn" href={`https://www.google.com/maps/search/?api=1&query=${navMission.lat},${navMission.lng}`} target="_blank" rel="noopener noreferrer" onClick={e=>e.stopPropagation()}>📍 {p.navigate}</a>}
+       {navHref&&<a className="mapMiniBtn" href={navHref} target="_blank" rel="noopener noreferrer" onClick={e=>e.stopPropagation()}>📍 {p.navigate}</a>}
        <button type="button" className="mapMiniBtn" onClick={e=>{e.stopPropagation();openDefault()}}>{p.openMission}</button>
       </div>
       {g.missions.length>1&&<div className="destinationDays">
@@ -69,7 +66,7 @@ export default function ParticipantJourneyMap({experience,flow,prog,idx,finished
         const isActive=!finished&&i===idx;
         const dayState=mDone?"done":isActive?"today":"future";
         return <button type="button" key={m.id} className={`destinationDay ${dayState}`} onClick={e=>{e.stopPropagation();onOpenMission(m,isActive)}} aria-label={m.title}>
-         <span className="destinationDayDot">{mDone?"✓":m.day||i+1}</span>
+         <span className="destinationDayDot">{m.day||i+1}{mDone&&<i className="destinationDayCheck">✓</i>}</span>
         </button>;
        })}
       </div>}
