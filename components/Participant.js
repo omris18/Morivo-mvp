@@ -330,12 +330,12 @@ export default function Participant({experience,setExperience,setView,setActiveI
  </div>}
  {chromeless&&<button type="button" className="printJourneyBtn noPrint" onClick={()=>window.print()}>🖨 {p.downloadJourneyPdf}</button>}
  {finished&&<div className="finishCard viewFade" key="finish"><div className="confetti">{Array.from({length:16}).map((_,i)=><span key={i}></span>)}</div><div className="finishIcon">🏆</div><h2>{p.journeyCompleteTitle}</h2><p>{p.journeyCompleteSub}</p>{badges.length>0&&<div className="badgeRow">{badges.map(b=><div className="badge" key={b.id} title={b.label}><span>{b.icon}</span><small>{b.label}</small></div>)}</div>}<button className="primary" onClick={()=>document.getElementById("finished-memory-book")?.scrollIntoView({behavior:"smooth"})}>{p.openMemoryBook}</button><div id="finished-memory-book" className="finishedMemoryBook"><Memory experience={experience} setExperience={setExperience} setView={setView} t={t} dir={dir} participantView/></div></div>}
- {chromeless&&<nav className="participantBottomNav">
+ {chromeless&&typeof document!=="undefined"&&createPortal(<nav className="participantBottomNav">
   <button type="button" className="navBtn" onClick={goHome}>🏠<span>{p.navHome}</span></button>
   <button type="button" className="navBtn" onClick={()=>setPassportOpen(true)}>🛂<span>{p.navPassport}</span></button>
   <button type="button" className="navBtn" onClick={()=>setAlbumOpen(true)}>🖼️<span>{p.navPhotos}</span></button>
   <button type="button" className="navBtn" onClick={()=>setHelpOpen(true)}>❓<span>{p.navHelp}</span></button>
- </nav>}
+ </nav>,document.body)}
  {passportOpen&&typeof document!=="undefined"&&createPortal(<div className="missionPopupOverlay" role="presentation" onClick={()=>setPassportOpen(false)}><div className="missionPopupCard passportCard" role="dialog" aria-modal="true" onClick={e=>e.stopPropagation()}><button type="button" className="missionPopupClose" aria-label={lang==="he"?"סגירה":"Close"} onClick={()=>setPassportOpen(false)}>×</button>
   <div className="passportCrest">🛂</div>
   <div className="missionPopupMeta">{p.passportKicker}</div>

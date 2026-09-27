@@ -85,7 +85,7 @@ export default function ParticipantJourneyMap({experience,flow,prog,idx,finished
        {navHref&&<a className="mapMiniBtn" href={navHref} target="_blank" rel="noopener noreferrer" onClick={e=>e.stopPropagation()}>📍 {p.navigate}</a>}
        <button type="button" className="mapMiniBtn" onClick={e=>{e.stopPropagation();openDefault()}}>{p.openMission}</button>
       </div>
-      {g.missions.length>1&&<div className="destinationDays">
+      <div className="destinationDays">
        {g.missions.map(({m,i})=>{
         const mDone=completedIds.includes(m.id);
         const isActive=!finished&&i===idx;
@@ -94,7 +94,7 @@ export default function ParticipantJourneyMap({experience,flow,prog,idx,finished
          <span className="destinationDayDot">{m.day||i+1}{mDone&&<i className="destinationDayCheck">✓</i>}</span>
         </button>;
        })}
-      </div>}
+      </div>
      </div>
     </div>;
    })}
