@@ -1,3 +1,4 @@
+import PhotoJourney from "./PhotoJourney";
 import {useEffect,useState} from "react";
 import {firebaseConfigured} from "../lib/firebase";
 import {computeOwnerStats,deleteExperienceRemote} from "../lib/morivoData";
@@ -39,18 +40,7 @@ export default function Dashboard({experience,experiences,setView,openExperience
          <button className="quietCta" onClick={()=>setView("create")}>{d.createExperience}</button>
        </div>
      </div>
-     <div className="heroJourney" aria-hidden="true">
-       <svg viewBox="0 0 520 310" preserveAspectRatio="xMidYMid meet">
-         <defs><linearGradient id="journeyGlow" x1="0" y1="1" x2="1" y2="0"><stop offset="0" stopColor="#efc186"/><stop offset=".55" stopColor="#7bc7d8"/><stop offset="1" stopColor="#9d86ff"/></linearGradient></defs>
-         <path className="journeyPathGhost" d="M42 247 C100 204 112 126 180 151 S265 253 323 190 S390 75 478 83"/>
-         <path className="journeyPath" d="M42 247 C100 204 112 126 180 151 S265 253 323 190 S390 75 478 83"/>
-       </svg>
-       <div className="journeyPin pinIdea"><i>✦</i><small>IDEA</small></div>
-       <div className="journeyPin pinPlace"><i>⌖</i><small>PLACE</small></div>
-       <div className="journeyPin pinLive"><i>◉</i><small>LIVE</small></div>
-       <div className="journeyPin pinMemory"><i>▤</i><small>MEMORY</small></div>
-       <div className="heroBook"><span></span><span></span><b>YOUR STORY</b></div>
-     </div>
+     <PhotoJourney/>
    </div>
 
    <div className="kpis dashboardKpis">
