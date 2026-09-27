@@ -109,7 +109,17 @@ export default function Runtime({experience,setExperience,setView,t,user,lang,is
  }
  function decideLocation(missionId,optionIds){
    if(!firebaseConfigured)return alert(r.connectFirebaseCtrl);
-   updateExperienceRemote(experience.id,{[`locationDecisions.${missionId}`]:optionIds}).catch(e=>alert(e.message));
+   const patch={[`locationDecisions.${missionId}`]:optionIds};
+   const mission=flow.find(m=>m.id===missionId);
+   // A hotel-type decision (not an attractions multi-pick) names the winning option directly
+   // on the mission, so the participant's stop card and popup can show the hotel + navigate
+   // to it right away instead of only learning "the organizer decided" with no details.
+   if(mission&&!mission.isAttractionsPoll&&optionIds?.length){
+     const allOptions=[...(mission.options||[]),...customOptionsFor(missionId)];
+     const chosen=allOptions.find(o=>o.id===optionIds[0]);
+     if(chosen?.name)patch.flow=flow.map(m=>m.id===missionId?{...m,hotel:chosen.name}:m);
+   }
+   updateExperienceRemote(experience.id,patch).catch(e=>alert(e.message));
    setPendingAttractionPicks(prev=>{const next={...prev};delete next[missionId];return next});
  }
  function votersFor(missionId,optionId){

@@ -14,6 +14,31 @@ function dayRangeText(missions,lang){
 export default function ParticipantJourneyMap({experience,flow,prog,idx,finished,lang,p,onOpenMission}){
  const he=lang==="he";
  const groups=buildRouteGroups(experience,flow,he);
+ const completedIds0=prog.completedMissionIds||[];
+ // A single-destination trip is one stop, not a map - render it as a plain card whose day-dot
+ // grid wraps to fit every mission, instead of forcing it onto the curved multi-stop layout
+ // (which assumes one card per stop and hid extra days behind an invisible scrollbar).
+ if(groups.length<=1){
+  const g=groups[0];
+  if(!g)return null;
+  const hotel=g.missions.map(({m})=>m.hotel).find(Boolean);
+  return <div className="journeySingleStop">
+   <div className="mapTitle"><div><strong>{g.label}</strong><small>{finished?p.journeyComplete:p.missionOf(idx+1,flow.length)}</small></div><span>🗺️</span></div>
+   <div className="mapStopCard standalone">
+    {hotel&&<div className="mapStopHead"><span className="mapStopIcon">🏨</span><div className="mapStopCopy"><strong>{hotel}</strong></div></div>}
+    <div className="destinationDays">
+     {g.missions.map(({m,i})=>{
+      const mDone=completedIds0.includes(m.id);
+      const isActive=!finished&&i===idx;
+      const dayState=mDone?"done":isActive?"today":"future";
+      return <button type="button" key={m.id} className={`destinationDay ${dayState}`} onClick={()=>onOpenMission(m,isActive)} aria-label={m.title}>
+       <span className="destinationDayDot">{m.day||i+1}{mDone&&<i className="destinationDayCheck">✓</i>}</span>
+      </button>;
+     })}
+    </div>
+   </div>
+  </div>;
+ }
  // Stops are placed at evenly spaced heights (never following the curve's raw y), so two
  // stops can never land close enough to overlap regardless of how the decorative path winds.
  // X alternates left/right for the same "winding road" look without any collision risk.

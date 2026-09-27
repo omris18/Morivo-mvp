@@ -94,9 +94,12 @@
 .locationPoll{display:flex;flex-direction:column;gap:10px;margin:14px 0}
 .locationPollOption{display:flex;flex-direction:column;align-items:flex-start;gap:3px;padding:14px;background:linear-gradient(135deg,rgba(125,92,255,.09),rgba(95,205,248,.06));border:1px solid rgba(125,92,255,.3);border-radius:14px;color:#1a2233;text-align:start;cursor:pointer}
 .locationPollOption b{font-size:15px;color:#152233}
-.locationPollOption span{font-size:13px;color:#5a6478;font-weight:400}
-.locationPollOption small{font-size:11px;color:#7d5cff;font-weight:700;margin-top:4px}
+.locationPollOption span{font-size:13px;color:#495265;font-weight:400}
+.locationPollOption small{font-size:11px;color:#7d5cff;font-weight:700}
 .locationPollOption.selected{border-color:#7d5cff;background:linear-gradient(135deg,rgba(125,92,255,.2),rgba(95,205,248,.12))}
+.locationPollOptionFooter{display:flex;align-items:center;justify-content:space-between;gap:10px;width:100%;margin-top:6px}
+.locationPollLink{font-size:11px;font-weight:700;color:#5f47d6;text-decoration:none;background:rgba(125,92,255,.12);border-radius:999px;padding:4px 10px}
+.locationPollLink:hover{background:rgba(125,92,255,.2)}
 .locationPollHint{font-size:12px;color:#6b7688;text-align:center;margin:2px 0 0}
 .locationPollSuggest{display:flex;gap:8px}
 .locationPollSuggest input{flex:1;min-width:0;padding:12px 14px;border-radius:12px;border:1px solid rgba(125,92,255,.35);background:#fff;color:#1a2233;font-size:14px}
@@ -356,6 +359,14 @@ button:active{transform:scale(.96)}
 .uploadLimitNote{display:block;margin:6px 0 12px;color:#8a92a6;font-size:11px}
 @media(max-width:480px){.missionPopupCard{padding:26px 18px 22px;border-radius:22px}.missionPopupBadge{width:56px;height:56px}}
 .journeySvgMap{position:relative;min-height:700px;margin:8px 0 22px;border-radius:30px;overflow:hidden;background:radial-gradient(circle at 19% 13%,rgba(255,255,255,.92),transparent 14%),radial-gradient(circle at 76% 38%,rgba(255,255,255,.42),transparent 18%),linear-gradient(180deg,#9ee3ff 0%,#dff7ff 37%,#d4f5e2 68%,#fff0c8 100%);box-shadow:0 24px 60px rgba(15,23,42,.18);border:1px solid rgba(255,255,255,.85)}
+.journeySingleStop{position:relative;margin:8px 0 22px;border-radius:30px;padding:66px 16px 18px;background:radial-gradient(circle at 19% 13%,rgba(255,255,255,.92),transparent 14%),radial-gradient(circle at 76% 38%,rgba(255,255,255,.42),transparent 18%),linear-gradient(180deg,#9ee3ff 0%,#dff7ff 37%,#d4f5e2 68%,#fff0c8 100%);box-shadow:0 24px 60px rgba(15,23,42,.18);border:1px solid rgba(255,255,255,.85)}
+.journeySingleStop .mapTitle{position:absolute;top:14px;right:12px;left:12px;z-index:2;display:flex;justify-content:space-between;align-items:center;background:rgba(255,255,255,.72);backdrop-filter:blur(20px) saturate(1.3);-webkit-backdrop-filter:blur(20px) saturate(1.3);border:1px solid rgba(255,255,255,.86);border-radius:19px;padding:11px 13px;box-shadow:0 12px 30px rgba(15,23,42,.11)}
+.journeySingleStop .mapTitle strong{font-size:14px;color:#152233}.journeySingleStop .mapTitle small{display:block;color:#5f6a80;font-weight:700;margin-top:2px;font-size:11px}
+.journeySingleStop .mapStopCard.standalone{position:relative;background:linear-gradient(145deg,rgba(255,255,255,.9),rgba(255,255,255,.72));border-radius:23px;padding:16px;box-shadow:0 16px 38px rgba(15,23,42,.14),inset 0 1px 0 rgba(255,255,255,.92);border:1px solid rgba(255,255,255,.82)}
+.journeySingleStop .mapStopCard.standalone .mapStopHead{display:flex;align-items:center;gap:8px;margin-bottom:4px}
+.journeySingleStop .mapStopCard.standalone .mapStopIcon{font-size:22px}
+.journeySingleStop .mapStopCard.standalone strong{font-size:14px;color:#152233}
+.journeySingleStop .destinationDays{border-top:0;margin-top:0;padding-top:0;justify-content:center}
 .journeySvgMap:before{content:"";position:absolute;inset:0;background:radial-gradient(ellipse at 17% 73%,rgba(22,163,74,.25) 0 11%,transparent 12%),radial-gradient(ellipse at 81% 49%,rgba(22,163,74,.22) 0 12%,transparent 13%),radial-gradient(ellipse at 61% 18%,rgba(22,163,74,.17) 0 9%,transparent 10%);pointer-events:none}
 .journeySvgMap:after{content:"☁️";position:absolute;top:70px;left:7%;font-size:34px;opacity:.55;filter:blur(.2px);animation:mapCloud 18s ease-in-out infinite alternate;pointer-events:none}
 .journeySvgMap .mapTitle{position:absolute;top:14px;right:12px;left:12px;z-index:7;display:flex;justify-content:space-between;align-items:center;background:rgba(255,255,255,.72);backdrop-filter:blur(20px) saturate(1.3);-webkit-backdrop-filter:blur(20px) saturate(1.3);border:1px solid rgba(255,255,255,.86);border-radius:19px;padding:11px 13px;box-shadow:0 12px 30px rgba(15,23,42,.11)}
@@ -377,13 +388,13 @@ button:active{transform:scale(.96)}
 .journeySvgMap .mapStopCard strong{display:block;font-size:13px;line-height:1.2;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;color:#152233}.journeySvgMap .mapStopCard small{display:block;color:#475467;font-size:10px;margin-top:2px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .journeySvgMap .mapStopActions{display:flex;gap:6px;margin-top:8px;flex-wrap:wrap}
 .journeySvgMap .mapMiniBtn{border:0;border-radius:999px;padding:5px 9px;background:rgba(255,255,255,.7);color:var(--accent);font-size:10.5px;font-weight:900;text-decoration:none;cursor:pointer;box-shadow:inset 0 0 0 1px rgba(var(--accent-rgb),.16)}
-.journeySvgMap .destinationDays{direction:ltr;display:flex;align-items:flex-start;gap:3px;margin-top:9px;padding:8px 3px 0;border-top:1px solid rgba(255,255,255,.72);overflow-x:auto;scrollbar-width:none}.journeySvgMap .destinationDays::-webkit-scrollbar{display:none}
-.journeySvgMap .destinationDay{position:relative;flex:1 0 27px;min-width:27px;border:0;background:transparent;padding:0;cursor:pointer;color:#64748b;font-weight:900;font-size:10px}
-.journeySvgMap .destinationDayDot{position:relative;z-index:1;width:24px;height:24px;margin:auto;border-radius:50%;display:grid;place-items:center;background:#e2e8f0;border:2px solid rgba(255,255,255,.95);box-shadow:0 3px 8px rgba(15,23,42,.12)}
-.journeySvgMap .destinationDay.done .destinationDayDot{background:#16a34a;color:#fff}
-.journeySvgMap .destinationDay.today .destinationDayDot{background:#f97316;color:#fff;transform:scale(1.12);box-shadow:0 0 0 4px rgba(249,115,22,.17),0 4px 10px rgba(15,23,42,.16)}
-.journeySvgMap .destinationDay.future .destinationDayDot{background:#e5e7eb;color:#94a3b8}
-.journeySvgMap .destinationDayCheck{position:absolute;top:-4px;inset-inline-end:-4px;width:12px;height:12px;border-radius:50%;background:#16a34a;color:#fff;font-size:8px;font-style:normal;display:grid;place-items:center;border:1.5px solid #fff;box-shadow:0 1px 3px rgba(15,23,42,.25)}
+.journeySvgMap .destinationDays,.journeySingleStop .destinationDays{direction:ltr;display:flex;flex-wrap:wrap;align-items:flex-start;gap:6px;margin-top:9px;padding:8px 3px 0;border-top:1px solid rgba(255,255,255,.72)}
+.journeySvgMap .destinationDay,.journeySingleStop .destinationDay{position:relative;flex:0 0 27px;width:27px;border:0;background:transparent;padding:0;cursor:pointer;color:#64748b;font-weight:900;font-size:10px}
+.journeySvgMap .destinationDayDot,.journeySingleStop .destinationDayDot{position:relative;z-index:1;width:24px;height:24px;margin:auto;border-radius:50%;display:grid;place-items:center;background:#e2e8f0;border:2px solid rgba(255,255,255,.95);box-shadow:0 3px 8px rgba(15,23,42,.12)}
+.journeySvgMap .destinationDay.done .destinationDayDot,.journeySingleStop .destinationDay.done .destinationDayDot{background:#16a34a;color:#fff}
+.journeySvgMap .destinationDay.today .destinationDayDot,.journeySingleStop .destinationDay.today .destinationDayDot{background:#f97316;color:#fff;transform:scale(1.12);box-shadow:0 0 0 4px rgba(249,115,22,.17),0 4px 10px rgba(15,23,42,.16)}
+.journeySvgMap .destinationDay.future .destinationDayDot,.journeySingleStop .destinationDay.future .destinationDayDot{background:#e5e7eb;color:#94a3b8}
+.journeySvgMap .destinationDayCheck,.journeySingleStop .destinationDayCheck{position:absolute;top:-4px;inset-inline-end:-4px;width:12px;height:12px;border-radius:50%;background:#16a34a;color:#fff;font-size:8px;font-style:normal;display:grid;place-items:center;border:1.5px solid #fff;box-shadow:0 1px 3px rgba(15,23,42,.25)}
 .journeySvgMap .mapDayBadge{position:absolute;top:-10px;left:-7px;min-width:34px;height:34px;padding:0 7px;border-radius:999px;display:grid;place-items:center;background:#fff;color:var(--accent);font-weight:900;font-size:10px;box-shadow:0 5px 13px rgba(15,23,42,.17)}
 [dir="rtl"] .journeySvgMap .mapDayBadge{left:auto;right:-7px}
 .journeySvgMap .mapPlane{position:absolute;z-index:8;font-size:36px;transform:translate(-50%,-50%) rotate(12deg);filter:drop-shadow(0 8px 7px rgba(15,23,42,.22));transition:left 1.1s ease,top 1.1s ease;animation:planeBob 2.2s ease-in-out infinite;pointer-events:none}
@@ -401,6 +412,24 @@ button:active{transform:scale(.96)}
 .flightItem span{color:#cdd8e6;font-size:13px}
 .flightDirTag{margin-inline-start:auto;padding:3px 9px;border-radius:999px;background:rgba(125,92,255,.18);color:#c9beff;font-size:10.5px;text-transform:uppercase;letter-spacing:.05em}
 .printJourneyBtn{display:block;width:100%;margin:18px 0;padding:12px;border-radius:12px;border:1px solid rgba(255,255,255,.16);background:rgba(255,255,255,.06);color:#fff}
+.participantBottomNav{position:fixed;z-index:20;bottom:0;inset-inline:0;width:100%;background:rgba(255,255,255,.97);backdrop-filter:blur(14px);display:flex;justify-content:space-around;padding:9px 6px calc(9px + env(safe-area-inset-bottom,0px));box-shadow:0 -8px 25px rgba(15,23,42,.12);border-top:1px solid rgba(15,23,42,.06)}
+.participantBottomNav .navBtn{border:0;background:none;color:#667085;display:flex;flex-direction:column;align-items:center;gap:2px;font-weight:800;font-size:20px;cursor:pointer;padding:2px 8px}
+.participantBottomNav .navBtn span{font-size:10.5px;font-weight:700}
+.participantBottomNav .navBtn:hover{color:#5f47d6}
+.passportCard,.albumCard{text-align:center}
+.passportCrest{font-size:34px;margin:4px auto 2px}
+.passportStampsHead{display:flex;align-items:center;justify-content:space-between;margin:14px 0 8px;font-weight:800;color:#152233;font-size:13px}
+.passportStampsHead small{color:#7d5cff;font-weight:700;font-size:11px}
+.passportStampGrid{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin-bottom:8px}
+.passportStamp{display:flex;flex-direction:column;align-items:center;gap:4px;padding:12px 6px;border-radius:14px;background:linear-gradient(135deg,rgba(125,92,255,.09),rgba(95,205,248,.06));border:1px solid rgba(125,92,255,.25)}
+.passportStampIcon{font-size:24px}
+.passportStamp b{font-size:11px;color:#152233;font-weight:700}
+.passportEmpty{color:#6b7688;font-size:13px;padding:18px 0}
+.albumGrid{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-top:12px}
+.albumThumb{display:block;border-radius:12px;overflow:hidden;aspect-ratio:1;background:#e8eaf2}
+.albumThumb img,.albumThumb video{width:100%;height:100%;object-fit:cover;display:block}
+.portalShell{padding-bottom:78px}
+@media print{.participantBottomNav{display:none}}
 @media print{
  .noPrint,.portalLangSwitch,.pushEnable,.journeyNavigateBtn,.orgMessage{display:none!important}
  .portalShell{background:#fff!important;min-height:0}
