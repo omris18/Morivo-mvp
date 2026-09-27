@@ -4,7 +4,7 @@ import { useEffect, useState, useRef } from "react";
 import { httpsCallable } from "firebase/functions";
 import QRCode from "qrcode";
 import { firebaseConfigured, functions } from "../lib/firebase";
-import { publishExperienceRemote, updateExperienceRemote } from "../lib/morivoData";
+import { publishExperienceRemote, updateExperienceRemote, reorderExperienceRemote } from "../lib/morivoData";
 import LinkifiedText from "./LinkifiedText";
 import missionAnswers from "../functions/missionAnswers";
 import { getCurrentPosition } from "../lib/geo";
@@ -71,6 +71,9 @@ export default function Studio({ experience, setExperience, setView, t }) {
       setSaving(true);
       setSaveError(false);
       try {
+        const oldIds=(experience.flow||[]).map(m=>m.id),newIds=(next.flow||[]).map(m=>m.id);
+        const reordered=oldIds.length===newIds.length&&oldIds.every(id=>newIds.includes(id))&&JSON.stringify(oldIds)!==JSON.stringify(newIds);
+        if(reordered){await reorderExperienceRemote(next.id,newIds,oldIds);return;}
         await updateExperienceRemote(next.id, {
           flow: next.flow,
           name: next.name,
@@ -83,6 +86,7 @@ export default function Studio({ experience, setExperience, setView, t }) {
           childrenCount: next.childrenCount || 0,
         });
       } catch (e) {
+        setExperience(experience);
         setSaveError(true);
         alert(s.saveFailed(e.message));
       } finally {

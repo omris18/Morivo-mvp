@@ -1,7 +1,8 @@
 import assert from "node:assert/strict";
 import {readFile} from "node:fs/promises";
 import artContext from "../functions/experienceArtContext.js";
-const source=(await readFile(new URL("../lib/experienceVisuals.js",import.meta.url),"utf8")).replace('import artContext from "../functions/experienceArtContext";',`const artContext={experienceArtContext:${artContext.experienceArtContext.toString()}};`);
+const progressSource=(await readFile(new URL("../functions/journeyProgress.js",import.meta.url),"utf8")).replace('module.exports=', 'const journeyProgress=');
+const source=(await readFile(new URL("../lib/experienceVisuals.js",import.meta.url),"utf8")).replace('import artContext from "../functions/experienceArtContext";',`const artContext={experienceArtContext:${artContext.experienceArtContext.toString()}};`).replace('import journeyProgress from "../functions/journeyProgress";',progressSource);
 const {getExperienceTheme,buildMemoryChapters,journeyFinished,missionMapUrl}=await import("data:text/javascript;base64,"+Buffer.from(source).toString("base64"));
 const flow=[{id:"a",title:"Photo",type:"photo"},{id:"b",title:"Note",type:"note"}];
 assert.equal(getExperienceTheme({location:"פוקט, תאילנד"}).key,"thailand");

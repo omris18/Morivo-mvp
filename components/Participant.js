@@ -1,6 +1,7 @@
 "use client";
 import Memory from "./Memory";
 import missionAnswers from "../functions/missionAnswers";
+import journeyProgress from "../functions/journeyProgress";
 import {useEffect,useRef,useState} from "react";
 import jsQR from "jsqr";
 import {firebaseConfigured} from "../lib/firebase";
@@ -61,12 +62,12 @@ export default function Participant({experience,setExperience,setView,setActiveI
   let alive=true;
   translateExperienceRemote(eid,lang).then(result=>{if(alive&&result)setTranslated(result)}).catch(e=>{if(alive)console.error("Translation failed:",e)});
   return ()=>{alive=false};
- },[joined,eid,lang,experience.lang]);
+ },[joined,eid,lang,experience.lang,experience.updatedAt?.seconds,experience.updatedAt?.nanoseconds]);
  const latestMessage=messages.find(m=>!dismissed.includes(m.id));
  const experienceName=translated?.name||experience.name;
  const rawFlow=(experience.flow||[]).map(missionAnswers.normalizeMission);
  const flow=translated?rawFlow.map(m=>missionAnswers.normalizeMission({...m,...translated.flow.find(x=>x.id===m.id),...(m.responseMode==="open"?{type:"note",responseMode:"open"}:{})})):rawFlow;
- const rawIdx=prog.currentMissionIndex||0;
+ const rawIdx=journeyProgress.currentMissionIndex(prog,flow);
  // A branch mission can jump the participant straight past the end of the array (skipping
  // whatever missions their path didn't take), so "finished" has to mean "position is past the
  // last mission", not "every mission in the array got completed" - that second definition
@@ -74,9 +75,9 @@ export default function Participant({experience,setExperience,setView,setActiveI
  const finished=flow.length>0&&rawIdx>=flow.length;
  const idx=Math.min(rawIdx,Math.max(flow.length-1,0)), mission=finished?null:flow[idx];
  const badges=computeBadges(prog,flow);
- useEffect(()=>{setQuizAnswer(null);setQuizFeedback(null);setQuizWrongAttempts(0);setNoteText("");setPuzzleAnswer("");setLocStatus(null);setQrVerified(false);stopScan()},[idx]);
+ useEffect(()=>{setQuizAnswer(null);setQuizFeedback(null);setQuizWrongAttempts(0);setNoteText("");setPuzzleAnswer("");setLocStatus(null);setQrVerified(false);stopScan()},[mission?.id]);
  const branchResolvingRef=useRef(false);
- useEffect(()=>{branchResolvingRef.current=false},[idx]);
+ useEffect(()=>{branchResolvingRef.current=false},[mission?.id]);
  useEffect(()=>{
   if(!mission||mission.type!=="branch"||!mission.organizerDecides||busy)return;
   const decidedOptionId=experience.branchDecisions?.[mission.id];
@@ -146,7 +147,7 @@ export default function Participant({experience,setExperience,setView,setActiveI
   const nextIndex=target<0?flow.length:target;
   setBusy(true);
   try{
-   if(firebaseConfigured)await completeJourneyMission(eid,mission,idx,name,nextIndex);
+   if(firebaseConfigured)await completeJourneyMission(eid,mission,idx,name,{nextMissionId:option.next||null});
    else setProg(pr=>({completedMissionIds:[...pr.completedMissionIds,mission.id],currentMissionIndex:nextIndex,points:pr.points+(mission.points||0)}));
   }catch(e){alert(e.message)}finally{setBusy(false)}
  }
@@ -154,7 +155,7 @@ export default function Participant({experience,setExperience,setView,setActiveI
   if(!mission||busy||quizFeedback)return;
   if(experience.paused)return alert(p.pausedByOrganizer);
   setQuizAnswer(opt);
-  const isCorrect=!mission.answer||opt===mission.answer;
+  const isCorrect=!mission.answer||missionAnswers.answerMatches(opt,mission.answer);
   if(!isCorrect){
    setQuizFeedback("wrong");
    setQuizWrongAttempts(n=>n+1);
@@ -227,7 +228,7 @@ export default function Participant({experience,setExperience,setView,setActiveI
  {mission.type==="photo"&&<label className="uploadBox"><span>{p.choosePhoto}</span><input type="file" accept="image/*" capture="environment" onChange={e=>setFile(e.target.files?.[0]||null)}/></label>}
  {mission.type==="video"&&<label className="uploadBox"><span>{p.chooseVideo}</span><input type="file" accept="video/*" capture="environment" onChange={e=>setFile(e.target.files?.[0]||null)}/></label>}
  {mission.type==="quiz"&&<>
- <div className={"choiceGrid "+(quizFeedback==="wrong"?"quizShake":"")}>{(mission.options&&mission.options.length?mission.options:["A","B","C"]).map(opt=><button key={opt} type="button" aria-pressed={quizAnswer===opt} disabled={busy||!!quizFeedback} className={quizAnswer===opt?"selected "+(quizFeedback||""):""} onClick={()=>evaluateQuiz(opt)}>{opt}</button>)}</div>
+ <div className={"choiceGrid "+(quizFeedback==="wrong"?"quizShake":"")}>{(mission.options||[]).map(opt=><button key={opt} type="button" aria-pressed={quizAnswer===opt} disabled={busy||!!quizFeedback} className={quizAnswer===opt?"selected "+(quizFeedback||""):""} onClick={()=>evaluateQuiz(opt)}>{opt}</button>)}</div>
  {quizFeedback==="wrong"&&<div className="quizFeedbackMsg wrong">✗ {p.wrongAnswer}</div>}
  {quizFeedback==="correct"&&<div className="quizFeedbackMsg correct">✓ {p.correctAnswer}</div>}
  {quizWrongAttempts>0&&!quizFeedback&&<div className="quizPenaltyHint">{p.pointsReduced(Math.round((1-Math.pow(0.9,quizWrongAttempts))*100))}</div>}
