@@ -60,7 +60,7 @@ export default function AICreator({setExperience,setView,setActiveId,user,lang,t
   setGeneratingKey(key);
   try{const url=await generateBrandImageRemote(key,artContext);if(url)setCustom(url)}catch(e){alert(e.message)}finally{setGeneratingKey(null)}
  }
- const shownHeroArt=customHeroArt||heroArt,shownLoadingArt=customLoadingArt||loadingArt;
+ const shownHeroArt=customHeroArt,shownLoadingArt=customLoadingArt;
  function setChildrenCount(value){
   const count=Math.max(0,Math.min(8,Number(value)||0));
   setForm(f=>({...f,children:String(count),childrenAges:Array.from({length:count},(_,i)=>f.childrenAges[i]??"")}));
