@@ -950,3 +950,7 @@ body .appShell .memoryPage .mbCoverShade,.memoryPage .mbCoverShade{background:li
  .albumIllustration{min-height:270px}
  .finishedMemoryBook{margin:0}
 }
+
+body .appShell .runtimePage .missionPerfRow b,body .appShell .runtimePage .rosterHint{color:#476974}
+body .appShell .runtimePage .missionPerfBar{background:#dce9df}
+body .appShell .runtimePage .missionPerfBar span{background:#459982}
