@@ -1,5 +1,6 @@
 const {onCall,HttpsError}=require('firebase-functions/v2/https');
 const {reorderProgress}=require('./journeyProgress');
+const {canManageExperience}=require('./masterAccess');
 module.exports=admin=>onCall({cors:true,timeoutSeconds:60},async request=>{
  if(!request.auth)throw new HttpsError('unauthenticated','Sign in first.');
  const {experienceId,order,expectedOrder}=request.data||{};
@@ -8,7 +9,7 @@ module.exports=admin=>onCall({cors:true,timeoutSeconds:60},async request=>{
  return db.runTransaction(async tx=>{
   const exp=(await tx.get(ref)).data();
   if(!exp)throw new HttpsError('not-found','Experience not found.');
-  if(exp.ownerUid!==request.auth.uid)throw new HttpsError('permission-denied','Only the organizer can reorder missions.');
+  if(!canManageExperience(request.auth,exp))throw new HttpsError('permission-denied','Only the organizer or master can reorder missions.');
   const flow=exp.flow||[],ids=flow.map(m=>m.id);
   if(JSON.stringify(ids)!==JSON.stringify(expectedOrder))throw new HttpsError('aborted','המסלול השתנה בינתיים. רעננו ונסו שוב.');
   if(order.length!==ids.length||new Set(order).size!==ids.length||order.some(id=>!ids.includes(id)))throw new HttpsError('invalid-argument','The new order must contain each existing mission exactly once.');

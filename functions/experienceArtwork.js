@@ -2,6 +2,7 @@ const {onCall, HttpsError} = require("firebase-functions/v2/https");
 const {createHash, randomUUID} = require("crypto");
 const OpenAI = require("openai");
 const {experienceArtContext} = require("./experienceArtContext");
+const {canManageExperience}=require('./masterAccess');
 module.exports = function experienceArtwork(admin, secret) {
   return onCall({secrets:[secret],cors:true,timeoutSeconds:180,memory:"512MiB",maxInstances:3}, async request => {
     if (!request.auth) throw new HttpsError("unauthenticated","Sign in first.");
@@ -10,7 +11,7 @@ module.exports = function experienceArtwork(admin, secret) {
     const db = admin.firestore(), ref = db.collection("experiences").doc(id);
     const exp = (await ref.get()).data();
     if (!exp) throw new HttpsError("not-found","Experience not found.");
-    if (exp.ownerUid !== request.auth.uid) throw new HttpsError("permission-denied","Only the organizer can create the background.");
+    if (!canManageExperience(request.auth,exp)) throw new HttpsError("permission-denied","Only the organizer or master can create the background.");
     if (!String(exp.name || exp.location || "").trim()) throw new HttpsError("failed-precondition","Add a name or location first.");
     const context = experienceArtContext(exp), key = createHash("sha256").update(context).digest("hex").slice(0,24);
     const job = db.collection("experienceArtworkJobs").doc(id);

@@ -3,6 +3,7 @@ const { onDocumentCreated } = require("firebase-functions/v2/firestore");
 const { defineSecret } = require("firebase-functions/params");
 const OpenAI = require("openai");
 const admin = require("firebase-admin");
+const {canManageExperience}=require("./masterAccess");
 
 if (!admin.apps.length) admin.initializeApp();
 const db = admin.firestore();
@@ -547,7 +548,7 @@ exports.generateMemoryStory = onCall({ secrets: [openaiApiKey], cors: true, time
     throw new HttpsError("not-found", "Experience not found.");
   }
   const experience = expSnap.data();
-  if (experience.ownerUid !== request.auth.uid) {
+  if (!canManageExperience(request.auth,experience)) {
     throw new HttpsError("permission-denied", "Only the experience owner can generate its story.");
   }
 
