@@ -4,7 +4,7 @@ import { useEffect, useState, useRef } from "react";
 import { httpsCallable } from "firebase/functions";
 import QRCode from "qrcode";
 import { firebaseConfigured, functions } from "../lib/firebase";
-import { publishExperienceRemote, updateExperienceRemote, reorderExperienceRemote, uploadFamilyPhoto, reshuffleFamilyPuzzleLayout } from "../lib/morivoData";
+import { publishExperienceRemote, updateExperienceRemote, reorderExperienceRemote, uploadFamilyPhoto, removeFamilyPuzzle, reshuffleFamilyPuzzleLayout } from "../lib/morivoData";
 import LinkifiedText from "./LinkifiedText";
 import ExperienceShare from "./ExperienceShare";
 import {missionLabels} from "../lib/experienceGuidance";
@@ -34,6 +34,7 @@ export default function Studio({ experience, setExperience, setView, t, lang }) 
   useEffect(()=>()=>{if(puzzlePhotoPreview)URL.revokeObjectURL(puzzlePhotoPreview)},[puzzlePhotoPreview]);
   const [puzzleShuffling, setPuzzleShuffling] = useState(false);
   const [puzzleShuffleError, setPuzzleShuffleError] = useState("");
+  const [puzzleRemoving, setPuzzleRemoving] = useState(false);
 
   const atom = flow.find((x) => x.id === selected) || null;
 
@@ -358,7 +359,6 @@ export default function Studio({ experience, setExperience, setView, t, lang }) 
           </label>
           {(puzzlePhotoPreview||experience.familyPuzzle?.url)&&<div className="celebrationCartoonPreview">
             <img src={experience.familyPuzzle?.url||puzzlePhotoPreview} alt={s.familyPuzzleTag}/>
-            {puzzlePhotoSaving&&<small>{s.saving}</small>}
           </div>}
           {puzzlePhotoError&&<p className="quizNoCorrect">⚠ {puzzlePhotoError}</p>}
           {experience.familyPuzzle?.url&&<div className="celebrationCartoonBox">
@@ -366,6 +366,10 @@ export default function Studio({ experience, setExperience, setView, t, lang }) 
               setPuzzleShuffling(true);setPuzzleShuffleError("");
               try{await reshuffleFamilyPuzzleLayout(experience.id,experience.familyPuzzle.totalPieces||8)}catch(err){setPuzzleShuffleError(err.message)}finally{setPuzzleShuffling(false)}
             }}>{puzzleShuffling?s.saving:s.shufflePuzzleBtn}</button>
+            <button type="button" disabled={puzzleRemoving} onClick={async()=>{
+              setPuzzleRemoving(true);setPuzzleShuffleError("");
+              try{await removeFamilyPuzzle(experience.id);setPuzzlePhotoPreview(null)}catch(err){setPuzzleShuffleError(err.message)}finally{setPuzzleRemoving(false)}
+            }}>{puzzleRemoving?s.saving:s.familyPuzzleRemove}</button>
             {puzzleShuffleError&&<p className="quizNoCorrect">⚠ {puzzleShuffleError}</p>}
           </div>}
         </div>
