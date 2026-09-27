@@ -127,13 +127,13 @@ export default function Participant({experience,setExperience,setView,setActiveI
  useEffect(()=>{
   const newlyUnlocked=[...unlockedPuzzlePieces].filter(n=>!prevUnlockedRef.current.has(n));
   prevUnlockedRef.current=unlockedPuzzlePieces;
-  if(newlyUnlocked.length&&experience.familyPuzzle?.cartoonUrl){
+  if(newlyUnlocked.length&&experience.familyPuzzle?.url){
    setFlyingPiece(newlyUnlocked[0]);
    setConfettiKey(k=>k+1);
    const t=setTimeout(()=>setFlyingPiece(null),1200);
    return ()=>clearTimeout(t);
   }
- },[unlockedPuzzlePieces,experience.familyPuzzle?.cartoonUrl]);
+ },[unlockedPuzzlePieces,experience.familyPuzzle?.url]);
  useEffect(()=>{setQuizAnswer(null);setQuizFeedback(null);setQuizWrongAttempts(0);setNoteText("");setPuzzleAnswer("");setLocStatus(null);setQrVerified(false);setSuggestText("");setMissionPopupOpen(false);setFiles([]);setUploadNotice("");stopScan()},[mission?.id]);
  useEffect(()=>{setRevisitFiles([]);setRevisitNotice("");setRevisitPct(0)},[revisitMission?.id]);
  const branchResolvingRef=useRef(false);
@@ -366,7 +366,7 @@ export default function Participant({experience,setExperience,setView,setActiveI
    ? <p className="passportEmpty">{p.passportEmptyHint}</p>
    : <div className="passportStampGrid">{earnedStamps.map(m=><div className="passportStamp" key={m.id}><span className="passportStampIcon">{stampIcons[m.type]||"⭐"}</span><b>{m.day?(lang==="he"?`יום ${m.day}`:`Day ${m.day}`):m.title}</b></div>)}</div>}
   {badges.length>0&&<div className="badgeRow">{badges.map(b=><div className="badge" key={b.id} title={b.label}><span>{b.icon}</span><small>{b.label}</small></div>)}</div>}
-  {experience.familyPuzzle?.cartoonUrl&&(()=>{
+  {experience.familyPuzzle?.url&&(()=>{
     const cols=4,rows=Math.ceil(puzzleTotal/cols);
     return <div className="familyPuzzleSection">
      <div className="passportStampsHead"><span>{p.familyPuzzleTitle}</span><small>{p.puzzlePiecesCount(unlockedPuzzlePieces.size,puzzleTotal)}</small></div>
@@ -376,7 +376,7 @@ export default function Participant({experience,setExperience,setView,setActiveI
        const col=gridIdx%cols,row=Math.floor(gridIdx/cols);
        const unlocked=unlockedPuzzlePieces.has(n);
        return <div className={"puzzleTile "+(unlocked?"":"locked")} key={gridIdx}>
-        <div className="puzzleTileImage" style={{backgroundImage:`url(${experience.familyPuzzle.cartoonUrl})`,backgroundSize:`${cols*100}% ${rows*100}%`,backgroundPosition:`${cols>1?col/(cols-1)*100:0}% ${rows>1?row/(rows-1)*100:0}%`}}/>
+        <div className="puzzleTileImage" style={{backgroundImage:`url(${experience.familyPuzzle.url})`,backgroundSize:`${cols*100}% ${rows*100}%`,backgroundPosition:`${cols>1?col/(cols-1)*100:0}% ${rows>1?row/(rows-1)*100:0}%`}}/>
         {!unlocked&&<div className="puzzleLock">🔒</div>}
        </div>;
       })}
@@ -385,11 +385,11 @@ export default function Participant({experience,setExperience,setView,setActiveI
     </div>;
    })()}
  </div></div>,document.body)}
- {flyingPiece&&experience.familyPuzzle?.cartoonUrl&&typeof document!=="undefined"&&createPortal((()=>{
+ {flyingPiece&&experience.familyPuzzle?.url&&typeof document!=="undefined"&&createPortal((()=>{
    const cols=4,rows=Math.ceil(puzzleTotal/cols);
    const gridIdx=gridIndexForPiece(experience.familyPuzzle.layout,puzzleTotal,flyingPiece);
    const col=gridIdx%cols,row=Math.floor(gridIdx/cols);
-   return <div className="puzzleFlyPiece" style={{backgroundImage:`url(${experience.familyPuzzle.cartoonUrl})`,backgroundSize:`${cols*100}% ${rows*100}%`,backgroundPosition:`${cols>1?col/(cols-1)*100:0}% ${rows>1?row/(rows-1)*100:0}%`}}/>;
+   return <div className="puzzleFlyPiece" style={{backgroundImage:`url(${experience.familyPuzzle.url})`,backgroundSize:`${cols*100}% ${rows*100}%`,backgroundPosition:`${cols>1?col/(cols-1)*100:0}% ${rows>1?row/(rows-1)*100:0}%`}}/>;
  })(),document.body)}
  {confettiKey>0&&<Confetti key={confettiKey}/>}
  {albumOpen&&typeof document!=="undefined"&&createPortal(<div className="missionPopupOverlay" role="presentation" onClick={()=>setAlbumOpen(false)}><div className="missionPopupCard albumCard" role="dialog" aria-modal="true" onClick={e=>e.stopPropagation()}><button type="button" className="missionPopupClose" aria-label={lang==="he"?"סגירה":"Close"} onClick={()=>setAlbumOpen(false)}>×</button>

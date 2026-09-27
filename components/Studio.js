@@ -4,7 +4,7 @@ import { useEffect, useState, useRef } from "react";
 import { httpsCallable } from "firebase/functions";
 import QRCode from "qrcode";
 import { firebaseConfigured, functions } from "../lib/firebase";
-import { publishExperienceRemote, updateExperienceRemote, reorderExperienceRemote, uploadFamilyPhoto, generateFamilyPuzzleCartoonRemote, reshuffleFamilyPuzzleLayout } from "../lib/morivoData";
+import { publishExperienceRemote, updateExperienceRemote, reorderExperienceRemote, uploadFamilyPhoto, reshuffleFamilyPuzzleLayout } from "../lib/morivoData";
 import LinkifiedText from "./LinkifiedText";
 import ExperienceShare from "./ExperienceShare";
 import {missionLabels} from "../lib/experienceGuidance";
@@ -32,9 +32,8 @@ export default function Studio({ experience, setExperience, setView, t, lang }) 
   const [puzzlePhotoError, setPuzzlePhotoError] = useState("");
   const [puzzlePhotoPreview, setPuzzlePhotoPreview] = useState(null);
   useEffect(()=>()=>{if(puzzlePhotoPreview)URL.revokeObjectURL(puzzlePhotoPreview)},[puzzlePhotoPreview]);
-  const [puzzleCartoonBusy, setPuzzleCartoonBusy] = useState(false);
-  const [puzzleCartoonError, setPuzzleCartoonError] = useState("");
   const [puzzleShuffling, setPuzzleShuffling] = useState(false);
+  const [puzzleShuffleError, setPuzzleShuffleError] = useState("");
 
   const atom = flow.find((x) => x.id === selected) || null;
 
@@ -363,18 +362,11 @@ export default function Studio({ experience, setExperience, setView, t, lang }) 
           </div>}
           {puzzlePhotoError&&<p className="quizNoCorrect">⚠ {puzzlePhotoError}</p>}
           {experience.familyPuzzle?.url&&<div className="celebrationCartoonBox">
-            <button type="button" disabled={puzzleCartoonBusy} onClick={async()=>{
-              setPuzzleCartoonBusy(true);setPuzzleCartoonError("");
-              try{await generateFamilyPuzzleCartoonRemote(experience.id)}catch(err){setPuzzleCartoonError(err.message)}finally{setPuzzleCartoonBusy(false)}
-            }}>{puzzleCartoonBusy?s.generatingCartoon:s.familyPuzzleGenerate}</button>
-            {puzzleCartoonError&&<p className="quizNoCorrect">⚠ {puzzleCartoonError}</p>}
-            {experience.familyPuzzle?.cartoonUrl&&<div className="celebrationCartoonPreview">
-              <img src={experience.familyPuzzle.cartoonUrl} alt={s.familyPuzzleTag}/>
-            </div>}
             <button type="button" disabled={puzzleShuffling} onClick={async()=>{
-              setPuzzleShuffling(true);setPuzzleCartoonError("");
-              try{await reshuffleFamilyPuzzleLayout(experience.id,experience.familyPuzzle.totalPieces||8)}catch(err){setPuzzleCartoonError(err.message)}finally{setPuzzleShuffling(false)}
-            }}>{puzzleShuffling?s.generatingCartoon:s.shufflePuzzleBtn}</button>
+              setPuzzleShuffling(true);setPuzzleShuffleError("");
+              try{await reshuffleFamilyPuzzleLayout(experience.id,experience.familyPuzzle.totalPieces||8)}catch(err){setPuzzleShuffleError(err.message)}finally{setPuzzleShuffling(false)}
+            }}>{puzzleShuffling?s.saving:s.shufflePuzzleBtn}</button>
+            {puzzleShuffleError&&<p className="quizNoCorrect">⚠ {puzzleShuffleError}</p>}
           </div>}
         </div>
 
