@@ -1,5 +1,6 @@
 "use client";
 import {useEffect,useMemo,useState} from "react";
+import {createPortal} from "react-dom";
 import ExperienceRoute from "./ExperienceRoute";
 import ExperienceShare from "./ExperienceShare";
 import {journeyFinished,missionDone,missionActive} from "../lib/experienceVisuals";
@@ -15,6 +16,8 @@ function minutesAgo(ts){ if(!ts?.toMillis)return null; return Math.floor((Date.n
 export default function Runtime({experience,setExperience,setView,t,user,lang,isMaster=false}){
  const r=t.runtime;
  const [people,setPeople]=useState([]),[feed,setFeed]=useState([]),[media,setMedia]=useState([]),[progress,setProgress]=useState([]),[answers,setAnswers]=useState([]),[locationVotes,setLocationVotes]=useState([]),[pendingAttractionPicks,setPendingAttractionPicks]=useState({});
+ const [decisionsModalOpen,setDecisionsModalOpen]=useState(false);
+ useEffect(()=>{if(!decisionsModalOpen)return;const onKey=e=>{if(e.key==="Escape")setDecisionsModalOpen(false)};window.addEventListener("keydown",onKey);return()=>window.removeEventListener("keydown",onKey)},[decisionsModalOpen]);
  const [qrDataUrl,setQrDataUrl]=useState(null);
  const [roster,setRoster]=useState([]),[rosterName,setRosterName]=useState(""),[addingRoster,setAddingRoster]=useState(false);
  const [writingCode,setWritingCode]=useState(null),[writeStatus,setWriteStatus]=useState("");
@@ -104,6 +107,13 @@ export default function Runtime({experience,setExperience,setView,t,user,lang,is
    updateExperienceRemote(experience.id,{[`locationDecisions.${missionId}`]:optionIds}).catch(e=>alert(e.message));
    setPendingAttractionPicks(prev=>{const next={...prev};delete next[missionId];return next});
  }
+ function votersFor(missionId,optionId){
+   return locationVotes.filter(v=>v.missionId===missionId&&(v.optionIds||[]).includes(optionId)).map(v=>v.participantName).filter(Boolean);
+ }
+ function formatVoters(names){
+   if(!names.length)return r.noVotesYet;
+   try{return new Intl.ListFormat(lang==="he"?"he":lang,{style:"long",type:"conjunction"}).format(names)}catch{return names.join(", ")}
+ }
  useEffect(()=>{if(!firebaseConfigured||!experience.id||experience.id==="thailand-demo"){setPeople([]);setProgress([]);setFeed([]);setMedia([]);setAnswers([]);setLocationVotes([]);return}
  const a=subscribeParticipants(experience.id,setPeople),b=subscribeEvents(experience.id,evs=>setFeed(evs.map(x=>x.text))),c=subscribeMedia(experience.id,setMedia),d=subscribeAllProgress(experience.id,setProgress),e=subscribeAnswers(experience.id,setAnswers),f=subscribeLocationVotes(experience.id,setLocationVotes);return()=>{a();b();c();d();e();f()}},[experience.id]);
  useEffect(()=>{if(!experience.joinCode){setQrDataUrl(null);return}const link=`${window.location.origin}${window.location.pathname}?join=${experience.joinCode}`;QRCode.toDataURL(link,{margin:1,width:160,color:{dark:"#050b13",light:"#ffffff"}}).then(setQrDataUrl).catch(()=>setQrDataUrl(null))},[experience.joinCode]);
@@ -132,44 +142,64 @@ export default function Runtime({experience,setExperience,setView,t,user,lang,is
  return <section className="runtimePage">
  <ExperienceShare experience={experience} lang={lang} setView={setView}/>
  {!people.length&&experience.status==="live"&&<p className="contextHint">{lang==="he"?"עדיין לא הצטרפו משתתפים. שתפו את הקישור שלמעלה; הרשימה תתעדכן אוטומטית כשיצטרפו.":"No participants yet. Share the link above; this view updates automatically when they join."}</p>}
- {locationPolls.length>0&&<div className="panel routeDecisionsPanel"><div className="tag">{r.locationPollsTitle}</div><p className="rosterHint">{r.locationPollsHint}</p>
-  {locationPolls.map(m=>{
-    const decided=experience.locationDecisions?.[m.id];
-    const isDecided=!!(decided&&decided.length);
-    if(!m.options||!m.options.length){
-      return <div className="orgDecisionRow" key={m.id}>
-       <b>{m.title}</b>
-       <div className="orgDecisionOptions">
-        <button type="button" className={isDecided?"primary":""} disabled={isDecided} onClick={()=>decideLocation(m.id,["confirmed"])}>{isDecided?`✓ ${r.confirmed}`:r.confirmDestination}</button>
-       </div>
-      </div>;
-    }
-    if(m.isAttractionsPoll){
-      const pending=pendingAttractionPicks[m.id]||decided||[];
-      return <div className="orgDecisionRow" key={m.id}>
-       <b>{m.title}</b>
-       <div className="orgDecisionOptions">{m.options.map(o=>{
-         const count=locationVotes.filter(v=>v.missionId===m.id&&(v.optionIds||[]).includes(o.id)).length;
-         const picked=pending.includes(o.id);
-         return <button key={o.id} type="button" disabled={isDecided} className={picked?"primary":""} onClick={()=>setPendingAttractionPicks(prev=>{
-           const cur=prev[m.id]||decided||[];
-           const next=cur.includes(o.id)?cur.filter(id=>id!==o.id):[...cur,o.id];
-           return {...prev,[m.id]:next};
-         })}>{o.name} · {count} {r.votesShort}</button>;
-       })}</div>
-       {!isDecided&&<button type="button" className="primary" disabled={!pending.length} onClick={()=>decideLocation(m.id,pending)}>{r.confirmSelection}</button>}
-       {isDecided&&<span className="orgDecisionConfirmed">✓ {r.confirmed}</span>}
-      </div>;
-    }
-    return <div className="orgDecisionRow" key={m.id}>
-     <b>{m.title}</b>
-     <div className="orgDecisionOptions">{m.options.map(o=>{
-       const count=locationVotes.filter(v=>v.missionId===m.id&&(v.optionIds||[]).includes(o.id)).length;
-       return <button key={o.id} type="button" className={decided?.[0]===o.id?"primary":""} onClick={()=>decideLocation(m.id,[o.id])}>{o.name} · {count} {r.votesShort}</button>;
-     })}</div>
-    </div>;
-  })}
- </div>}
+ {locationPolls.length>0&&(()=>{
+   const pendingCount=locationPolls.filter(m=>{const d=experience.locationDecisions?.[m.id];return !(d&&d.length)}).length;
+   return <>
+    <div className="panel routeDecisionsPanel">
+     <div className="tag">{r.locationPollsTitle}</div>
+     <p className="rosterHint">{pendingCount>0?r.pendingDecisionsCount(pendingCount):r.locationPollsHint}</p>
+     <button type="button" className="primary" onClick={()=>setDecisionsModalOpen(true)}>{r.pollResultsButton}</button>
+    </div>
+    {decisionsModalOpen&&typeof document!=="undefined"&&createPortal(<div className="orgDecisionsOverlay" role="presentation" onClick={()=>setDecisionsModalOpen(false)}>
+     <div className="orgDecisionsModal" role="dialog" aria-modal="true" aria-label={r.locationPollsTitle} onClick={e=>e.stopPropagation()}>
+      <button type="button" className="orgDecisionsClose" aria-label={r.closeModal} onClick={()=>setDecisionsModalOpen(false)}>×</button>
+      <div className="tag">{r.locationPollsTitle}</div>
+      <p className="rosterHint">{r.locationPollsHint}</p>
+      {locationPolls.map(m=>{
+        const decided=experience.locationDecisions?.[m.id];
+        const isDecided=!!(decided&&decided.length);
+        if(!m.options||!m.options.length){
+          return <div className="orgDecisionRow" key={m.id}>
+           <b>{m.title}</b>
+           <div className="orgDecisionOptions">
+            <button type="button" className={isDecided?"primary":""} disabled={isDecided} onClick={()=>decideLocation(m.id,["confirmed"])}>{isDecided?`✓ ${r.confirmed}`:r.confirmDestination}</button>
+           </div>
+          </div>;
+        }
+        if(m.isAttractionsPoll){
+          const pending=pendingAttractionPicks[m.id]||decided||[];
+          return <div className="orgDecisionRow" key={m.id}>
+           <b>{m.title}</b>
+           <div className="orgDecisionOptionList">{m.options.map(o=>{
+             const picked=pending.includes(o.id);
+             return <div className={"orgDecisionOptionRow "+(picked?"picked":"")} key={o.id}>
+              <label className="orgDecisionCheck"><input type="checkbox" disabled={isDecided} checked={picked} onChange={()=>setPendingAttractionPicks(prev=>{
+                const cur=prev[m.id]||decided||[];
+                const next=cur.includes(o.id)?cur.filter(id=>id!==o.id):[...cur,o.id];
+                return {...prev,[m.id]:next};
+              })}/><b>{o.name}</b></label>
+              <small>{formatVoters(votersFor(m.id,o.id))}</small>
+             </div>;
+           })}</div>
+           {!isDecided&&<button type="button" className="primary" disabled={!pending.length} onClick={()=>decideLocation(m.id,pending)}>{r.confirmSelection}</button>}
+           {isDecided&&<span className="orgDecisionConfirmed">✓ {r.confirmed}</span>}
+          </div>;
+        }
+        return <div className="orgDecisionRow" key={m.id}>
+         <b>{m.title}</b>
+         <div className="orgDecisionOptionList">{m.options.map(o=>{
+           const isPicked=decided?.[0]===o.id;
+           return <div className={"orgDecisionOptionRow "+(isPicked?"picked":"")} key={o.id}>
+            <div><b>{o.name}</b><small>{formatVoters(votersFor(m.id,o.id))}</small></div>
+            <button type="button" className={isPicked?"primary":""} onClick={()=>decideLocation(m.id,[o.id])}>{isPicked?`✓ ${r.confirmed}`:r.confirmOption}</button>
+           </div>;
+         })}</div>
+        </div>;
+      })}
+     </div>
+    </div>,document.body)}
+   </>;
+ })()}
  {organizerBranches.length>0&&<div className="panel routeDecisionsPanel"><div className="tag">{r.routeDecisions}</div><p className="rosterHint">{r.routeDecisionsHint}</p>
   {organizerBranches.map(m=>{
     const decided=experience.branchDecisions?.[m.id];
