@@ -18,7 +18,7 @@ import {experienceGradient} from "../lib/theme";
 import {COUNTRY_FLAGS} from "../lib/i18n";
 import FlagIcon from "./FlagIcon";
 import {isStampMission} from "../lib/stampMissions";
-import {unlockedPieces} from "../lib/familyPuzzle";
+import {unlockedPieces,gridIndexForPiece,pieceAtGridIndex} from "../lib/familyPuzzle";
 function formatStopDate(dateStr,lang){
  try{ return new Intl.DateTimeFormat(lang==="he"?"he-IL":lang,{day:"numeric",month:"short"}).format(new Date(dateStr+"T00:00:00")); }
  catch{ return dateStr; }
@@ -371,10 +371,11 @@ export default function Participant({experience,setExperience,setView,setActiveI
     return <div className="familyPuzzleSection">
      <div className="passportStampsHead"><span>{p.familyPuzzleTitle}</span><small>{p.puzzlePiecesCount(unlockedPuzzlePieces.size,puzzleTotal)}</small></div>
      <div className="familyPuzzleGrid" style={{gridTemplateColumns:`repeat(${cols},1fr)`,aspectRatio:`${cols}/${rows}`}}>
-      {Array.from({length:puzzleTotal},(_,i)=>i+1).map(n=>{
-       const col=(n-1)%cols,row=Math.floor((n-1)/cols);
+      {Array.from({length:puzzleTotal},(_,gridIdx)=>gridIdx).map(gridIdx=>{
+       const n=pieceAtGridIndex(experience.familyPuzzle.layout,puzzleTotal,gridIdx);
+       const col=gridIdx%cols,row=Math.floor(gridIdx/cols);
        const unlocked=unlockedPuzzlePieces.has(n);
-       return <div className={"puzzleTile "+(unlocked?"":"locked")} key={n}>
+       return <div className={"puzzleTile "+(unlocked?"":"locked")} key={gridIdx}>
         <div className="puzzleTileImage" style={{backgroundImage:`url(${experience.familyPuzzle.cartoonUrl})`,backgroundSize:`${cols*100}% ${rows*100}%`,backgroundPosition:`${cols>1?col/(cols-1)*100:0}% ${rows>1?row/(rows-1)*100:0}%`}}/>
         {!unlocked&&<div className="puzzleLock">🔒</div>}
        </div>;
@@ -384,7 +385,12 @@ export default function Participant({experience,setExperience,setView,setActiveI
     </div>;
    })()}
  </div></div>,document.body)}
- {flyingPiece&&experience.familyPuzzle?.cartoonUrl&&typeof document!=="undefined"&&createPortal(<div className="puzzleFlyPiece" style={{backgroundImage:`url(${experience.familyPuzzle.cartoonUrl})`,backgroundSize:`400% ${Math.ceil(puzzleTotal/4)*100}%`,backgroundPosition:`${(flyingPiece-1)%4/3*100}% ${Math.floor((flyingPiece-1)/4)/Math.max(1,Math.ceil(puzzleTotal/4)-1)*100}%`}}/>,document.body)}
+ {flyingPiece&&experience.familyPuzzle?.cartoonUrl&&typeof document!=="undefined"&&createPortal((()=>{
+   const cols=4,rows=Math.ceil(puzzleTotal/cols);
+   const gridIdx=gridIndexForPiece(experience.familyPuzzle.layout,puzzleTotal,flyingPiece);
+   const col=gridIdx%cols,row=Math.floor(gridIdx/cols);
+   return <div className="puzzleFlyPiece" style={{backgroundImage:`url(${experience.familyPuzzle.cartoonUrl})`,backgroundSize:`${cols*100}% ${rows*100}%`,backgroundPosition:`${cols>1?col/(cols-1)*100:0}% ${rows>1?row/(rows-1)*100:0}%`}}/>;
+ })(),document.body)}
  {confettiKey>0&&<Confetti key={confettiKey}/>}
  {albumOpen&&typeof document!=="undefined"&&createPortal(<div className="missionPopupOverlay" role="presentation" onClick={()=>setAlbumOpen(false)}><div className="missionPopupCard albumCard" role="dialog" aria-modal="true" onClick={e=>e.stopPropagation()}><button type="button" className="missionPopupClose" aria-label={lang==="he"?"סגירה":"Close"} onClick={()=>setAlbumOpen(false)}>×</button>
   <h3>{p.albumTitle}</h3>

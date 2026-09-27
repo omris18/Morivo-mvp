@@ -4,7 +4,7 @@ import { useEffect, useState, useRef } from "react";
 import { httpsCallable } from "firebase/functions";
 import QRCode from "qrcode";
 import { firebaseConfigured, functions } from "../lib/firebase";
-import { publishExperienceRemote, updateExperienceRemote, reorderExperienceRemote, uploadFamilyPhoto, generateFamilyPuzzleCartoonRemote } from "../lib/morivoData";
+import { publishExperienceRemote, updateExperienceRemote, reorderExperienceRemote, uploadFamilyPhoto, generateFamilyPuzzleCartoonRemote, reshuffleFamilyPuzzleLayout } from "../lib/morivoData";
 import LinkifiedText from "./LinkifiedText";
 import ExperienceShare from "./ExperienceShare";
 import {missionLabels} from "../lib/experienceGuidance";
@@ -30,8 +30,11 @@ export default function Studio({ experience, setExperience, setView, t, lang }) 
   const titleInputRef = useRef(null);
   const [puzzlePhotoSaving, setPuzzlePhotoSaving] = useState(false);
   const [puzzlePhotoError, setPuzzlePhotoError] = useState("");
+  const [puzzlePhotoPreview, setPuzzlePhotoPreview] = useState(null);
+  useEffect(()=>()=>{if(puzzlePhotoPreview)URL.revokeObjectURL(puzzlePhotoPreview)},[puzzlePhotoPreview]);
   const [puzzleCartoonBusy, setPuzzleCartoonBusy] = useState(false);
   const [puzzleCartoonError, setPuzzleCartoonError] = useState("");
+  const [puzzleShuffling, setPuzzleShuffling] = useState(false);
 
   const atom = flow.find((x) => x.id === selected) || null;
 
@@ -345,13 +348,19 @@ export default function Studio({ experience, setExperience, setView, t, lang }) 
         <div className="familyPuzzleBox">
           <div className="tag">{s.familyPuzzleTag}</div>
           <p className="rosterHint">{s.familyPuzzleHint}</p>
-          <label className="familyPuzzleUpload">{experience.familyPuzzle?.url?s.familyPuzzleReplace:s.familyPuzzleUpload}
+          {!experience.id&&<p className="quizNoCorrect">⚠ {he?"שמרו את החוויה כדי להעלות תמונה (החוויה עדיין לא קיבלה מזהה).":"Save the experience first to upload a photo (it doesn't have an ID yet)."}</p>}
+          <label className="familyPuzzleUpload">{puzzlePhotoSaving?s.saving:experience.familyPuzzle?.url?s.familyPuzzleReplace:s.familyPuzzleUpload}
             <input type="file" accept="image/jpeg,image/png,image/webp" disabled={!experience.id||puzzlePhotoSaving} onChange={async e=>{
               const file=e.target.files?.[0];if(!file)return;
+              setPuzzlePhotoPreview(URL.createObjectURL(file));
               setPuzzlePhotoSaving(true);setPuzzlePhotoError("");
-              try{await uploadFamilyPhoto(experience.id,file)}catch(err){setPuzzlePhotoError(err.message)}finally{setPuzzlePhotoSaving(false)}
+              try{await uploadFamilyPhoto(experience.id,file)}catch(err){setPuzzlePhotoError(err.message)}finally{setPuzzlePhotoSaving(false);e.target.value=""}
             }}/>
           </label>
+          {(puzzlePhotoPreview||experience.familyPuzzle?.url)&&<div className="celebrationCartoonPreview">
+            <img src={experience.familyPuzzle?.url||puzzlePhotoPreview} alt={s.familyPuzzleTag}/>
+            {puzzlePhotoSaving&&<small>{s.saving}</small>}
+          </div>}
           {puzzlePhotoError&&<p className="quizNoCorrect">⚠ {puzzlePhotoError}</p>}
           {experience.familyPuzzle?.url&&<div className="celebrationCartoonBox">
             <button type="button" disabled={puzzleCartoonBusy} onClick={async()=>{
@@ -362,6 +371,10 @@ export default function Studio({ experience, setExperience, setView, t, lang }) 
             {experience.familyPuzzle?.cartoonUrl&&<div className="celebrationCartoonPreview">
               <img src={experience.familyPuzzle.cartoonUrl} alt={s.familyPuzzleTag}/>
             </div>}
+            <button type="button" disabled={puzzleShuffling} onClick={async()=>{
+              setPuzzleShuffling(true);setPuzzleCartoonError("");
+              try{await reshuffleFamilyPuzzleLayout(experience.id,experience.familyPuzzle.totalPieces||8)}catch(err){setPuzzleCartoonError(err.message)}finally{setPuzzleShuffling(false)}
+            }}>{puzzleShuffling?s.generatingCartoon:s.shufflePuzzleBtn}</button>
           </div>}
         </div>
 
