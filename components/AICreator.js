@@ -1,4 +1,5 @@
 "use client";
+import PhotoJourney from "./PhotoJourney";
 import {useEffect,useState} from "react";
 import {httpsCallable} from "firebase/functions";
 import {firebaseConfigured,functions} from "../lib/firebase";
@@ -130,31 +131,11 @@ export default function AICreator({setExperience,setView,setActiveId,user,lang,t
   }catch(e){alert(e.message);setBuilding(false)}
  }
  if(building)return <section className="aiThinking" dir={dir}>
-   <div className={"thinkingWorld "+(shownLoadingArt?"thinkingWorldArt":"")} style={shownLoadingArt?{backgroundImage:`url(${shownLoadingArt})`}:undefined}>
-    {!shownLoadingArt&&<>
-    <svg className="thinkingLines" viewBox="0 0 600 540" preserveAspectRatio="none">
-     <defs>
-      <linearGradient id="lineGrad" x1="0" y1="0" x2="1" y2="1">
-       <stop offset="0%" stopColor="#efc186" stopOpacity="0"/>
-       <stop offset="50%" stopColor="#5fcdf8" stopOpacity=".9"/>
-       <stop offset="100%" stopColor="#7d5cff" stopOpacity="0"/>
-      </linearGradient>
-     </defs>
-     <path className="flowLine fl1" d="M78,127 Q220,190 300,270"/>
-     <path className="flowLine fl2" d="M165,382 Q245,320 300,270"/>
-     <path className="flowLine fl3" d="M293,72 Q297,175 300,270"/>
-     <path className="flowLine fl4" d="M432,382 Q365,320 300,270"/>
-     <path className="flowLine fl5" d="M503,138 Q395,205 300,270"/>
-    </svg>
-    <div className="coreGlowWrap" style={{transform:`scale(${(0.85+step*0.06).toFixed(2)})`}}><div className="coreGlow"></div></div>
-    <div className="orb orb1">📍</div><div className="orb orb2">📸</div><div className="orb orb3">🧩</div><div className="orb orb4">🏆</div><div className="orb orb5">📖</div>
-    <div className="bookBuild"><span></span><span></span><span></span></div>
-    </>}
-   </div>
+   <PhotoJourney building image={shownLoadingArt||undefined}/>
    <div className="thinkingCopy"><div className="tag">{a.tag}</div><h1>{a.thinking[step]}</h1><p>{form.prompt}</p><div className="thinkingSteps">{a.thinking.map((x,i)=><i className={i<=step?"on":""} key={x}></i>)}</div></div>
   </section>;
  if(phase==="planning")return <section className="aiThinking" dir={dir}>
-   <div className="thinkingWorld"><div className="planSpinner"></div></div>
+   <PhotoJourney building image={shownLoadingArt||undefined}/>
    <div className="thinkingCopy"><div className="tag">{a.tag}</div><h1>{a.planningTitle}</h1><p>{form.prompt}</p></div>
   </section>;
  if(phase==="review"&&itinerary)return <section className="itineraryReview" dir={dir}>
@@ -226,25 +207,8 @@ export default function AICreator({setExperience,setView,setActiveId,user,lang,t
    {planError&&<div className="planError">⚠ {planError}</div>}
    <div className="actions finalActions"><button onClick={()=>setView("create")}>{a.blank}</button><button className="primary aiBuildButton" onClick={goPlan}>✦ {a.planTrip}</button></div>
   </div>
-  <div className={"panel aiPromise "+(shownHeroArt?"aiPromiseArt":"")} style={shownHeroArt?{backgroundImage:`url(${shownHeroArt})`}:undefined}>
-   {shownHeroArt?<div className="aiPromiseShade"></div>:<div className="constellation">
-    <svg className="constellationLines" viewBox="0 0 100 100" preserveAspectRatio="none">
-     <defs>
-      <linearGradient id="constLineGrad" x1="0" y1="0" x2="1" y2="1">
-       <stop offset="0%" stopColor="#efc186" stopOpacity="0"/>
-       <stop offset="50%" stopColor="#5fcdf8" stopOpacity=".95"/>
-       <stop offset="100%" stopColor="#7d5cff" stopOpacity="0"/>
-      </linearGradient>
-     </defs>
-     <path className="constLine cl1" vectorEffect="non-scaling-stroke" d="M15,28 Q25,20 35,14"/>
-     <path className="constLine cl2" vectorEffect="non-scaling-stroke" d="M35,14 Q52,12 70,10"/>
-     <path className="constLine cl3" vectorEffect="non-scaling-stroke" d="M35,14 Q44,24 53,32"/>
-     <path className="constLine cl4" vectorEffect="non-scaling-stroke" d="M53,32 Q70,30 86,28"/>
-     <path className="constLine cl5" vectorEffect="non-scaling-stroke" d="M70,10 Q84,9 95,10"/>
-     <path className="constLine cl6" vectorEffect="non-scaling-stroke" d="M86,28 Q92,18 95,10"/>
-    </svg>
-    <span>📍</span><span>📸</span><span>❓</span><span>🧩</span><span>🏆</span><span>📖</span>
-   </div>}
+  <div className="panel aiPromise photoPromise">
+   <PhotoJourney image={shownHeroArt||undefined}/>
    <h2>{a.promiseTitle1}<br/>{a.promiseTitle2}</h2><p>{a.promiseDesc}</p>
    <div className="brandArtRow" title={canGenerateArt?"":(lang==="he"?"מלאו תיאור וסוג חוויה כדי ליצור תמונה מותאמת":"Fill in a description and experience type to generate matching art")}>
     <button type="button" className="brandArtBtn" disabled={!canGenerateArt||!!generatingKey} onClick={()=>generateArt("aiCreatorHero",setCustomHeroArt)}>
