@@ -36,7 +36,7 @@ export default function ParticipantJourneyMap({experience,flow,prog,idx,finished
  const activeGroupIndex=finished?groups.length:groups.findIndex(g=>g.missions.some(({i})=>i===idx));
  const progress=groups.length<=1?(finished?1:0):Math.max(0,Math.min(1,(finished?groups.length-1:activeGroupIndex)/Math.max(1,groups.length-1)));
  const statusText=finished?p.journeyComplete:p.missionOf(idx+1,flow.length);
- const mapHeight=Math.max(560,240+groups.length*130);
+ const mapHeight=Math.max(560,240+groups.length*155);
  return <div className="journeySvgMap" style={{minHeight:mapHeight}}>
   <div className="mapTitle"><div><strong>{singleDestination?destinationLabel:(he?"מתקדמים בין היעדים":"Moving between stops")}</strong><small>{statusText}</small></div><span>🗺️</span></div>
   <svg className="routeSvg" viewBox="0 0 600 820" preserveAspectRatio="none" aria-hidden="true">
