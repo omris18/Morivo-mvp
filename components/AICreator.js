@@ -212,7 +212,7 @@ export default function AICreator({setExperience,setView,setActiveId,user,lang,t
    </div>
 
    {planError&&<div className="planError">⚠ {planError}</div>}
-   <div className="actions finalActions"><button onClick={()=>setView("create")}>{a.blank}</button><button className="primary aiBuildButton" onClick={goPlan}>✦ {a.planTrip}</button></div>
+   <div className="actions finalActions"><button className="primary aiBuildButton" onClick={goPlan}>✦ {a.planTrip}</button></div>
   </div>
   <div className="panel aiPromise photoPromise">
    <PhotoJourney image={shownHeroArt||undefined}/>

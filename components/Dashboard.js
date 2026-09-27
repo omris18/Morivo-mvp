@@ -37,7 +37,6 @@ export default function Dashboard({experience,experiences,setView,openExperience
        <p>{d.heroSub}</p>
        <div className="actions heroActions">
          <button className="aiCta" onClick={()=>setView("ai")}><span className="spark">✦</span>{d.createWithAI}</button>
-         <button className="quietCta" onClick={()=>setView("create")}>{d.createExperience}</button>
        </div>
      </div>
      <PhotoJourney/>
