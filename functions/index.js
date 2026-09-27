@@ -209,14 +209,16 @@ function attractionsMissionFromSelection(selected, location, lang) {
   };
 }
 
-function hotelMissionFromSelection(selected, location, lang, opts) {
+function hotelMissionFromSelection(selected, location, lang, opts, destinationLabel) {
   if (!selected) return null;
   const text = optionsToMissionText([selected], 1, bookingSearchUrl, location, opts);
   if (!text) return null;
   return {
-    id: `story-${Date.now()}-hotel`,
+    id: `story-${Date.now()}-hotel-${Math.random().toString(36).slice(2, 7)}`,
     type: "story",
-    title: lang === "he" ? "היכן להתארח" : "Where to Stay",
+    title: destinationLabel
+      ? (lang === "he" ? `היכן להתארח ב${destinationLabel}` : `Where to Stay in ${destinationLabel}`)
+      : (lang === "he" ? "היכן להתארח" : "Where to Stay"),
     text,
     reward: "",
     points: 0,
@@ -227,7 +229,7 @@ function hotelMissionFromSelection(selected, location, lang, opts) {
 // experience's first mission, but it's not something each participant completes on their own:
 // they vote, the organizer makes the final call in Runtime, and the journey only continues
 // once that decision lands (see organizerDecides handling in Participant.js/Runtime.js).
-function hotelPollMission(candidates, location, lang, opts) {
+function hotelPollMission(candidates, location, lang, opts, destinationLabel) {
   const options = (Array.isArray(candidates) ? candidates : []).slice(0, 4).map((c, i) => {
     const name = String(c?.name || "").trim().slice(0, 100);
     if (!name) return null;
@@ -235,12 +237,14 @@ function hotelPollMission(candidates, location, lang, opts) {
   }).filter(Boolean);
   if (options.length < 2) return null;
   return {
-    id: `story-${Date.now()}-locationpoll`,
+    id: `story-${Date.now()}-locationpoll-${Math.random().toString(36).slice(2, 7)}`,
     type: "story",
-    title: lang === "he" ? "איפה נתארח?" : "Where should we stay?",
+    title: destinationLabel
+      ? (lang === "he" ? `איפה נתארח ב${destinationLabel}?` : `Where should we stay in ${destinationLabel}?`)
+      : (lang === "he" ? "איפה נתארח?" : "Where should we stay?"),
     text: lang === "he"
-      ? "יש כמה אפשרויות מגורים לטיול הזה. הצביעו על מה שאתם מעדיפים - המארגן יקבל את ההחלטה הסופית, ומשם יוצאים למסע."
-      : "There are a few accommodation options for this trip. Vote for the one you'd prefer - the organizer will make the final call, and the journey begins from there.",
+      ? `יש כמה אפשרויות מגורים${destinationLabel ? ` ב${destinationLabel}` : " לטיול הזה"}. הצביעו על מה שאתם מעדיפים - המארגן יקבל את ההחלטה הסופית, ומשם יוצאים למסע.`
+      : `There are a few accommodation options${destinationLabel ? ` in ${destinationLabel}` : " for this trip"}. Vote for the one you'd prefer - the organizer will make the final call, and the journey begins from there.`,
     reward: "",
     points: 0,
     isLocationPoll: true,
@@ -263,11 +267,16 @@ exports.proposeItinerary = onCall({ secrets: [openaiApiKey, geminiApiKey], cors:
     throw new HttpsError("unauthenticated", "Sign in (even anonymously) before planning an experience.");
   }
 
-  const { prompt, type, location, duration, people, peopleDetails, lang, multiDay, needsHotel, interests, startDate, endDate, adults, children, childrenAges } = request.data || {};
+  const { prompt, type, location, duration, people, peopleDetails, lang, multiDay, needsHotel, interests, startDate, endDate, adults, children, childrenAges, destinations } = request.data || {};
 
   if (!prompt || !String(prompt).trim()) {
     throw new HttpsError("invalid-argument", "A description of the experience is required.");
   }
+
+  // Multiple named destinations (e.g. "Tokyo, Kyoto, Osaka") means one hotel choice per
+  // destination rather than a single whole-trip hotel list - see hotelsByDestination below.
+  const destList = Array.isArray(destinations) ? destinations.map((d) => String(d || "").trim()).filter(Boolean).slice(0, 6) : [];
+  const multiDestination = destList.length > 1;
 
   const client = new OpenAI({ apiKey: openaiApiKey.value().trim() });
   const userPrompt = [
@@ -275,6 +284,7 @@ exports.proposeItinerary = onCall({ secrets: [openaiApiKey, geminiApiKey], cors:
     `Required output language for the title and every part: ${LANG_NAMES[lang] || "the language of the description"}. The destination country does not determine the language.`,
     type ? `Experience type: ${type}` : null,
     location ? `Location: ${location}` : null,
+    multiDestination ? `The trip visits these destinations in order: ${destList.join(", ")} - group the parts by destination and name the destination in each part's title.` : null,
     duration ? `Duration: ${duration}` : null,
     people ? `Participants: ${people}` : null,
     peopleDetails && String(peopleDetails).trim() ? `Who's joining (names, ages, relationships): ${String(peopleDetails).trim().slice(0, 600)}` : null,
@@ -282,7 +292,9 @@ exports.proposeItinerary = onCall({ secrets: [openaiApiKey, geminiApiKey], cors:
   ].filter(Boolean).join("\n");
 
   const attractionsPromise = location ? suggestAttractionOptions({ location, prompt, people, duration, lang, interests }) : Promise.resolve([]);
-  const hotelPromise = (needsHotel && location) ? suggestHotelOptions({ location, prompt, people, duration, lang }) : Promise.resolve([]);
+  const hotelPromise = multiDestination
+    ? (needsHotel ? Promise.all(destList.map((d) => suggestHotelOptions({ location: d, prompt, people, duration, lang }))) : Promise.resolve(null))
+    : (needsHotel && location) ? suggestHotelOptions({ location, prompt, people, duration, lang }) : Promise.resolve([]);
 
   let completion;
   try {
@@ -329,11 +341,24 @@ exports.proposeItinerary = onCall({ secrets: [openaiApiKey, geminiApiKey], cors:
       why: String(o?.why || "").slice(0, 220),
       url: mapsSearchUrl(o?.name, location),
     })),
-    hotels: hotelOptions.map((o) => ({
-      name: String(o?.name || "").slice(0, 100),
-      why: String(o?.why || "").slice(0, 220),
-      url: bookingSearchUrl(o?.name, location, hotelUrlOpts),
-    })),
+    ...(multiDestination
+      ? {
+        hotelsByDestination: destList.map((d, i) => ({
+          destination: d,
+          options: (hotelOptions[i] || []).map((o) => ({
+            name: String(o?.name || "").slice(0, 100),
+            why: String(o?.why || "").slice(0, 220),
+            url: bookingSearchUrl(o?.name, d, hotelUrlOpts),
+          })),
+        })),
+      }
+      : {
+        hotels: (hotelOptions || []).map((o) => ({
+          name: String(o?.name || "").slice(0, 100),
+          why: String(o?.why || "").slice(0, 220),
+          url: bookingSearchUrl(o?.name, location, hotelUrlOpts),
+        })),
+      }),
   };
 });
 
@@ -371,11 +396,18 @@ exports.generateExperience = onCall({ secrets: [openaiApiKey, geminiApiKey], cor
   // build those missions directly from that exact selection instead of asking the AI again -
   // what they approved is what they get, not a fresh re-roll.
   const hotelUrlOpts = { checkin: startDate, checkout: endDate, adults: Math.max(1, Number(adults) || Number(people) || 2), children: Math.max(0, Number(children) || 0), childrenAges, rooms: Math.max(1, Math.ceil((Math.max(1, Number(adults) || Number(people) || 2) + Math.max(0, Number(children) || 0)) / 4)) };
-  const hotelMissionPromise = hasApprovedPlan
-    ? Promise.resolve(approvedItinerary.selectedHotel?.poll
-        ? hotelPollMission(approvedItinerary.selectedHotel.candidates, location, lang, hotelUrlOpts)
-        : hotelMissionFromSelection(approvedItinerary.selectedHotel, location, lang, hotelUrlOpts))
-    : (needsHotel && location) ? suggestHotel({ location, prompt, people, duration, lang, startDate, endDate, adults, children, childrenAges }) : Promise.resolve(null);
+  // A multi-destination trip approves one hotel choice per destination (selectedHotels) instead
+  // of a single whole-trip hotel (selectedHotel) - each becomes its own "Where to Stay in X"
+  // mission rather than one shared mission for the whole journey.
+  const hotelMissionsPromise = hasApprovedPlan
+    ? Promise.resolve(Array.isArray(approvedItinerary.selectedHotels)
+        ? approvedItinerary.selectedHotels.map((sel) => sel?.hotel?.poll
+            ? hotelPollMission(sel.hotel.candidates, sel.destination, lang, hotelUrlOpts, sel.destination)
+            : hotelMissionFromSelection(sel?.hotel, sel.destination, lang, hotelUrlOpts, sel.destination)).filter(Boolean)
+        : [approvedItinerary.selectedHotel?.poll
+            ? hotelPollMission(approvedItinerary.selectedHotel.candidates, location, lang, hotelUrlOpts)
+            : hotelMissionFromSelection(approvedItinerary.selectedHotel, location, lang, hotelUrlOpts)].filter(Boolean))
+    : (needsHotel && location) ? suggestHotel({ location, prompt, people, duration, lang, startDate, endDate, adults, children, childrenAges }).then((m) => m ? [m] : []) : Promise.resolve([]);
   const attractionsMissionPromise = hasApprovedPlan
     ? Promise.resolve(attractionsMissionFromSelection(approvedItinerary.selectedAttractions, location, lang))
     : (multiDay && location) ? suggestAttractions({ location, prompt, people, duration, lang, interests }) : Promise.resolve(null);
@@ -410,8 +442,8 @@ exports.generateExperience = onCall({ secrets: [openaiApiKey, geminiApiKey], cor
 
   const flow = sanitizeFlow(data.flow);
 
-  const [hotelMission, attractionsMission] = await Promise.all([hotelMissionPromise, attractionsMissionPromise]);
-  const extras = [hotelMission, attractionsMission].filter(Boolean);
+  const [hotelMissions, attractionsMission] = await Promise.all([hotelMissionsPromise, attractionsMissionPromise]);
+  const extras = [...hotelMissions, attractionsMission].filter(Boolean);
 
   return {
     name: String(data.name || prompt).slice(0, 120),

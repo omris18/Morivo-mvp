@@ -37,7 +37,8 @@ function generateDraft(f){
 export default function AICreator({setExperience,setView,setActiveId,user,lang,t,dir}){
  const a=t.aiCreator;
  const [portraitFile,setPortraitFile]=useState(null);
- const [form,setForm]=useState({prompt:"",type:"",location:"",duration:"",startDate:"",endDate:"",people:"",peopleDetails:"",hotelBooked:false,interests:[],adults:"2",children:"0",childrenAges:[]}),[building,setBuilding]=useState(false),[step,setStep]=useState(0);
+ const [form,setForm]=useState({prompt:"",type:"",location:"",duration:"",startDate:"",endDate:"",people:"",peopleDetails:"",hotelBooked:false,interests:[],adults:"2",children:"0",childrenAges:[],destinations:[]}),[building,setBuilding]=useState(false),[step,setStep]=useState(0);
+ const [destinationInput,setDestinationInput]=useState("");
  const TOTAL_STEPS=3;
  const [formStep,setFormStep]=useState(1);
  const [phase,setPhase]=useState("form");
@@ -45,6 +46,16 @@ export default function AICreator({setExperience,setView,setActiveId,user,lang,t
  const [planError,setPlanError]=useState(null);
  const [selectedAttractionIds,setSelectedAttractionIds]=useState(new Set());
  const [selectedHotelIndex,setSelectedHotelIndex]=useState(-1);
+ const [selectedHotelByDestination,setSelectedHotelByDestination]=useState({});
+ function addDestination(){
+  const v=destinationInput.trim();
+  if(!v||form.destinations.includes(v))return;
+  setForm(f=>({...f,destinations:[...f.destinations,v]}));
+  setDestinationInput("");
+ }
+ function removeDestination(name){
+  setForm(f=>({...f,destinations:f.destinations.filter(d=>d!==name)}));
+ }
  function goNext(){
   if(formStep===1&&!form.prompt.trim())return alert(a.describeFirst);
   setFormStep(s=>Math.min(TOTAL_STEPS,s+1));
@@ -76,7 +87,7 @@ export default function AICreator({setExperience,setView,setActiveId,user,lang,t
  useEffect(()=>{if(!building)return;const id=setInterval(()=>setStep(x=>Math.min(x+1,a.thinking.length-1)),900);return()=>clearInterval(id)},[building,lang]);
  function baseFields(){
   const needsHotel=isMultiDayFamilyTrip&&!form.hotelBooked;
-  return {prompt:form.prompt,type:form.type,location:form.location,duration:isMultiDayFamilyTrip?(tripDays?`${tripDays} days`:""):form.duration,startDate:isMultiDayFamilyTrip?form.startDate:null,endDate:isMultiDayFamilyTrip?form.endDate:null,people:isFamilyTrip?String(Number(form.adults||0)+Number(form.children||0)):form.people,peopleDetails:form.peopleDetails,adults:isFamilyTrip?Number(form.adults||0):null,children:isFamilyTrip?Number(form.children||0):null,childrenAges:isFamilyTrip?form.childrenAges.map(Number).filter(Number.isFinite):[],lang,multiDay:isMultiDayFamilyTrip,needsHotel,interests:isFamilyTrip?form.interests:[]};
+  return {prompt:form.prompt,type:form.type,location:form.location,duration:isMultiDayFamilyTrip?(tripDays?`${tripDays} days`:""):form.duration,startDate:isMultiDayFamilyTrip?form.startDate:null,endDate:isMultiDayFamilyTrip?form.endDate:null,people:isFamilyTrip?String(Number(form.adults||0)+Number(form.children||0)):form.people,peopleDetails:form.peopleDetails,adults:isFamilyTrip?Number(form.adults||0):null,children:isFamilyTrip?Number(form.children||0):null,childrenAges:isFamilyTrip?form.childrenAges.map(Number).filter(Number.isFinite):[],lang,multiDay:isMultiDayFamilyTrip,needsHotel,interests:isFamilyTrip?form.interests:[],destinations:isMultiDayFamilyTrip?form.destinations:[]};
  }
  async function goPlan(){
   if(!form.prompt.trim())return alert(a.describeFirst);
@@ -89,6 +100,7 @@ export default function AICreator({setExperience,setView,setActiveId,user,lang,t
    setItinerary(result.data);
    setSelectedAttractionIds(new Set((result.data.attractions||[]).map((_,i)=>i)));
    setSelectedHotelIndex((result.data.hotels||[]).length?0:-1);
+   setSelectedHotelByDestination(Object.fromEntries((result.data.hotelsByDestination||[]).map((d)=>[d.destination,d.options?.length?0:-1])));
    setPhase("review");
   }catch(e){
    console.error("Itinerary planning failed",e);
@@ -102,12 +114,23 @@ export default function AICreator({setExperience,setView,setActiveId,user,lang,t
  function toggleAttraction(i){
   setSelectedAttractionIds(prev=>{const next=new Set(prev);next.has(i)?next.delete(i):next.add(i);return next});
  }
+ function setDestinationHotelIndex(destination,idx){
+  setSelectedHotelByDestination(prev=>({...prev,[destination]:idx}));
+ }
  async function build(){
+  const hasDestinations=(itinerary?.hotelsByDestination||[]).length>0;
   const approvedItinerary=itinerary?{
    name:itinerary.name,
    plan:itinerary.plan,
    selectedAttractions:(itinerary.attractions||[]).filter((_,i)=>selectedAttractionIds.has(i)),
-   selectedHotel:selectedHotelIndex===-2?{poll:true,candidates:itinerary.hotels||[]}:selectedHotelIndex>=0?(itinerary.hotels||[])[selectedHotelIndex]:null,
+   ...(hasDestinations?{
+    selectedHotels:itinerary.hotelsByDestination.map(d=>{
+     const idx=selectedHotelByDestination[d.destination];
+     return {destination:d.destination,hotel:idx===-2?{poll:true,candidates:d.options||[]}:idx>=0?(d.options||[])[idx]||null:null};
+    }),
+   }:{
+    selectedHotel:selectedHotelIndex===-2?{poll:true,candidates:itinerary.hotels||[]}:selectedHotelIndex>=0?(itinerary.hotels||[])[selectedHotelIndex]:null,
+   }),
   }:null;
   setPhase("building");setBuilding(true);setStep(0);
   const minWait=new Promise(r=>setTimeout(r,Math.max(4200,a.thinking.length*700)));
@@ -161,7 +184,16 @@ export default function AICreator({setExperience,setView,setActiveId,user,lang,t
      <a href={att.url} target="_blank" rel="noopener noreferrer">🔗</a>
     </label>)}
    </div>}
-   {itinerary.hotels?.length>0&&<div className="itineraryOptions">
+   {itinerary.hotelsByDestination?.length>0?itinerary.hotelsByDestination.map(d=><div className="itineraryOptions" key={d.destination}>
+    <div className="tag">{a.hotelsInLabel(d.destination)}</div>
+    {(d.options||[]).map((h,i)=><label className="itineraryOptionRow" key={i}>
+     <input type="radio" name={"itineraryHotel-"+d.destination} checked={selectedHotelByDestination[d.destination]===i} onChange={()=>setDestinationHotelIndex(d.destination,i)}/>
+     <div><b>{h.name}</b><p>{h.why}</p></div>
+     <a href={h.url} target="_blank" rel="noopener noreferrer">🔗</a>
+    </label>)}
+    {(d.options||[]).length>1&&<label className="itineraryOptionRow"><input type="radio" name={"itineraryHotel-"+d.destination} checked={selectedHotelByDestination[d.destination]===-2} onChange={()=>setDestinationHotelIndex(d.destination,-2)}/><div><b>{a.letGroupVote}</b><p>{a.letGroupVoteDesc}</p></div></label>}
+    <label className="itineraryOptionRow"><input type="radio" name={"itineraryHotel-"+d.destination} checked={selectedHotelByDestination[d.destination]===-1} onChange={()=>setDestinationHotelIndex(d.destination,-1)}/><div><b>{a.noHotelOption}</b></div></label>
+   </div>):itinerary.hotels?.length>0&&<div className="itineraryOptions">
     <div className="tag">{a.hotelsLabel}</div>
     {itinerary.hotels.map((h,i)=><label className="itineraryOptionRow" key={i}>
      <input type="radio" name="itineraryHotel" checked={selectedHotelIndex===i} onChange={()=>setSelectedHotelIndex(i)}/>
@@ -185,6 +217,15 @@ export default function AICreator({setExperience,setView,setActiveId,user,lang,t
    <div className={"aiFormStep "+(formStep===1?"active":"")} data-step="1">
     <label>{a.prompt}</label><textarea className="aiPrompt" value={form.prompt} onChange={e=>setForm({...form,prompt:e.target.value})}/>
     <div className="fieldRow"><div><label>{a.type}</label><select value={form.type} onChange={e=>setForm({...form,type:e.target.value})}><option value=""></option>{TYPE_OPTIONS[lang].map(x=><option key={x} value={x}>{x}</option>)}</select></div><div><label>{a.location}</label><input value={form.location} onChange={e=>setForm({...form,location:e.target.value})}/></div></div>
+    {isMultiDayFamilyTrip&&<div className="destinationsField">
+     <label>{a.destinationsLabel}</label>
+     <p className="destinationsHint">{a.destinationsHint}</p>
+     <div className="destinationInputRow">
+      <input value={destinationInput} placeholder={a.destinationPlaceholder} onChange={e=>setDestinationInput(e.target.value)} onKeyDown={e=>{if(e.key==="Enter"){e.preventDefault();addDestination()}}}/>
+      <button type="button" onClick={addDestination}>+ {a.addDestination}</button>
+     </div>
+     {form.destinations.length>0&&<div className="chipRow">{form.destinations.map(d=><button type="button" key={d} className="chip selected" onClick={()=>removeDestination(d)}>{d} ✕</button>)}</div>}
+    </div>}
     {/birthday|יום הולדת/i.test(form.type)&&<CelebrationPhotoPicker file={portraitFile} onChange={setPortraitFile} lang={lang}/>}
    </div>
 
