@@ -692,3 +692,126 @@ body{background:radial-gradient(circle at 78% -10%,rgba(123,199,216,.08),transpa
  .accountForm{grid-template-columns:minmax(0,1fr)}
  .accountBar .accountField input{font-size:16px}
 }
+
+/* Approved Morivo direction — warm daylight, seafoam and coral. */
+:root{--m-bg:#faf6ed;--m-surface:#fffdf8;--m-surface2:#eef7f3;--m-line:#d7e5df;--m-text:#153e4b;--m-muted:#526f78;--m-warm:#b55735;--m-sky:#167b80;--m-violet:#7666a7}
+body{background:radial-gradient(ellipse at 88% 4%,#d9f1ef 0,transparent 45%),radial-gradient(ellipse at 4% 70%,#ffe4d3 0,transparent 42%),#faf6ed;color:#153e4b}
+body .sidebar{background:linear-gradient(180deg,#fffef9,#f0f8f1);border-color:#d7e5df;box-shadow:4px 0 30px rgba(44,92,87,.03)}
+.brandLockup{padding:0 4px 24px;border-color:#d7e5df}
+.morivoWordmark{display:block;width:158px;max-width:100%;height:48px;object-fit:contain}
+.brandLockup .tag{color:#53747a;margin:9px 0 0;font-size:8px}
+body .sidebar nav button{color:#466c74;white-space:nowrap}
+body .sidebar nav button span:last-child{width:auto}
+body .sidebar nav button:hover{background:#e5f3ec;color:#0f4c5c}
+body .sidebar nav button.active{background:#d8efec;color:#0f4c5c;box-shadow:none}
+body [dir="rtl"] .sidebar nav button.active{box-shadow:none}
+.sidebarJourney small{color:#5d7e80}.journeyLine{background:linear-gradient(90deg,#e9ba62,#60b5b4,transparent)}
+.topBar{border-color:#d7e5df}.langSwitchGlobal{background:#fffdf8!important;border-color:#d7e5df!important}
+body .appShell .panel,body .appShell .studioWorkspace,body .appShell .studioPreviewPanel{background:#fffdf8;border-color:#d7e5df;box-shadow:0 14px 40px rgba(34,86,78,.06)}
+body .appShell :is(h1,h2,h3,h4){color:#0f4c5c}
+body .appShell :is(p,label,small){color:#526f78}
+body .appShell :is(input,textarea,select){background:#fff!important;border-color:#c8dcd7!important;color:#173f4b!important}
+body .appShell :is(input,textarea,select):focus{outline:2px solid #69b9b6;outline-offset:2px;box-shadow:none}
+body .appShell :is(input,textarea)::placeholder{color:#71868a}
+body .appShell :is(.actions button,.accountBar button,.openExperience){background:#f4faf6;color:#215762;border:1px solid #c8ded7}
+body .appShell :is(.actions .primary,.actions .aiCta,.actions .aiBuildButton,.accountBar .primary){background:#e96b4e;color:#fff;border-color:#e96b4e;box-shadow:0 6px 20px rgba(203,85,53,.14)}
+body .appShell :is(.actions .primary,.actions .aiCta,.actions .aiBuildButton,.accountBar .primary):hover{background:#cd563c}
+body .accountBar{background:rgba(255,253,248,.86);border-color:#d7e5df;box-shadow:none}
+.accountIntro .accountMessage,.accountIdentity b{color:#476771}
+body .accountBar .accountSwitch{background:transparent;color:#19797e;border:0}
+.accountIntro .accountMark{color:#b87d23;background:#fff0cc}
+.accountField span{color:#536f77}.accountError{background:#fff0e9;color:#9b3c30;border-color:#efc5b6}
+body .morivoHero{background:linear-gradient(125deg,#fffdf7,#e6f4ef);border-color:#d9e7df;box-shadow:0 20px 50px rgba(41,96,86,.08);padding:40px;grid-template-columns:1fr 1.05fr;gap:28px;min-height:470px}
+body .morivoHero h1{font-family:ui-rounded,"Arial Rounded MT Bold",system-ui,sans-serif;font-size:clamp(36px,4.1vw,58px);font-weight:800;line-height:1.12;letter-spacing:-.035em}
+body .morivoHero h1 span{color:#d65d43;font-style:normal;font-weight:800}
+body .morivoHero p{color:#476974}
+body .heroCopy .tag{color:#267d80}
+body .heroActions .quietCta{color:#1d6873;border-color:#bddbd4;background:#fffdf8}
+.photoJourney{position:relative;isolation:isolate;min-width:0;height:395px;border-radius:24px;direction:ltr}
+.journeyLandscape{display:block;width:100%;height:100%;object-fit:cover;object-position:45% 50%;border-radius:24px;box-shadow:0 15px 35px rgba(31,86,79,.16);animation:photoReveal 1s ease both}
+.journeyPhoto{position:absolute;overflow:hidden;background:#fffdf7;border:7px solid #fffdf7;border-bottom-width:18px;border-radius:12px;box-shadow:0 15px 35px rgba(28,63,58,.2);width:43%;height:40%;animation:photoArrive 1.2s ease both}
+.journeyPhoto img{display:block;width:100%;height:100%;object-fit:cover}
+.journeyPhotoPlace{right:-9px;top:22px;transform:rotate(7deg);animation-delay:.25s}
+.journeyPhotoPlace img{object-position:85% 50%;transform:scale(1.55)}
+.journeyPhotoBook{left:-12px;bottom:-15px;width:58%;height:43%;transform:rotate(-7deg);animation-delay:.6s}
+.photoTrail{position:absolute;inset:15% 6% 9% 25%;border:2px solid rgba(255,217,131,.86);border-inline-start-color:transparent;border-radius:48%;transform:rotate(-23deg);box-shadow:3px 0 12px rgba(251,218,133,.45);animation:photoReveal 1.8s ease both}
+.photoSpark{position:absolute;right:10%;bottom:15%;font-size:35px;color:#fff0bf;text-shadow:0 0 15px #e8b756}
+@keyframes photoReveal{from{opacity:0;filter:blur(5px)}to{opacity:1;filter:blur(0)}}
+@keyframes photoArrive{from{opacity:0;translate:0 35px}to{opacity:1;translate:0 0}}
+.photoJourneyBuilding{height:510px;margin:20px}
+.photoJourneyBuilding .journeyPhotoPlace{animation:photoCollect 7s ease-in-out infinite}
+.photoJourneyBuilding .journeyPhotoBook{animation:photoCollect 7s 1s ease-in-out infinite}
+@keyframes photoCollect{0%,100%{translate:0 0}50%{translate:0 -14px}}
+body .dashboardKpis .kpiBtn{background:#fffdf8;border-color:#d7e5df;color:#164c58;box-shadow:0 6px 20px rgba(43,90,78,.04)}
+body .dashboardKpis .kpiBtn:hover{background:#edf8f2;border-color:#87c7bf}
+body .dashboardKpis b{color:#155868}
+body .dashboardKpis small{color:#627f81}
+body .experiencePanel .experienceRow{background:#f4f9f3;border-color:#deebe2}
+body .experiencePanel .experienceRow:hover{background:#edf6ee}
+.experienceThumb{background:linear-gradient(140deg,#e2f3ea,#d2ece8);color:#197c7e;border-color:#c8e0d7}
+body .experienceInfo h3{font-family:inherit;font-weight:700}
+body .roundCreate{background:#d7efea;color:#156875;border-color:#c4e1d6}
+body .aiCreate>.panel:first-child{background:#fffdf8;padding:34px}
+body .aiCreate h1{font-family:ui-rounded,system-ui,sans-serif;font-weight:800;font-size:clamp(34px,3.7vw,50px);line-height:1.12}
+body .aiCreate label{font-size:12px;letter-spacing:0;text-transform:none;color:#365f68}
+body .aiCreate .aiPrompt{background:#f4faf5!important;border-color:#bcded4!important}
+body .aiCreate :is(.hotelPartyBox,.hotelCheck,.tripLengthDisplay){background:#eef7f1;border-color:#d1e7dd;color:#286574}
+body .aiCreate .chip{background:#f3f8f4;border-color:#d3e4dc;color:#3d6972}
+body .aiCreate .chip.selected{background:#ccebe2;border-color:#65b1a7;color:#134f5b}
+body .aiCreate>.photoPromise{background:linear-gradient(160deg,#e0f2ed,#fff4e4);padding:24px;min-height:650px;justify-content:flex-start;position:relative}
+.photoPromise::after{display:none}
+body .photoPromise .photoJourney{width:100%;height:370px;flex-shrink:0;margin-bottom:48px}
+body .photoPromise h2{font-family:ui-rounded,system-ui,sans-serif;font-weight:750;font-size:32px;line-height:1.2;color:#0f4c5c}
+body .photoPromise p{color:#436b72}
+body .photoPromise .brandArtRow{margin-top:auto;padding-top:18px}
+body .photoPromise .brandArtBtn{background:#fffaf0;border-color:#bcdad1;color:#226674;font-size:12px!important}
+body .photoPromise .brandArtBtn:disabled{opacity:.55}
+body .aiThinking{background:linear-gradient(135deg,#e5f4ec,#fff2df);border:1px solid #d8e7dc;border-radius:28px;padding:24px;align-items:center}
+body .thinkingCopy h1{color:#0f4c5c;font-family:ui-rounded,system-ui,sans-serif;font-weight:750;line-height:1.16;font-size:clamp(32px,4vw,50px)}
+body .thinkingCopy p{color:#55747b}
+body .thinkingSteps i{background:#c8ded4}
+body .thinkingSteps i.on{background:#e7855f}
+body .appShell :is(.flowNode,.atomBar button,.phone,.mission,.join,.feed>div,.people>div,.runtimeKpis>div,.runtimePanel,.runtimeHero,.createIntro,.createFormPanel){background:#f3f9f4!important;border-color:#cce0d6!important;color:#225562!important}
+body .appShell :is(.flowNode b,.flowNode span,.flowNode small,.phone h3,.phone p,.runtimeTitle h2){color:#285f69!important}
+body .appShell .flowNode.selected{background:#dff0e5!important;border-color:#7abdad!important}
+body .appShell .atomBar button{color:#235e68!important}
+body .appShell .reviseBar{background:#e8f4ec;border-color:#cde1d8}
+body .appShell .reviseBar button{color:#286477;background:#dcece8;border-color:#bad6cf}
+body .appShell .memoryPage .mbCover{background-color:#176270;background-image:radial-gradient(ellipse at 80% 10%,#8fc9c1,transparent 65%),linear-gradient(135deg,#2f8e95,#145064)}
+body .appShell .memoryPage .mbCoverContent h1{color:#fff8eb}
+body .appShell .memoryPage .mbCoverShade{background:linear-gradient(0deg,rgba(15,67,76,.6),transparent)}
+body .appShell .memoryPage .mbShare{background:#e0eee6;border-color:#c0d9ce}
+body .appShell .memoryPage .mbShare .mbHeading{color:#24646b}
+@media(max-width:1000px){
+ body .morivoHero{grid-template-columns:1fr;padding:30px}
+ .photoJourney{height:370px}
+}
+@media(max-width:900px){
+ body .aiCreate,body .aiThinking{grid-template-columns:minmax(0,1fr)}
+ body .photoPromise .photoJourney{height:360px}
+ body .aiCreate>.photoPromise{min-height:0}
+ .photoJourneyBuilding{height:360px;margin:0 8px 26px}
+}
+@media(max-width:700px){
+ .morivoWordmark{width:132px;height:40px}
+ body .sidebar{padding:16px}
+ .brandLockup{padding-bottom:12px;margin-bottom:6px}
+ body .morivoHero{padding:26px 20px;gap:28px}
+ body .morivoHero h1{font-size:37px}
+ .photoJourney{height:290px;margin:0 6px 16px}
+ body .photoPromise .photoJourney{height:310px;width:calc(100% - 12px)}
+ body .aiCreate>.panel:first-child{padding:24px 20px}
+ body .aiThinking{padding:20px}
+ body .aiCreate>.photoPromise{padding:20px}
+ .photoJourneyBuilding{height:320px}
+}
+@media(prefers-reduced-motion:reduce){
+ .photoJourney *{animation:none!important}
+ .photoJourneyBuilding .journeyPhoto{translate:none}
+}
+
+body .appShell .stepNav{border-color:#d2e5db}
+body .appShell .stepNav button{background:#e4f2e9;border:1px solid #bfdcd0;color:#1b5b67}
+body .appShell .stepNav .primary{background:#e96b4e;color:white;border-color:#e96b4e}
+body .appShell .stepIndicator{color:#52767c}
+body .appShell :is(.itineraryStep,.itineraryOptionRow){background:#eff7ef;border-color:#c8ddd1;color:#164c5c}
