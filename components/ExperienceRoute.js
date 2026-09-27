@@ -28,7 +28,9 @@ export default function ExperienceRoute({experience,people=[],media=[],answers=[
   const out=[];
   flow.forEach((m,i)=>{
    const rawDay=m.day||m.dayNumber||m.date||((m.title||"").match(/(?:day|יום)\s*([0-9]+)/i)?.[1]);
-   const destinations=Array.isArray(experience.destinations)?experience.destinations:[];
+   const explicitDestinations=Array.isArray(experience.destinations)?experience.destinations:[];
+   const inferredDestinations=[...new Set(flow.flatMap(x=>String(`${x.title||""} ${x.text||""}`).match(/(?:ב|ב-)([א-ת]{3,})/g)||[]).map(x=>x.replace(/^ב-?/ ,"")))];
+   const destinations=[...explicitDestinations,...inferredDestinations].filter(Boolean);
    const searchable=String(`${m.title||""} ${m.text||""} ${m.description||""}`).toLocaleLowerCase();
    const matchedDestination=destinations.find(d=>String(d||"").trim().split(/[,\s]+/).filter(Boolean).some(word=>word.length>2&&searchable.includes(word.toLocaleLowerCase())));
    const destination=String(m.destination||matchedDestination||"").trim();
@@ -59,5 +61,6 @@ export default function ExperienceRoute({experience,people=[],media=[],answers=[
     <small>{finished?he?finished+" משתתפים סיימו את המסע":finished+" participants finished":he?"הספר נאסף אוטומטית לאורך החוויה":"Your book is collected automatically throughout the experience"}</small>
    </div>
   </div>:<div className="routeEmpty"><DestinationBackdrop theme={theme}/><div><h3>{he?"המסלול שלכם עוד רגע מתחיל":"Your route is about to begin"}</h3><p>{he?"הוסיפו משימות לחוויה כדי לראות כאן תחנות, משתתפים וזיכרונות.":"Add missions to see your stops, participants and memories here."}</p><button onClick={onStudio}>{he?"בניית המסלול בסטודיו":"Build your route in Studio"}</button></div></div>}
+ <style jsx global>{` .experienceRoute .routeJourneyMap{position:relative;overflow:hidden;background:linear-gradient(135deg,#f3fbf4,#fff8e9 52%,#eef5ff);border:1px solid #cfe3d6;border-radius:30px;box-shadow:0 18px 45px rgba(39,91,76,.12)} .experienceRoute .routeJourneyMap:before{content:"";position:absolute;inset:0;background:radial-gradient(circle at 15% 18%,rgba(251,190,94,.2),transparent 24%),radial-gradient(circle at 86% 80%,rgba(91,155,220,.16),transparent 28%);pointer-events:none} .experienceRoute .routeDayGroup{position:relative;z-index:1;padding:18px 0 25px}.experienceRoute .routeDayGroup+.routeDayGroup{border-top:1px dashed #c7ded1}.experienceRoute .routeMissionCircles{display:grid;grid-template-columns:repeat(4,minmax(105px,1fr));gap:14px}.experienceRoute .routeMissionCircle{width:100%;min-height:132px;border-radius:22px;background:rgba(255,255,255,.93);border:2px solid #d1e4d7;box-shadow:0 8px 18px rgba(38,91,73,.11)}.experienceRoute .routeMissionCircle:after{content:"→";position:absolute;inset-inline-end:-17px;top:50%;color:#d48b59;font-size:22px;font-weight:800;z-index:2}.experienceRoute .routeMissionCircle:nth-of-type(4n):after{display:none}.experienceRoute .routeMissionCircle.isDone{background:#effbf2;border-color:#7fc995}.experienceRoute .routeMissionCircle.isCurrent{background:#fff0df;border-color:#ee994d;box-shadow:0 0 0 4px rgba(238,153,77,.2)}.experienceRoute .routeMissionCircle.isNext{background:#edf6ff;border-color:#76a9db}.experienceRoute .routeConnector{display:none}@media(max-width:700px){.experienceRoute .routeMissionCircles{grid-template-columns:repeat(2,minmax(110px,1fr))}.experienceRoute .routeMissionCircle:nth-of-type(4n):after{display:block}.experienceRoute .routeMissionCircle:nth-of-type(2n):after{display:none}} `}</style>
  </section>;
 }
