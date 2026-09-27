@@ -1,15 +1,16 @@
 export const metadata = {
-  title: "Morivo MVP",
+  title: "Morivo",
   description: "Experience Operating System",
   applicationName: "Morivo",
-  appleWebApp: { capable: true, statusBarStyle: "black-translucent", title: "Morivo" },
+  icons: { icon: "/morivo-icon.svg" },
+  appleWebApp: { capable: true, statusBarStyle: "default", title: "Morivo" },
 };
 export const viewport = {
   width: "device-width",
   initialScale: 1,
   maximumScale: 1,
   viewportFit: "cover",
-  themeColor: "#050b13",
+  themeColor: "#faf6ed",
 };
 import "./globals.css";
 export default function RootLayout({ children }) {

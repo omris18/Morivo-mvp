@@ -9,7 +9,7 @@ const icons={
 };
 export default function Sidebar({view,setView,t}){
  return <aside className="sidebar">
-   <div className="brandLockup"><div className="brandMark"><span></span><span></span><span></span></div><div><div className="brand">{t.brand}</div><div className="tag">{t.brandTag}</div></div></div>
+   <div className="brandLockup"><div><img className="morivoWordmark" src="/morivo-logo.svg" alt="Morivo"/><div className="tag">{t.brandTag}</div></div></div>
    <nav>{items.map(id=>
      <button key={id} onClick={()=>setView(id)} className={view===id?"active":""}>
       <span className="navIcon">{icons[id]}</span><span>{t.nav[id]}</span>
