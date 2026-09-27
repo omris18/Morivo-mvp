@@ -4,7 +4,7 @@ import { useEffect, useState, useRef } from "react";
 import { httpsCallable } from "firebase/functions";
 import QRCode from "qrcode";
 import { firebaseConfigured, functions } from "../lib/firebase";
-import { publishExperienceRemote, updateExperienceRemote, reorderExperienceRemote } from "../lib/morivoData";
+import { publishExperienceRemote, updateExperienceRemote, reorderExperienceRemote, uploadFamilyPhoto, generateFamilyPuzzleCartoonRemote } from "../lib/morivoData";
 import LinkifiedText from "./LinkifiedText";
 import ExperienceShare from "./ExperienceShare";
 import {missionLabels} from "../lib/experienceGuidance";
@@ -28,6 +28,10 @@ export default function Studio({ experience, setExperience, setView, t, lang }) 
   const [scrollToInspector, setScrollToInspector] = useState(false);
   const inspectorRef = useRef(null);
   const titleInputRef = useRef(null);
+  const [puzzlePhotoSaving, setPuzzlePhotoSaving] = useState(false);
+  const [puzzlePhotoError, setPuzzlePhotoError] = useState("");
+  const [puzzleCartoonBusy, setPuzzleCartoonBusy] = useState(false);
+  const [puzzleCartoonError, setPuzzleCartoonError] = useState("");
 
   const atom = flow.find((x) => x.id === selected) || null;
 
@@ -338,6 +342,29 @@ export default function Studio({ experience, setExperience, setView, t, lang }) 
           <button type="button" onClick={addFlight}>+ {s.addFlight}</button>
         </div>
 
+        <div className="familyPuzzleBox">
+          <div className="tag">{s.familyPuzzleTag}</div>
+          <p className="rosterHint">{s.familyPuzzleHint}</p>
+          <label className="familyPuzzleUpload">{experience.familyPuzzle?.url?s.familyPuzzleReplace:s.familyPuzzleUpload}
+            <input type="file" accept="image/jpeg,image/png,image/webp" disabled={!experience.id||puzzlePhotoSaving} onChange={async e=>{
+              const file=e.target.files?.[0];if(!file)return;
+              setPuzzlePhotoSaving(true);setPuzzlePhotoError("");
+              try{await uploadFamilyPhoto(experience.id,file)}catch(err){setPuzzlePhotoError(err.message)}finally{setPuzzlePhotoSaving(false)}
+            }}/>
+          </label>
+          {puzzlePhotoError&&<p className="quizNoCorrect">⚠ {puzzlePhotoError}</p>}
+          {experience.familyPuzzle?.url&&<div className="celebrationCartoonBox">
+            <button type="button" disabled={puzzleCartoonBusy} onClick={async()=>{
+              setPuzzleCartoonBusy(true);setPuzzleCartoonError("");
+              try{await generateFamilyPuzzleCartoonRemote(experience.id)}catch(err){setPuzzleCartoonError(err.message)}finally{setPuzzleCartoonBusy(false)}
+            }}>{puzzleCartoonBusy?s.generatingCartoon:s.familyPuzzleGenerate}</button>
+            {puzzleCartoonError&&<p className="quizNoCorrect">⚠ {puzzleCartoonError}</p>}
+            {experience.familyPuzzle?.cartoonUrl&&<div className="celebrationCartoonPreview">
+              <img src={experience.familyPuzzle.cartoonUrl} alt={s.familyPuzzleTag}/>
+            </div>}
+          </div>}
+        </div>
+
         <p className="contextHint">{he?"בחרו תחנה קיימת מהרשימה כדי לערוך אותה, או הוסיפו משימה חדשה מהאפשרויות הבאות.":"Select a stop below to edit it, or add a new mission using these options."}</p>
         <div className="atomBar">
           {["photo", "video", "map", "quiz", "puzzle", "note", "reward", "story", "branch"].map(
@@ -567,6 +594,23 @@ export default function Studio({ experience, setExperience, setView, t, lang }) 
               {s.stampMissionLabel}
             </label>
             <p className="organizerDecidesHint">{s.stampMissionHint}</p>
+
+            {experience.familyPuzzle?.url && (
+              <>
+                <label>{s.puzzlePieceLabel}</label>
+                <input
+                  type="number"
+                  min="1"
+                  max={experience.familyPuzzle.totalPieces || 8}
+                  value={atom.puzzlePiece || ""}
+                  placeholder={s.puzzlePiecePlaceholder}
+                  onChange={(e) => {
+                    const v = e.target.value.trim();
+                    patch({ puzzlePiece: v === "" ? null : Math.max(1, Math.min(experience.familyPuzzle.totalPieces || 8, Number(v) || 1)) });
+                  }}
+                />
+              </>
+            )}
 
             <label>{s.reward}</label>
             <input

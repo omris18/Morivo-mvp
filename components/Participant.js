@@ -3,7 +3,7 @@ import Memory from "./Memory";
 import {missionLabels,participantHint} from "../lib/experienceGuidance";
 import missionAnswers from "../functions/missionAnswers";
 import journeyProgress from "../functions/journeyProgress";
-import {useEffect,useRef,useState} from "react";
+import {useEffect,useMemo,useRef,useState} from "react";
 import {createPortal} from "react-dom";
 import ParticipantJourneyMap from "./ParticipantJourneyMap";
 import jsQR from "jsqr";
@@ -18,6 +18,7 @@ import {experienceGradient} from "../lib/theme";
 import {COUNTRY_FLAGS} from "../lib/i18n";
 import FlagIcon from "./FlagIcon";
 import {isStampMission} from "../lib/stampMissions";
+import {unlockedPieces} from "../lib/familyPuzzle";
 function formatStopDate(dateStr,lang){
  try{ return new Intl.DateTimeFormat(lang==="he"?"he-IL":lang,{day:"numeric",month:"short"}).format(new Date(dateStr+"T00:00:00")); }
  catch{ return dateStr; }
@@ -118,6 +119,21 @@ export default function Participant({experience,setExperience,setView,setActiveI
  const idx=Math.min(rawIdx,Math.max(flow.length-1,0)), mission=finished?null:flow[idx];
  const badges=computeBadges(prog,flow);
  const earnedStamps=flow.filter(m=>isStampMission(m)&&(prog.completedMissionIds||[]).includes(m.id));
+ const puzzleTotal=experience.familyPuzzle?.totalPieces||8;
+ const unlockedPuzzlePieces=useMemo(()=>unlockedPieces(flow,prog.completedMissionIds,puzzleTotal),[flow,prog.completedMissionIds,puzzleTotal]);
+ const [flyingPiece,setFlyingPiece]=useState(null);
+ const [confettiKey,setConfettiKey]=useState(0);
+ const prevUnlockedRef=useRef(new Set());
+ useEffect(()=>{
+  const newlyUnlocked=[...unlockedPuzzlePieces].filter(n=>!prevUnlockedRef.current.has(n));
+  prevUnlockedRef.current=unlockedPuzzlePieces;
+  if(newlyUnlocked.length&&experience.familyPuzzle?.cartoonUrl){
+   setFlyingPiece(newlyUnlocked[0]);
+   setConfettiKey(k=>k+1);
+   const t=setTimeout(()=>setFlyingPiece(null),1200);
+   return ()=>clearTimeout(t);
+  }
+ },[unlockedPuzzlePieces,experience.familyPuzzle?.cartoonUrl]);
  useEffect(()=>{setQuizAnswer(null);setQuizFeedback(null);setQuizWrongAttempts(0);setNoteText("");setPuzzleAnswer("");setLocStatus(null);setQrVerified(false);setSuggestText("");setMissionPopupOpen(false);setFiles([]);setUploadNotice("");stopScan()},[mission?.id]);
  useEffect(()=>{setRevisitFiles([]);setRevisitNotice("");setRevisitPct(0)},[revisitMission?.id]);
  const branchResolvingRef=useRef(false);
@@ -213,6 +229,7 @@ export default function Participant({experience,setExperience,setView,setActiveI
    if(isMedia&&firebaseConfigured)await uploadBatch(mission,files,setPct);
    if(["note","puzzle"].includes(mission.type)&&firebaseConfigured)await saveMissionAnswer(eid,mission,mission.type==="note"?noteText.trim():puzzleAnswer.trim(),name);
    if(firebaseConfigured)await completeJourneyMission(eid,mission,idx,name);else setProg(pr=>({completedMissionIds:[...pr.completedMissionIds,mission.id],currentMissionIndex:idx+1,points:pr.points+(mission.points||100)}));
+   setConfettiKey(k=>k+1);
    setFiles([]);setPct(0);setNoteText("");setUploadNotice("");
  }catch(e){alert(e.message)}finally{setBusy(false)}}
  async function uploadMoreForRevisit(){
@@ -275,6 +292,7 @@ export default function Participant({experience,setExperience,setView,setActiveI
    return;
   }
   setQuizFeedback("correct");
+  setConfettiKey(k=>k+1);
   setBusy(true);
   const penaltyMultiplier=Math.pow(0.9,quizWrongAttempts);
   const effectivePoints=Math.max(10,Math.round((mission.points||100)*penaltyMultiplier));
@@ -348,7 +366,26 @@ export default function Participant({experience,setExperience,setView,setActiveI
    ? <p className="passportEmpty">{p.passportEmptyHint}</p>
    : <div className="passportStampGrid">{earnedStamps.map(m=><div className="passportStamp" key={m.id}><span className="passportStampIcon">{stampIcons[m.type]||"⭐"}</span><b>{m.day?(lang==="he"?`יום ${m.day}`:`Day ${m.day}`):m.title}</b></div>)}</div>}
   {badges.length>0&&<div className="badgeRow">{badges.map(b=><div className="badge" key={b.id} title={b.label}><span>{b.icon}</span><small>{b.label}</small></div>)}</div>}
+  {experience.familyPuzzle?.cartoonUrl&&(()=>{
+    const cols=4,rows=Math.ceil(puzzleTotal/cols);
+    return <div className="familyPuzzleSection">
+     <div className="passportStampsHead"><span>{p.familyPuzzleTitle}</span><small>{p.puzzlePiecesCount(unlockedPuzzlePieces.size,puzzleTotal)}</small></div>
+     <div className="familyPuzzleGrid" style={{gridTemplateColumns:`repeat(${cols},1fr)`,aspectRatio:`${cols}/${rows}`}}>
+      {Array.from({length:puzzleTotal},(_,i)=>i+1).map(n=>{
+       const col=(n-1)%cols,row=Math.floor((n-1)/cols);
+       const unlocked=unlockedPuzzlePieces.has(n);
+       return <div className={"puzzleTile "+(unlocked?"":"locked")} key={n}>
+        <div className="puzzleTileImage" style={{backgroundImage:`url(${experience.familyPuzzle.cartoonUrl})`,backgroundSize:`${cols*100}% ${rows*100}%`,backgroundPosition:`${cols>1?col/(cols-1)*100:0}% ${rows>1?row/(rows-1)*100:0}%`}}/>
+        {!unlocked&&<div className="puzzleLock">🔒</div>}
+       </div>;
+      })}
+     </div>
+     {unlockedPuzzlePieces.size===puzzleTotal&&<p className="puzzleCompleteText">{p.puzzleCompleteText}</p>}
+    </div>;
+   })()}
  </div></div>,document.body)}
+ {flyingPiece&&experience.familyPuzzle?.cartoonUrl&&typeof document!=="undefined"&&createPortal(<div className="puzzleFlyPiece" style={{backgroundImage:`url(${experience.familyPuzzle.cartoonUrl})`,backgroundSize:`400% ${Math.ceil(puzzleTotal/4)*100}%`,backgroundPosition:`${(flyingPiece-1)%4/3*100}% ${Math.floor((flyingPiece-1)/4)/Math.max(1,Math.ceil(puzzleTotal/4)-1)*100}%`}}/>,document.body)}
+ {confettiKey>0&&<Confetti key={confettiKey}/>}
  {albumOpen&&typeof document!=="undefined"&&createPortal(<div className="missionPopupOverlay" role="presentation" onClick={()=>setAlbumOpen(false)}><div className="missionPopupCard albumCard" role="dialog" aria-modal="true" onClick={e=>e.stopPropagation()}><button type="button" className="missionPopupClose" aria-label={lang==="he"?"סגירה":"Close"} onClick={()=>setAlbumOpen(false)}>×</button>
   <h3>{p.albumTitle}</h3>
   {(()=>{const mine=coverMedia.filter(m=>m.uid===uid);return mine.length===0
@@ -458,4 +495,17 @@ export default function Participant({experience,setExperience,setView,setActiveI
 
  return <section className="panel narrow" dir={dir}><div className="tag">{p.tag}</div>{joined?joinedContent:joinForm}
  <div className="actions centerActions"><button onClick={()=>setView("runtime")}>{p.organizerRuntime}</button></div></section>
+}
+
+function Confetti(){
+ const pieces=useMemo(()=>Array.from({length:26},(_,i)=>({
+  left:Math.random()*100,
+  delay:Math.random()*0.25,
+  duration:1+Math.random()*0.6,
+  rotate:Math.random()*360,
+  color:["#7c3aed","#ec4899","#f97316","#22c55e","#3b82f6","#efc186"][i%6],
+ })),[]);
+ return typeof document!=="undefined"?createPortal(<div className="confettiLayer" aria-hidden="true">
+  {pieces.map((c,i)=><span key={i} className="confettiPiece" style={{left:`${c.left}%`,animationDelay:`${c.delay}s`,animationDuration:`${c.duration}s`,background:c.color,transform:`rotate(${c.rotate}deg)`}}/>)}
+ </div>,document.body):null;
 }

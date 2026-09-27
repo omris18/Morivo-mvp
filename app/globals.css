@@ -418,6 +418,18 @@ button:active{transform:scale(.96)}
 .passportStampIcon{font-size:24px}
 .passportStamp b{font-size:11px;color:#152233;font-weight:700}
 .passportEmpty{color:#6b7688;font-size:13px;padding:18px 0}
+.familyPuzzleSection{margin-top:10px}
+.familyPuzzleGrid{display:grid;direction:ltr;gap:2px;border-radius:16px;overflow:hidden;border:2px solid rgba(125,92,255,.25);background:#e5e7eb}
+.puzzleTile{position:relative;aspect-ratio:1;overflow:hidden}
+.puzzleTileImage{position:absolute;inset:0;background-repeat:no-repeat;transition:filter .3s,opacity .3s,transform .3s}
+.puzzleTile.locked .puzzleTileImage{filter:blur(9px) grayscale(1);transform:scale(1.08);opacity:.3}
+.puzzleLock{position:absolute;inset:0;display:grid;place-items:center;background:rgba(30,41,59,.55);color:#fff;font-size:20px}
+.puzzleCompleteText{margin-top:10px;text-align:center;color:#166534;font-weight:800}
+.puzzleFlyPiece{position:fixed;z-index:1400;left:50%;top:50%;width:82px;height:82px;border-radius:14px;overflow:hidden;box-shadow:0 18px 45px rgba(15,23,42,.35);pointer-events:none;background-repeat:no-repeat;animation:puzzleFly 1.15s cubic-bezier(.2,.8,.2,1) forwards}
+@keyframes puzzleFly{0%{transform:translate(-50%,-50%) scale(.45) rotate(-18deg);opacity:0}25%{opacity:1;transform:translate(-50%,-50%) scale(1.15) rotate(8deg)}100%{transform:translate(-50%,-220%) scale(.65) rotate(0);opacity:0}}
+.confettiLayer{position:fixed;inset:0;z-index:1500;pointer-events:none;overflow:hidden}
+.confettiPiece{position:absolute;top:-20px;width:9px;height:14px;border-radius:2px;animation:confettiFall linear forwards;opacity:.95}
+@keyframes confettiFall{0%{transform:translateY(0) rotate(0deg);opacity:1}100%{transform:translateY(105vh) rotate(360deg);opacity:0}}
 .albumGrid{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-top:12px}
 .albumThumb{display:block;border-radius:12px;overflow:hidden;aspect-ratio:1;background:#e8eaf2}
 .albumThumb img,.albumThumb video{width:100%;height:100%;object-fit:cover;display:block}
@@ -973,7 +985,9 @@ body .appShell .accountBar .accountSwitch{background:transparent;border:0;color:
 /* Destination-aware live routes and automatically collected memory albums. */
 .destinationBackdrop{position:absolute;inset:0;background:linear-gradient(135deg,#cce7da,#ebf2d9 50%,#9dccc9);background-repeat:no-repeat;pointer-events:none}
 .routeArtStatus{font-size:13px;color:#31565a;margin:0 0 14px;display:flex;align-items:center;gap:12px;flex-wrap:wrap}
-.routePortraitUpload,.celebrationPhotoPicker{padding:16px;background:#f5f5ec;border:1px solid #dce6de;border-radius:18px;margin:12px 0;display:grid;gap:10px;color:#24494e}
+.routePortraitUpload,.celebrationPhotoPicker,.familyPuzzleBox{padding:16px;background:#f5f5ec;border:1px solid #dce6de;border-radius:18px;margin:12px 0;display:grid;gap:10px;color:#24494e}
+.familyPuzzleUpload{display:inline-block;padding:9px 16px;border-radius:12px;background:#e3eddf;border:1px solid #cde1d8;cursor:pointer;font-weight:600;width:fit-content}
+.familyPuzzleUpload input{display:none}
 .routePortraitUpload label,.celebrationPhotoPicker label{display:grid;gap:8px}.celebrationPhotoPicker img{width:100px;height:100px;object-fit:cover;border-radius:20px}
 .celebrationCartoonBox{margin-top:6px;padding-top:12px;border-top:1px dashed #cdd9cf;display:grid;gap:10px}
 .celebrationCartoonPreview{display:flex;align-items:center;gap:12px;flex-wrap:wrap}
