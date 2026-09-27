@@ -61,8 +61,8 @@ export default function Participant({experience,setExperience,setView,setActiveI
  const [albumOpen,setAlbumOpen]=useState(false);
  const [helpOpen,setHelpOpen]=useState(false);
  function goHome(){
-  const current=document.querySelector(".mapStop.current, .journeySingleStop .mapStopCard");
-  (current||document.querySelector(".journeySvgMap, .journeySingleStop"))?.scrollIntoView({behavior:"smooth",block:"center"});
+  const current=document.querySelector(".mapStop.current");
+  (current||document.querySelector(".journeySvgMap"))?.scrollIntoView({behavior:"smooth",block:"center"});
  }
  const [viewingMission,setViewingMission]=useState(null);
  useEffect(()=>{if(deepLinkCode)setCode(deepLinkCode)},[deepLinkCode]);

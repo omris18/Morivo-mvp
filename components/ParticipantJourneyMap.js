@@ -13,32 +13,15 @@ function dayRangeText(missions,lang){
 
 export default function ParticipantJourneyMap({experience,flow,prog,idx,finished,lang,p,onOpenMission}){
  const he=lang==="he";
- const groups=buildRouteGroups(experience,flow,he);
- const completedIds0=prog.completedMissionIds||[];
- // A single-destination trip is one stop, not a map - render it as a plain card whose day-dot
- // grid wraps to fit every mission, instead of forcing it onto the curved multi-stop layout
- // (which assumes one card per stop and hid extra days behind an invisible scrollbar).
- if(groups.length<=1){
-  const g=groups[0];
-  if(!g)return null;
-  const hotel=g.missions.map(({m})=>m.hotel).find(Boolean);
-  return <div className="journeySingleStop">
-   <div className="mapTitle"><div><strong>{g.label}</strong><small>{finished?p.journeyComplete:p.missionOf(idx+1,flow.length)}</small></div><span>🗺️</span></div>
-   <div className="mapStopCard standalone">
-    {hotel&&<div className="mapStopHead"><span className="mapStopIcon">🏨</span><div className="mapStopCopy"><strong>{hotel}</strong></div></div>}
-    <div className="destinationDays">
-     {g.missions.map(({m,i})=>{
-      const mDone=completedIds0.includes(m.id);
-      const isActive=!finished&&i===idx;
-      const dayState=mDone?"done":isActive?"today":"future";
-      return <button type="button" key={m.id} className={`destinationDay ${dayState}`} onClick={()=>onOpenMission(m,isActive)} aria-label={m.title}>
-       <span className="destinationDayDot">{m.day||i+1}{mDone&&<i className="destinationDayCheck">✓</i>}</span>
-      </button>;
-     })}
-    </div>
-   </div>
-  </div>;
- }
+ const rawGroups=buildRouteGroups(experience,flow,he);
+ const singleDestination=rawGroups.length<=1&&rawGroups[0];
+ // A trip with only one real destination shouldn't merge every mission into a single card -
+ // it still gets the same curved multi-stop map, just with each mission as its own stop along
+ // the route and the shared destination named once, at the top, instead of on every cube.
+ const groups=singleDestination
+  ? rawGroups[0].missions.map(({m,i})=>({key:m.id,label:m.title,destination:rawGroups[0].destination,missions:[{m,i}]}))
+  : rawGroups;
+ const destinationLabel=singleDestination?(rawGroups[0].label||experience.location||experience.name||""):"";
  // Stops are placed at evenly spaced heights (never following the curve's raw y), so two
  // stops can never land close enough to overlap regardless of how the decorative path winds.
  // X alternates left/right for the same "winding road" look without any collision risk.
@@ -55,7 +38,7 @@ export default function ParticipantJourneyMap({experience,flow,prog,idx,finished
  const statusText=finished?p.journeyComplete:p.missionOf(idx+1,flow.length);
  const mapHeight=Math.max(560,240+groups.length*130);
  return <div className="journeySvgMap" style={{minHeight:mapHeight}}>
-  <div className="mapTitle"><div><strong>{he?"מתקדמים בין היעדים":"Moving between stops"}</strong><small>{statusText}</small></div><span>🗺️</span></div>
+  <div className="mapTitle"><div><strong>{singleDestination?destinationLabel:(he?"מתקדמים בין היעדים":"Moving between stops")}</strong><small>{statusText}</small></div><span>🗺️</span></div>
   <svg className="routeSvg" viewBox="0 0 600 820" preserveAspectRatio="none" aria-hidden="true">
    <defs><linearGradient id="participantProgressGradient" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stopColor="#7c3aed"/><stop offset="55%" stopColor="#ec4899"/><stop offset="100%" stopColor="#f97316"/></linearGradient></defs>
    <path className="routePath" d={ROUTE_D}/>
