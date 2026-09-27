@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useState, useRef } from "react";
 import { httpsCallable } from "firebase/functions";
 import QRCode from "qrcode";
 import { firebaseConfigured, functions } from "../lib/firebase";
@@ -19,8 +19,19 @@ export default function Studio({ experience, setExperience, setView, t }) {
   const [publishing, setPublishing] = useState(false);
   const [saveError, setSaveError] = useState(false);
   const [qrImgUrl, setQrImgUrl] = useState(null);
+  const [scrollToInspector, setScrollToInspector] = useState(false);
+  const inspectorRef = useRef(null);
+  const titleInputRef = useRef(null);
 
   const atom = flow.find((x) => x.id === selected) || null;
+
+  useEffect(() => {
+    if (scrollToInspector && atom && inspectorRef.current) {
+      inspectorRef.current.scrollIntoView({ behavior: "smooth", block: "start" });
+      titleInputRef.current?.focus();
+      setScrollToInspector(false);
+    }
+  }, [scrollToInspector, atom]);
 
   useEffect(() => {
     if (atom?.type === "map" && atom.qrCode) {
@@ -152,6 +163,7 @@ export default function Studio({ experience, setExperience, setView, t }) {
     });
 
     setSelected(newAtom.id);
+    setScrollToInspector(true);
   }
 
   function addBranchOption() {
@@ -342,9 +354,10 @@ export default function Studio({ experience, setExperience, setView, t }) {
         </div>
 
         {atom && (
-          <div className="inspector">
+          <div className="inspector" ref={inspectorRef}>
             <label>{s.title}</label>
             <input
+              ref={titleInputRef}
               value={atom.title || ""}
               onChange={(e) => patch({ title: e.target.value })}
             />

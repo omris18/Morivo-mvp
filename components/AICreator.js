@@ -5,8 +5,8 @@ import {firebaseConfigured,functions} from "../lib/firebase";
 import {createExperienceRemote,ensureUser,subscribeSiteAsset,generateBrandImageRemote} from "../lib/morivoData";
 
 const TYPE_OPTIONS={
- en:["Family Trip","Birthday","Team Building","School","Museum"],
- he:["טיול משפחתי","יום הולדת","גיבוש צוות","בית ספר","מוזיאון"]
+ en:["Family Trip","Family Day Trip","Birthday","Team Building","School","Museum"],
+ he:["טיול משפחתי","טיול משפחתי חד יומי","יום הולדת","גיבוש צוות","בית ספר","מוזיאון"]
 };
 const DURATION_OPTIONS={
  en:["30 minutes","1 hour","2-3 hours","Half day (4-5 hours)","Full day"],
@@ -47,8 +47,10 @@ export default function AICreator({setExperience,setView,setActiveId,user,lang,t
   setFormStep(s=>Math.min(TOTAL_STEPS,s+1));
  }
  function goBack(){setFormStep(s=>Math.max(1,s-1))}
- const isFamilyTrip=form.type===TYPE_OPTIONS.en[0]||form.type===TYPE_OPTIONS.he[0];
- const tripDays=isFamilyTrip?daysBetween(form.startDate,form.endDate):0;
+ const isMultiDayFamilyTrip=form.type===TYPE_OPTIONS.en[0]||form.type===TYPE_OPTIONS.he[0];
+ const isSingleDayFamilyTrip=form.type===TYPE_OPTIONS.en[1]||form.type===TYPE_OPTIONS.he[1];
+ const isFamilyTrip=isMultiDayFamilyTrip||isSingleDayFamilyTrip;
+ const tripDays=isMultiDayFamilyTrip?daysBetween(form.startDate,form.endDate):0;
  const [heroArt,setHeroArt]=useState(null),[loadingArt,setLoadingArt]=useState(null),[generatingKey,setGeneratingKey]=useState(null);
  const [customHeroArt,setCustomHeroArt]=useState(null),[customLoadingArt,setCustomLoadingArt]=useState(null);
  useEffect(()=>{const a=subscribeSiteAsset("aiCreatorHero",setHeroArt),b=subscribeSiteAsset("bookBuildingHero",setLoadingArt);return()=>{a();b()}},[]);
@@ -70,8 +72,8 @@ export default function AICreator({setExperience,setView,setActiveId,user,lang,t
  }
  useEffect(()=>{if(!building)return;const id=setInterval(()=>setStep(x=>Math.min(x+1,a.thinking.length-1)),900);return()=>clearInterval(id)},[building,lang]);
  function baseFields(){
-  const needsHotel=isFamilyTrip&&!form.hotelBooked;
-  return {prompt:form.prompt,type:form.type,location:form.location,duration:isFamilyTrip?(tripDays?`${tripDays} days`:""):form.duration,startDate:isFamilyTrip?form.startDate:null,endDate:isFamilyTrip?form.endDate:null,people:isFamilyTrip?String(Number(form.adults||0)+Number(form.children||0)):form.people,peopleDetails:form.peopleDetails,adults:isFamilyTrip?Number(form.adults||0):null,children:isFamilyTrip?Number(form.children||0):null,childrenAges:isFamilyTrip?form.childrenAges.map(Number).filter(Number.isFinite):[],lang,multiDay:isFamilyTrip,needsHotel,interests:isFamilyTrip?form.interests:[]};
+  const needsHotel=isMultiDayFamilyTrip&&!form.hotelBooked;
+  return {prompt:form.prompt,type:form.type,location:form.location,duration:isMultiDayFamilyTrip?(tripDays?`${tripDays} days`:""):form.duration,startDate:isMultiDayFamilyTrip?form.startDate:null,endDate:isMultiDayFamilyTrip?form.endDate:null,people:isFamilyTrip?String(Number(form.adults||0)+Number(form.children||0)):form.people,peopleDetails:form.peopleDetails,adults:isFamilyTrip?Number(form.adults||0):null,children:isFamilyTrip?Number(form.children||0):null,childrenAges:isFamilyTrip?form.childrenAges.map(Number).filter(Number.isFinite):[],lang,multiDay:isMultiDayFamilyTrip,needsHotel,interests:isFamilyTrip?form.interests:[]};
  }
  async function goPlan(){
   if(!form.prompt.trim())return alert(a.describeFirst);
@@ -163,7 +165,7 @@ export default function AICreator({setExperience,setView,setActiveId,user,lang,t
    <h1>{a.reviewTitle}</h1><p>{a.reviewDesc}</p>
    <div className="itineraryPlan">
     {itinerary.plan.map(p=><div className="itineraryStep" key={p.step}>
-     <div className="itineraryStepBadge">{isFamilyTrip?a.dayBadge(p.step):a.partBadge(p.step)}</div>
+     <div className="itineraryStepBadge">{isMultiDayFamilyTrip?a.dayBadge(p.step):a.partBadge(p.step)}</div>
      <input value={p.title} onChange={e=>updatePlanStep(p.step,{title:e.target.value})}/>
      <textarea value={p.summary} onChange={e=>updatePlanStep(p.step,{summary:e.target.value})}/>
     </div>)}
@@ -202,16 +204,18 @@ export default function AICreator({setExperience,setView,setActiveId,user,lang,t
    </div>
 
    <div className={"aiFormStep "+(formStep===2?"active":"")} data-step="2">
-    {isFamilyTrip?
+    {isMultiDayFamilyTrip?
      <div className="fieldRow"><div><label>{a.startDate}</label><input type="date" value={form.startDate} onChange={e=>setForm({...form,startDate:e.target.value,endDate:form.endDate&&form.endDate<e.target.value?"":form.endDate})}/></div><div><label>{a.endDate}</label><input type="date" min={form.startDate||undefined} value={form.endDate} onChange={e=>setForm({...form,endDate:e.target.value})}/></div></div>
+     :isSingleDayFamilyTrip?
+     <div className="fieldRow"><div><label>{a.duration}</label><select value={form.duration} onChange={e=>setForm({...form,duration:e.target.value})}><option value=""></option>{DURATION_OPTIONS[lang].map(x=><option key={x} value={x}>{x}</option>)}</select></div></div>
      :<div className="fieldRow"><div><label>{a.duration}</label><select value={form.duration} onChange={e=>setForm({...form,duration:e.target.value})}><option value=""></option>{DURATION_OPTIONS[lang].map(x=><option key={x} value={x}>{x}</option>)}</select></div><div><label>{a.people}</label><input type="number" value={form.people} onChange={e=>setForm({...form,people:e.target.value})}/></div></div>}
-    {isFamilyTrip&&<div className="fieldRow"><div><label>{a.days}</label><div className="tripLengthDisplay">{tripDays?a.tripLength(tripDays):"—"}</div></div></div>}
-    {isFamilyTrip&&<div className="hotelPartyBox"><div className="tag">{lang==="he"?"הרכב לאירוח":"Stay party"}</div><div className="fieldRow"><div><label>{lang==="he"?"מבוגרים":"Adults"}</label><input type="number" min="1" max="12" value={form.adults} onChange={e=>setForm({...form,adults:e.target.value})}/></div><div><label>{lang==="he"?"ילדים":"Children"}</label><input type="number" min="0" max="8" value={form.children} onChange={e=>setChildrenCount(e.target.value)}/></div></div>{Number(form.children)>0&&<div className="childrenAges"><label>{lang==="he"?"גילי הילדים — כדי למצוא חדר ומחיר מתאימים":"Children ages — for accurate rooms and pricing"}</label><div className="ageGrid">{form.childrenAges.map((age,i)=><input key={i} type="number" min="0" max="17" placeholder={(lang==="he"?"ילד ":"Child ")+(i+1)} value={age} onChange={e=>setChildAge(i,e.target.value)}/>)}</div></div>}</div>}
+    {isMultiDayFamilyTrip&&<div className="fieldRow"><div><label>{a.days}</label><div className="tripLengthDisplay">{tripDays?a.tripLength(tripDays):"—"}</div></div></div>}
+    {isFamilyTrip&&<div className="hotelPartyBox"><div className="tag">{isMultiDayFamilyTrip?(lang==="he"?"הרכב לאירוח":"Stay party"):(lang==="he"?"הרכב משפחתי":"Family composition")}</div><div className="fieldRow"><div><label>{lang==="he"?"מבוגרים":"Adults"}</label><input type="number" min="1" max="12" value={form.adults} onChange={e=>setForm({...form,adults:e.target.value})}/></div><div><label>{lang==="he"?"ילדים":"Children"}</label><input type="number" min="0" max="8" value={form.children} onChange={e=>setChildrenCount(e.target.value)}/></div></div>{Number(form.children)>0&&<div className="childrenAges"><label>{isMultiDayFamilyTrip?(lang==="he"?"גילי הילדים — כדי למצוא חדר ומחיר מתאימים":"Children ages — for accurate rooms and pricing"):(lang==="he"?"גילי הילדים":"Children ages")}</label><div className="ageGrid">{form.childrenAges.map((age,i)=><input key={i} type="number" min="0" max="17" placeholder={(lang==="he"?"ילד ":"Child ")+(i+1)} value={age} onChange={e=>setChildAge(i,e.target.value)}/>)}</div></div>}</div>}
    </div>
 
    <div className={"aiFormStep "+(formStep===3?"active":"")} data-step="3">
     <label>{a.peopleDetails}</label><textarea className="peopleDetailsInput" placeholder={a.peopleDetailsPlaceholder} value={form.peopleDetails} onChange={e=>setForm({...form,peopleDetails:e.target.value})}/>
-    {isFamilyTrip&&<label className="hotelCheck"><input type="checkbox" checked={form.hotelBooked} onChange={e=>setForm({...form,hotelBooked:e.target.checked})}/> {a.hotel}</label>}
+    {isMultiDayFamilyTrip&&<label className="hotelCheck"><input type="checkbox" checked={form.hotelBooked} onChange={e=>setForm({...form,hotelBooked:e.target.checked})}/> {a.hotel}</label>}
     {isFamilyTrip&&<div className="interestsField"><label>{a.interests}</label><div className="chipRow">{Object.keys(a.interestOptions).map(key=><button type="button" key={key} className={"chip "+(form.interests.includes(key)?"selected":"")} onClick={()=>toggleInterest(key)}>{a.interestOptions[key]}</button>)}</div></div>}
    </div>
 
