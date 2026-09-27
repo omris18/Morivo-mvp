@@ -92,9 +92,9 @@ export default function Participant({experience,setExperience,setView,setActiveI
   chooseBranch(option);
  },[mission,experience.branchDecisions,busy]);
  useEffect(()=>{
-  if(!mission||!mission.isLocationPoll||busy)return;
+  if(!mission||mission.type!=="story"||!mission.organizerDecides||busy)return;
   const decided=experience.locationDecisions?.[mission.id];
-  if(!decided||locationPollResolvingRef.current)return;
+  if(!decided||!decided.length||locationPollResolvingRef.current)return;
   locationPollResolvingRef.current=true;
   completeLocationPoll();
  },[mission,experience.locationDecisions,busy]);
@@ -172,7 +172,12 @@ export default function Participant({experience,setExperience,setView,setActiveI
  }
  async function voteLocation(optionId){
   if(!mission||!firebaseConfigured)return;
-  try{await castLocationVote(eid,mission.id,optionId,name)}catch(e){alert(e.message)}
+  const myVoteDoc=locationVotes.find(v=>v.id===`${uid}_${mission.id}`);
+  const current=myVoteDoc?.optionIds||[];
+  const next=mission.isAttractionsPoll
+   ?(current.includes(optionId)?current.filter(id=>id!==optionId):[...current,optionId])
+   :[optionId];
+  try{await castLocationVote(eid,mission.id,next,name)}catch(e){alert(e.message)}
  }
  async function evaluateQuiz(opt){
   if(!mission||busy||quizFeedback)return;
@@ -269,21 +274,26 @@ export default function Participant({experience,setExperience,setView,setActiveI
  {mission.type==="branch"&&(mission.organizerDecides
   ? <div className="branchWaiting">⏳ {p.waitingForOrganizerDecision}</div>
   : <div className="branchChoices">{(mission.options||[]).map(o=><button key={o.id} type="button" className="branchChoiceBtn" disabled={busy||experience.paused} onClick={()=>chooseBranch(o)}>{o.label}</button>)}</div>)}
- {mission.isLocationPoll&&(experience.locationDecisions?.[mission.id]
-  ? <div className="branchWaiting">⏳ {p.waitingForOrganizerDecision}</div>
-  : <div className="locationPoll">
-     {(mission.options||[]).map(o=>{
-      const count=locationVotes.filter(v=>v.missionId===mission.id&&v.optionId===o.id).length;
-      const myVote=locationVotes.find(v=>v.id===uid)?.optionId===o.id;
+ {mission.type==="story"&&mission.organizerDecides&&(()=>{
+    const decided=experience.locationDecisions?.[mission.id];
+    if((decided&&decided.length)||!mission.options||!mission.options.length){
+     return <div className="branchWaiting">⏳ {p.waitingForOrganizerDecision}</div>;
+    }
+    const myVoteIds=locationVotes.find(v=>v.id===`${uid}_${mission.id}`)?.optionIds||[];
+    return <div className="locationPoll">
+     {mission.options.map(o=>{
+      const count=locationVotes.filter(v=>v.missionId===mission.id&&(v.optionIds||[]).includes(o.id)).length;
+      const myVote=myVoteIds.includes(o.id);
       return <button key={o.id} type="button" className={"locationPollOption "+(myVote?"selected":"")} onClick={()=>voteLocation(o.id)}>
        <b>{o.name}</b>{o.why&&<span>{o.why}</span>}
        <small>{p.votesCount(count)}</small>
       </button>;
      })}
      <p className="locationPollHint">{p.locationPollHint}</p>
-    </div>)}
- {mission.type!=="branch"&&!mission.isLocationPoll&&<div className="mission">{p.reward}: {mission.reward||`${mission.points||100} pts`}</div>}
- {mission.type!=="branch"&&mission.type!=="quiz"&&!mission.isLocationPoll&&<>{busy&&(mission.type==="photo"||mission.type==="video")&&<div className="uploadProgress"><div style={{width:`${pct}%`}}></div><span>{pct}%</span></div>}<button className="primary" disabled={busy||experience.paused} onClick={complete}>{busy?p.saving:p.completeContinue}</button></>}</div>}</>;
+    </div>;
+   })()}
+ {mission.type!=="branch"&&!(mission.type==="story"&&mission.organizerDecides)&&<div className="mission">{p.reward}: {mission.reward||`${mission.points||100} pts`}</div>}
+ {mission.type!=="branch"&&mission.type!=="quiz"&&!(mission.type==="story"&&mission.organizerDecides)&&<>{busy&&(mission.type==="photo"||mission.type==="video")&&<div className="uploadProgress"><div style={{width:`${pct}%`}}></div><span>{pct}%</span></div>}<button className="primary" disabled={busy||experience.paused} onClick={complete}>{busy?p.saving:p.completeContinue}</button></>}</div>}</>;
 
  const joinForm=<div className="participantJoin"><div className="participantJoinMark" aria-hidden="true"><span></span><span></span><span></span></div><div className="participantJoinEyebrow">MORIVO · EXPERIENCE</div><h2>{p.joinTitle}</h2><p className="joinInstructions">{lang==="he"?(code?"הקוד כבר מוכן. כתבו את השם שיופיע למארגן ולחצו על הצטרפות.":"קיבלתם קישור או קוד מהמארגן? הזינו שם וקוד כדי להתחיל. אין צורך ליצור חשבון."):(code?"Your code is ready. Enter the name the organizer should see, then join.":"Enter your name and the code from your organizer to get started. No account is needed.")}</p><label htmlFor="participant-name">{p.yourName}</label><input id="participant-name" autoComplete="name" value={name} placeholder={p.namePlaceholder} onChange={e=>setName(e.target.value)}/><label htmlFor="participant-code">{p.joinCode}</label><input id="participant-code" autoCapitalize="characters" value={code} onChange={e=>setCode(e.target.value.toUpperCase())} onKeyDown={e=>e.key==="Enter"&&join()}/><div className="actions centerActions"><button className="primary" disabled={joining} onClick={join}>{joining?p.joining:p.joinBtn}</button></div></div>;
 

@@ -195,17 +195,28 @@ async function suggestAttractions({ location, prompt, people, duration, lang, in
   };
 }
 
-function attractionsMissionFromSelection(selected, location, lang) {
-  if (!Array.isArray(selected) || !selected.length) return null;
-  const text = optionsToMissionText(selected, selected.length, mapsSearchUrl, location);
-  if (!text) return null;
+// Attractions are always a group poll: participants mark whichever ones they're excited about
+// (any number), the organizer sees the tally and confirms the final picks in Runtime, and only
+// then does the mission resolve for everyone - see organizerDecides handling in Participant.js.
+function attractionsPollMission(selected, location, lang) {
+  const options = (Array.isArray(selected) ? selected : []).slice(0, 6).map((o, i) => {
+    const name = String(o?.name || "").trim().slice(0, 100);
+    if (!name) return null;
+    return { id: `attr-${i}`, name, why: String(o?.why || "").trim().slice(0, 220), url: mapsSearchUrl(name, location) };
+  }).filter(Boolean);
+  if (!options.length) return null;
   return {
-    id: `story-${Date.now()}-attractions`,
+    id: `story-${Date.now()}-attractionspoll-${Math.random().toString(36).slice(2, 7)}`,
     type: "story",
-    title: lang === "he" ? "מה לעשות" : "Things to Do",
-    text: text.slice(0, 1400),
+    title: lang === "he" ? "מה נעשה?" : "What should we do?",
+    text: lang === "he"
+      ? "הצביעו על האטרקציות שהכי מעניינות אתכם - אפשר לבחור כמה שרוצים. המארגן יאשר את הבחירה הסופית, ומשם ממשיכים."
+      : "Vote for the attractions you're most excited about - pick as many as you like. The organizer will confirm the final picks, and then everyone continues.",
     reward: "",
     points: 0,
+    isAttractionsPoll: true,
+    organizerDecides: true,
+    options,
   };
 }
 
@@ -222,6 +233,10 @@ function hotelMissionFromSelection(selected, location, lang, opts, destinationLa
     text,
     reward: "",
     points: 0,
+    // The organizer already picked this hotel during planning - participants only need to see
+    // it, not "complete" it like a real task. organizerDecides makes them wait until the
+    // organizer confirms it in Runtime, then everyone advances together (see Participant.js).
+    organizerDecides: true,
   };
 }
 
@@ -409,7 +424,7 @@ exports.generateExperience = onCall({ secrets: [openaiApiKey, geminiApiKey], cor
             : hotelMissionFromSelection(approvedItinerary.selectedHotel, location, lang, hotelUrlOpts)].filter(Boolean))
     : (needsHotel && location) ? suggestHotel({ location, prompt, people, duration, lang, startDate, endDate, adults, children, childrenAges }).then((m) => m ? [m] : []) : Promise.resolve([]);
   const attractionsMissionPromise = hasApprovedPlan
-    ? Promise.resolve(attractionsMissionFromSelection(approvedItinerary.selectedAttractions, location, lang))
+    ? Promise.resolve(attractionsPollMission(approvedItinerary.selectedAttractions, location, lang))
     : (multiDay && location) ? suggestAttractions({ location, prompt, people, duration, lang, interests }) : Promise.resolve(null);
 
   let completion;

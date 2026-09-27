@@ -102,6 +102,7 @@
 .orgDecisionRow{display:flex;flex-wrap:wrap;align-items:center;gap:10px;padding:10px 0;border-top:1px solid rgba(255,255,255,.08)}
 .orgDecisionRow:first-of-type{border-top:0}
 .orgDecisionOptions{display:flex;flex-wrap:wrap;gap:8px}
+.orgDecisionConfirmed{color:#7fd8a0;font-weight:700;font-size:13px}
 .quizFeedbackMsg{padding:10px 14px;border-radius:10px;font-weight:700;margin:8px 0;text-align:center}
 .quizFeedbackMsg.correct{background:rgba(47,157,110,.15);color:#59d39a}
 .quizFeedbackMsg.wrong{background:rgba(161,58,79,.15);color:#f28ba0}
