@@ -387,6 +387,7 @@ button:active{transform:scale(.96)}
 .journeySvgMap .destinationDay.today .destinationDayDot{background:#f97316;color:#fff;transform:scale(1.12);box-shadow:0 0 0 4px rgba(249,115,22,.17),0 4px 10px rgba(15,23,42,.16)}
 .journeySvgMap .destinationDay.future .destinationDayDot{background:#e5e7eb;color:#94a3b8}
 .journeySvgMap .destinationDayCheck{position:absolute;top:-4px;inset-inline-end:-4px;width:12px;height:12px;border-radius:50%;background:#16a34a;color:#fff;font-size:8px;font-style:normal;display:grid;place-items:center;border:1.5px solid #fff;box-shadow:0 1px 3px rgba(15,23,42,.25)}
+.journeySvgMap .destinationDayType{position:absolute;bottom:-4px;inset-inline-start:-4px;width:13px;height:13px;border-radius:50%;background:#fff;font-size:8px;font-style:normal;display:grid;place-items:center;border:1px solid rgba(15,23,42,.12);box-shadow:0 1px 3px rgba(15,23,42,.2)}
 .journeySvgMap .mapDayBadge{position:absolute;top:-10px;left:-7px;min-width:34px;height:34px;padding:0 7px;border-radius:999px;display:grid;place-items:center;background:#fff;color:var(--accent);font-weight:900;font-size:10px;box-shadow:0 5px 13px rgba(15,23,42,.17)}
 [dir="rtl"] .journeySvgMap .mapDayBadge{left:auto;right:-7px}
 .journeySvgMap .mapPlane{position:absolute;z-index:8;font-size:36px;transform:translate(-50%,-50%) rotate(12deg);filter:drop-shadow(0 8px 7px rgba(15,23,42,.22));transition:left 1.1s ease,top 1.1s ease;animation:planeBob 2.2s ease-in-out infinite;pointer-events:none}

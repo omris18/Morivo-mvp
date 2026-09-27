@@ -9,7 +9,7 @@ import {buildRouteGroups} from "../lib/routeGroups";
 import RouteMissionPanel from "./RouteMissionPanel";
 import DestinationBackdrop from "./DestinationBackdrop";
 import LinkifiedText from "./LinkifiedText";
-const icons={photo:"📸",video:"🎬",map:"🗺️",quiz:"🧩",puzzle:"🔐",note:"✍️",story:"📖",reward:"🏆"};
+const icons={photo:"📸",video:"🎬",map:"🗺️",quiz:"✅",puzzle:"🧩",note:"✍️",story:"📖",reward:"🏆"};
 export default function ExperienceRoute({experience,people=[],media=[],answers=[],onMemory,onStudio,onTheme,onSwap,onSaveMission,lang}){
  const he=lang==="he",flow=experience.flow||[],theme=getExperienceTheme(experience);
  const [selected,setSelected]=useState(experience.flow?.[0]?.id||null),[saving,setSaving]=useState(false),[error,setError]=useState(""),[popupMission,setPopupMission]=useState(null);

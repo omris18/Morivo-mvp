@@ -2,6 +2,7 @@
 import {buildRouteGroups} from "../lib/routeGroups";
 
 const ROUTE_D="M92 60 C470 95, 500 180, 135 235 S95 390, 470 420 S500 585, 130 635 S115 760, 500 780";
+const typeIcons={photo:"📸",video:"🎬",map:"🗺️",quiz:"✅",puzzle:"🧩",note:"✍️",story:"📖",branch:"🔀"};
 
 function dayRangeText(missions,lang){
  const days=missions.map(({m})=>m.day).filter(Number.isFinite);
@@ -61,7 +62,7 @@ export default function ParticipantJourneyMap({experience,flow,prog,idx,finished
      <div className="mapStopCard" role="button" tabIndex={0} onClick={openDefault} onKeyDown={e=>{if(e.key==="Enter"||e.key===" "){e.preventDefault();openDefault()}}}>
       {rangeText&&<span className="mapDayBadge">{rangeText}</span>}
       <div className="mapStopHead">
-       <span className="mapStopIcon">📍</span>
+       <span className="mapStopIcon">{g.missions.length===1?(typeIcons[g.missions[0].m.type]||"📍"):"📍"}</span>
        <div className="mapStopCopy"><strong>{g.label}</strong><small>{hotel||(he?"תחנה במסע":"A stop on the journey")}</small></div>
       </div>
       <div className="mapStopActions">
@@ -74,7 +75,7 @@ export default function ParticipantJourneyMap({experience,flow,prog,idx,finished
         const isActive=!finished&&i===idx;
         const dayState=mDone?"done":isActive?"today":"future";
         return <button type="button" key={m.id} className={`destinationDay ${dayState}`} onClick={e=>{e.stopPropagation();onOpenMission(m,isActive)}} aria-label={m.title}>
-         <span className="destinationDayDot">{m.day||i+1}{mDone&&<i className="destinationDayCheck">✓</i>}</span>
+         <span className="destinationDayDot">{m.day||i+1}{mDone&&<i className="destinationDayCheck">✓</i>}{typeIcons[m.type]&&<i className="destinationDayType">{typeIcons[m.type]}</i>}</span>
         </button>;
        })}
       </div>
