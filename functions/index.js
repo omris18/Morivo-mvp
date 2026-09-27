@@ -9,6 +9,8 @@ const db = admin.firestore();
 
 const openaiApiKey = defineSecret("OPENAI_API_KEY");
 const geminiApiKey = defineSecret("GEMINI_API_KEY");
+const {normalizeMission} = require("./missionAnswers");
+exports.generateExperienceArtwork = require("./experienceArtwork")(admin, openaiApiKey);
 
 const MISSION_TYPES = ["photo", "video", "quiz", "puzzle", "note", "map", "story", "reward"];
 
@@ -16,6 +18,7 @@ function sanitizeFlow(rawFlow) {
   return (rawFlow || [])
     .filter((m) => m && typeof m === "object")
     .map((m, i) => {
+      m = normalizeMission(m);
       const type = MISSION_TYPES.includes(m.type) ? m.type : "story";
       const atom = {
         id: `${type}-${Date.now()}-${i}`,
@@ -33,7 +36,7 @@ function sanitizeFlow(rawFlow) {
         if (options.length >= 2) {
           const rawAnswer = String(m.answer || "").slice(0, 120);
           atom.options = options;
-          atom.answer = options.includes(rawAnswer) ? rawAnswer : options[0];
+          atom.answer = options.includes(rawAnswer) ? rawAnswer : "";
         }
       }
       return atom;
@@ -52,10 +55,10 @@ If a "Who's joining" section is provided below the description, listing names, a
 Vary the mission types meaningfully:
 ${MISSION_TYPES.join(", ")}
 - "photo"/"video": ask participants to capture something specific and evocative, tied to a real detail from the description - not just "take a photo".
-- "note": ask for a short written memory, reflection, opinion or personal answer that only makes sense for this specific group and occasion. Use "note" (never "puzzle") whenever what people type is inherently personal or subjective - everyone's honest answer is valid and there is no single right one (e.g. "what's your favorite memory of X", "what are you most excited for").
+- "note": ALL personal reflections, opinions, feelings and closing questions such as "what did you learn today?" MUST use this type. Every personal answer is valid. NEVER use quiz or puzzle for these; omit answer/options.
 - "map": a lightweight in-context challenge, written using real names/places/facts from the description where possible (the app currently renders this as a simple generic prompt, so keep the mission's "text" self-contained and understandable without extra UI).
-- "quiz": a specific multiple-choice question built from a real detail in the description (a name, place, date, shared fact) - "text" is the question itself. Include an "options" array of exactly 3 or 4 short answer choices (a few words each, no "A."/"1." prefixes, no duplicates) and an "answer" field that is the exact text of the one correct option, copied character-for-character from "options". Exactly one option must be unambiguously correct given the description. Only use "quiz" when the question is objective (a fact, date, name, place) - if it's a matter of opinion or personal taste, use "note" instead.
-- "puzzle": write a short, solvable riddle, cipher or word puzzle in "text" (built from a real detail in the description when possible - a name, place or shared memory), and include its solution as a separate "answer" field (a single word or short phrase, lowercase, no punctuation) - the app validates the participant's typed answer against it, so the riddle must have exactly one unambiguous correct answer. Never use "puzzle" for an open-ended prompt that different people would legitimately complete differently - that's a "note", not a puzzle.
+- "quiz": a specific multiple-choice question built from a real detail in the description (a name, place, date, shared fact) - "text" is the question itself. Include an "options" array of exactly 3 or 4 short answer choices (a few words each, no "A."/"1." prefixes, no duplicates) and an "answer" field that is the exact text of the one correct option, copied character-for-character from "options". Exactly one option must be unambiguously correct given the description.
+- "puzzle": write a short, solvable riddle, cipher or word puzzle in "text" (built from a real detail in the description when possible - a name, place or shared memory), and include its solution as a separate "answer" field (a single word or short phrase, lowercase, no punctuation) - the app validates the participant's typed answer against it, so the riddle must have exactly one unambiguous correct answer.
 - "story": a narrative beat with no participant action, used for openings/transitions/closings - reference the actual occasion, not a generic "the beginning".
 - "reward": a payoff moment that ties back to something earlier in the journey.
 
@@ -493,7 +496,8 @@ exports.translateExperience = onCall({ secrets: [openaiApiKey], cors: true, time
           const translated = Array.isArray(t?.options) ? t.options.map((o) => String(o || "").slice(0, 120)) : [];
           const options = translated.length === m.options.length ? translated : m.options;
           const rawAnswer = t?.answer ? String(t.answer).slice(0, 120) : "";
-          return { options, answer: options.includes(rawAnswer) ? rawAnswer : options[0] };
+          const correctIndex = m.options.indexOf(normalizeMission(m).answer);
+          return { options, answer: options.includes(rawAnswer) ? rawAnswer : (options[correctIndex] || "") };
         })()
         : {}),
       ...(m.hotel && t?.hotel ? { hotel: String(t.hotel).slice(0, 120) } : {}),
@@ -641,7 +645,7 @@ exports.reviseExperience = onCall({ secrets: [openaiApiKey], cors: true, timeout
     completion = await client.chat.completions.create({
       model: "gpt-4o-mini",
       messages: [
-        { role: "system", content: REVISE_SYSTEM_PROMPT },
+        { role: "system", content: REVISE_SYSTEM_PROMPT + '\nPersonal reflections, opinions, feelings and closing questions such as what did you learn MUST be type note with no answer or options. Never grade a personal reflection. Only factual questions and riddles may have one correct answer.' },
         { role: "user", content: userPrompt },
       ],
       response_format: { type: "json_object" },

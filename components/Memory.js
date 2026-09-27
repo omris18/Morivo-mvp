@@ -4,6 +4,9 @@ import { httpsCallable } from "firebase/functions";
 import { firebaseConfigured, functions } from "../lib/firebase";
 import { subscribeMedia } from "../lib/mediaData";
 import { subscribeAnswers, subscribeAllProgress, subscribeExperience, updateExperienceRemote, ensureUser } from "../lib/morivoData";
+import MemoryAlbum from "./MemoryAlbum";
+import DestinationBackdrop from "./DestinationBackdrop";
+import {getExperienceTheme,buildMemoryChapters,journeyFinished} from "../lib/experienceVisuals";
 import LinkifiedText from "./LinkifiedText";
 
 function MediaThumb({m}){
@@ -14,7 +17,7 @@ function MediaThumb({m}){
 
 const ICONS={photo:"📸",video:"🎥",quiz:"❓",puzzle:"🧩",note:"📝",map:"📍",story:"📖",reward:"🏆"};
 
-export default function Memory({experience,setExperience,setView,t,user,publicView,memoryId,dir}){
+export default function Memory({experience,setExperience,setView,t,user,publicView,memoryId,dir,participantView=false}){
  const m2=t.memory;
  const [writing,setWriting]=useState(false);
  const [sharing,setSharing]=useState(false);
@@ -40,13 +43,11 @@ export default function Memory({experience,setExperience,setView,t,user,publicVi
   const a=subscribeMedia(exp.id,setMedia),b=subscribeAnswers(exp.id,setAnswers),c=subscribeAllProgress(exp.id,setProgress);return()=>{a();b();c()}},[exp.id]);
 
  const flow=exp.flow||[];
- const chapters=useMemo(()=>flow.map(m=>({
-   mission:m,
-   photos:media.filter(x=>x.missionId===m.id),
-   quotes:answers.filter(x=>x.missionId===m.id),
- })).filter(c=>c.photos.length||c.quotes.length),[flow,media,answers]);
-
- const finishers=progress.filter(p=>flow.length&&(p.currentMissionIndex||0)>=flow.length).length;
+ const he=dir==="rtl";
+ const theme=getExperienceTheme(exp);
+ const chapters=useMemo(()=>buildMemoryChapters(flow,media,answers,progress,he?"עוד רגעים מהמסע":"More moments from the journey"),[flow,media,answers,progress,he]);
+ const finishers=progress.filter(p=>journeyFinished(p,flow)).length;
+ const allFinished=participantView||finishers>0;
  const canWriteStory=firebaseConfigured&&exp.id&&exp.id!=="thailand-demo"&&chapters.length>0&&isOwner;
  const canShare=firebaseConfigured&&exp.id&&exp.id!=="thailand-demo"&&isOwner;
  const coverPhoto=media.find(m=>!m.contentType?.startsWith("video/"));
@@ -81,14 +82,16 @@ export default function Memory({experience,setExperience,setView,t,user,publicVi
  <div className="mbToolbar">
   <span className="mbToolbarLabel">{m2.morivoMemoryBook}</span>
   <div className="actions mbActions">
-   {!publicView&&<button onClick={()=>setView("runtime")}>{m2.backToRuntime}</button>}
+   {!publicView&&!participantView&&<button onClick={()=>setView("runtime")}>{m2.backToRuntime}</button>}
    <button className="primary" onClick={()=>window.print()}>{m2.exportPrint}</button>
   </div>
  </div>
+ <div className="albumAutoStatus">{allFinished?(he?"רגעים שהשלמנו · ספר הזיכרונות שלכם מוכן":"Completed moments · your memory book is ready"):(he?"ספר חי · הרגעים שלכם נאספים כאן אוטומטית":"A living book · your moments are collected automatically")}</div>
  <section className="memoryBook" dir={dir}>
 
   <div className="mbCover" style={coverPhoto?{backgroundImage:`url(${coverPhoto.downloadURL})`}:undefined}>
-   {!coverPhoto&&<div className="mbCoverArt" aria-hidden="true"><span>✦</span></div>}
+   {!coverPhoto&&<DestinationBackdrop theme={theme}/>}
+   {!coverPhoto&&<span className="bookCoverIllustration">{he?"איור בהשראת היעד":"Destination-inspired illustration"}</span>}
    <div className="mbCoverShade"></div>
    <div className="mbCoverFrame"></div>
    <div className="mbCoverContent">
@@ -125,14 +128,7 @@ export default function Memory({experience,setExperience,setView,t,user,publicVi
    {canWriteStory&&<button className="mbWriteBtn" disabled={writing} onClick={writeStory}>{writing?m2.writing:exp.memoryStory?m2.rewriteWithAI:m2.writeWithAI}</button>}
   </div>
 
-  {chapters.length>0&&<div className="mbSection mbChapters">
-   <div className="mbHeading">{m2.chapters}</div>
-   {chapters.map(c=><div className="mbChapter" key={c.mission.id}>
-    <h3>{ICONS[c.mission.type]||"✦"} {c.mission.title}</h3>
-    {c.photos.length>0&&<div className="polaroidRow">{c.photos.map((p,i)=><div className="polaroid" key={p.id} style={{transform:`rotate(${(i%2?1:-1)*(2+i%3)}deg)`}}><MediaThumb m={p}/></div>)}</div>}
-    {c.quotes.map(q=><blockquote className="mbQuote" key={q.id}>“{q.text}”<cite>— {q.participantName}</cite></blockquote>)}
-   </div>)}
-  </div>}
+  <MemoryAlbum chapters={chapters} theme={theme} he={he}/>
 
   {canShare&&<div className="mbSection mbShareSection">
    <div className="mbShare">

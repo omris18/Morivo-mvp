@@ -842,3 +842,135 @@ body .appShell .firebaseStatus .dot{background:#238464;box-shadow:none}
 body .appShell .aiCreate>.panel:first-child>p{color:#526f78}
 body .appShell :is(.aiTop .tag,.thinkingCopy .tag,.mbToolbarLabel){color:#397879}
 body .appShell .accountBar .accountSwitch{background:transparent;border:0;color:#19797e}
+
+/* Destination-aware live routes and automatically collected memory albums. */
+.destinationBackdrop{position:absolute;inset:0;background:linear-gradient(135deg,#cce7da,#ebf2d9 50%,#9dccc9);background-repeat:no-repeat;pointer-events:none}
+.routeArtStatus{font-size:13px;color:#31565a;margin:0 0 14px;display:flex;align-items:center;gap:12px;flex-wrap:wrap}
+.routePortraitUpload,.celebrationPhotoPicker{padding:16px;background:#f5f5ec;border:1px solid #dce6de;border-radius:18px;margin:12px 0;display:grid;gap:10px;color:#24494e}
+.routePortraitUpload label,.celebrationPhotoPicker label{display:grid;gap:8px}.celebrationPhotoPicker img{width:100px;height:100px;object-fit:cover;border-radius:20px}
+.celebrationPortraitFrame{position:absolute;right:3%;bottom:5%;width:clamp(90px,23%,185px);aspect-ratio:4/5;padding:7px;background:#fff9ed;border:3px solid #ecb653;border-radius:45% 45% 20px 20px;box-shadow:0 8px 25px #193e4030;transform:rotate(5deg)}
+.celebrationPortraitFrame img{width:100%;height:100%;object-fit:cover;border-radius:inherit}.celebrationPortraitFrame span{position:absolute;bottom:-12px;inset-inline:0;text-align:center;font-size:24px}
+.answerModeEditor{margin:16px 0;padding:12px;border-radius:12px;background:#eef7f2}.answerModeEditor p{font-size:13px;color:#305752}
+.destination-celebration{background:radial-gradient(circle at 15% 20%,#f9c97e 0,transparent 28%),radial-gradient(circle at 80% 60%,#e9b5c2 0,transparent 35%),linear-gradient(140deg,#ffe5c7,#faf0e5)}
+.destination-learning{background:radial-gradient(circle at 80% 12%,#dfd2f2 0,transparent 38%),linear-gradient(145deg,#e1f0dd,#d2e6e8)}
+.destination-nature{background:radial-gradient(ellipse at 5% 100%,#8cb099,transparent 60%),linear-gradient(145deg,#e3f1db,#a5ced1)}
+.experienceRoute{margin:28px 0 18px}
+.routeHeading{display:flex;align-items:center;justify-content:space-between;gap:20px;margin-bottom:18px}
+.routeEyebrow{font-size:11px;letter-spacing:.12em;color:var(--route-accent,#28757b);font-weight:700}
+body .appShell .routeHeading h3{font:750 28px/1.25 system-ui;margin:8px 0}
+.routeHeading p{font-size:12px;margin:0;line-height:1.6}
+.routeThemePicker{font-size:11px;display:grid;gap:6px;min-width:180px}
+.routeThemePicker select{padding:9px;border-radius:10px;max-width:230px}
+.routeLayout{display:grid;grid-template-columns:minmax(0,1.6fr) minmax(230px,.8fr);gap:18px}
+.routeScroll{max-height:650px;overflow:auto;border-radius:24px;border:1px solid #d8e3d5;scrollbar-color:#73a99a #e9f3e8}
+.routeBoard{position:relative;min-height:310px;isolation:isolate;overflow:hidden}
+.routeBoard .destinationBackdrop{background-size:300% 100%;opacity:.95}
+.routeVeil{position:absolute;inset:0;background:linear-gradient(180deg,rgba(255,252,234,.2),rgba(255,251,236,.4));pointer-events:none}
+.routePath{position:absolute;inset:0;width:100%;height:100%;overflow:visible}
+.routePath path{fill:none;stroke:#fff8da;stroke-width:7;stroke-dasharray:9 8;filter:drop-shadow(0 2px 2px #677d62)}
+.routeStop{position:absolute;transform:translate(-50%,-50%);width:39%;min-height:112px;padding:14px 10px 10px;background:rgba(255,253,245,.95);border:2px solid #fffcf0;border-radius:18px;box-shadow:0 8px 22px rgba(31,75,57,.2);color:#24515c;cursor:pointer;text-align:center;transition:box-shadow .2s,border-color .2s}
+.routeStop.selected{border-color:var(--route-accent);box-shadow:0 0 0 4px rgba(255,255,255,.65),0 10px 25px rgba(28,68,55,.2)}
+.routeStop:focus-visible{outline:3px solid #e98c54;outline-offset:5px}
+.routeStopNumber{position:absolute;inset-inline-start:8px;top:8px;background:var(--route-accent);color:#fff;width:23px;height:23px;border-radius:50%;display:grid;place-items:center;font-size:11px;font-weight:700}
+.routeStopIcon{display:block;font-size:22px;margin-bottom:6px;color:var(--route-accent)}
+.routeStop strong{display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden;font-size:13px;line-height:1.35}
+.routeStop small{display:block;font-size:10px;margin-top:5px;color:#546f65}
+.routeStop.visited .routeStopNumber{background:#2d8064}
+.routeDetail{background:#f4f8ef;border:1px solid #dce7d7;border-radius:20px;padding:23px;align-self:start}
+.routeDetail h3{font-size:23px;line-height:1.3;margin:10px 0}
+.routeDescription{max-height:230px;overflow:auto;font-size:13px;line-height:1.8;white-space:pre-wrap;overflow-wrap:anywhere}
+.routeCounts{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin:20px 0;border-block:1px solid #d8e5d4;padding:16px 0}
+.routeCounts span{font-size:10px;color:#5e756c;display:flex;flex-direction:column;gap:6px}
+.routeCounts b{font-size:25px;color:#245b5b}
+.routePeople{display:flex;flex-wrap:wrap;gap:6px;margin-bottom:15px}
+.routePeople span{padding:6px 10px;background:#deeee0;border-radius:999px;font-size:11px;color:#32654f}
+.routeBookButton,.routeEmpty button{display:block;width:100%;border:0;border-radius:12px;background:#e77050;color:#fff;padding:13px;font-weight:700;cursor:pointer;margin:18px 0 12px}
+.routeMapLink{display:inline-block;color:#226f80;font-size:13px;padding:10px 0}
+.routeDetail>small{display:block;font-size:11px;line-height:1.6}
+.routeEmpty{position:relative;isolation:isolate;overflow:hidden;border-radius:22px;min-height:300px;display:grid;place-items:center;padding:30px}
+.routeEmpty>div:last-child{position:relative;max-width:480px;background:rgba(255,253,244,.94);border:1px solid white;padding:26px;border-radius:18px;text-align:center}
+.routeEmpty h3{font-size:25px;margin:0 0 12px}
+.routeEmpty p{line-height:1.7}
+.participantMatrix{border:1px solid #d5e3d8;border-radius:14px;padding:15px;margin:24px 0}
+.participantMatrix summary{cursor:pointer;color:#3e696d;font-size:13px;font-weight:700}
+.participantMatrix .journeyTable{margin-top:18px}
+body .appShell .runtimePage .runtimeStats>div{background:#f0f7ef;border-color:#d3e5d7;color:#235663}
+body .appShell .runtimePage .runtimeStats b{color:#245f62}
+body .appShell .runtimePage .runtimeStats span,body .appShell .runtimePage .joinMini small{color:#506f74}
+body .appShell .runtimePage .joinMini{background:#eef7f0;border-color:#c8e0d0;color:#235663}
+.albumAutoStatus{font-size:12px;color:#356d62;background:#e4f2e7;border:1px solid #c9e0cf;padding:12px 18px;border-radius:12px;margin:0 0 16px}
+.memoryPage .mbCover{min-height:390px}
+.memoryPage .mbCover .destinationBackdrop{background-size:300% 100%}
+.bookCoverIllustration{position:absolute;inset-inline-end:30px;top:28px;z-index:3;color:white;font-size:10px;background:rgba(20,64,58,.65);border-radius:999px;padding:6px 10px}
+.memoryPage .mbCoverContent{max-width:100%;padding:42px}
+body .appShell .memoryPage .mbCoverShade,.memoryPage .mbCoverShade{background:linear-gradient(0deg,rgba(13,55,58,.9),rgba(13,55,58,.2) 75%);z-index:1}
+.memoryPage .mbCoverContent h1{color:#fff8ec!important}
+.memoryPage .mbCoverContent .mbSub{color:#e1efe4!important}
+.memoryAlbum{padding:0 24px 32px}
+.albumControls{display:flex;align-items:center;justify-content:space-between;gap:14px;padding:24px 0;color:#526c65;font-size:12px}
+.albumControls button{min-height:42px;border-radius:999px;border:1px solid #c4d5c6;background:#fffaf0;color:#245e64;padding:10px 18px;cursor:pointer}
+.albumControls button:disabled{opacity:.35;cursor:default}
+.albumSpread{display:none;grid-template-columns:1fr 1fr;min-height:480px;background:linear-gradient(90deg,#fffcf3 0%,#f3eedf 49.5%,#d9cfb9 50%,#fffcf3 51%);border:1px solid #e4dbc5;border-radius:12px;box-shadow:0 18px 30px rgba(91,71,39,.12);overflow:hidden;position:relative;animation:albumPageIn .35s ease}
+.albumSpread.isCurrent{display:grid}
+@keyframes albumPageIn{from{opacity:.3;transform:translateY(8px)}to{opacity:1;transform:translateY(0)}}
+.albumPhotos{padding:28px 22px;display:grid;grid-template-columns:1fr 1fr;gap:16px;align-content:center;min-width:0}
+.albumPhotos.singlePhoto{grid-template-columns:1fr}
+.albumPhotos figure{margin:0;padding:7px 7px 20px;background:#fff;box-shadow:0 7px 16px rgba(75,56,25,.15);border-radius:3px;min-width:0;break-inside:avoid}
+.albumPhotos figure:nth-child(2n){transform:rotate(2deg)}
+.albumPhotos figure:nth-child(2n+1){transform:rotate(-2deg)}
+.albumPhotos img,.albumPhotos video{width:100%;height:180px;object-fit:cover;display:block}
+.albumPhotos.singlePhoto img,.albumPhotos.singlePhoto video{height:330px;object-fit:contain;background:#f2eee2}
+.albumPhotos figcaption{font-size:10px;text-align:center;color:#776747;padding-top:7px}
+.albumIllustration{grid-column:1/-1;position:relative;border-radius:8px;overflow:hidden;min-height:350px}
+.albumIllustration span{position:absolute;inset-inline:16px;bottom:16px;background:rgba(255,253,243,.9);border-radius:8px;padding:10px;text-align:center;color:#577467;font-size:12px}
+.albumWords{padding:34px 28px;position:relative;min-width:0;overflow-wrap:anywhere;display:flex;flex-direction:column;align-items:flex-start}
+.albumChapterNumber{font:italic 54px Georgia,serif;color:#cdae75;line-height:1;margin-bottom:18px}
+.albumWords h2{font:700 27px/1.3 system-ui;margin:0 0 22px;color:#24565c!important}
+.albumWords blockquote{margin:0 0 20px;padding:10px 16px;border-inline-start:3px solid #d8b77b;color:#586354;font:italic 18px/1.8 Georgia,serif}
+.albumWords cite{display:block;font:12px system-ui;margin-top:10px;color:#837153}
+.albumMission small{color:#977644;font-size:11px}
+.albumMission p{font-size:13px;line-height:1.8;white-space:pre-wrap}
+.albumStamp{border:1px solid #9aba9c;color:#527759;border-radius:8px;padding:8px 12px;font-size:11px;transform:rotate(-3deg);margin:18px 0}
+.albumPageNumber{font-size:9px;letter-spacing:.12em;color:#9a8a6b;margin-top:auto;padding-top:25px}
+.albumEmpty{padding:36px;text-align:center;background:#f7f4e8}
+.albumEmpty h3{color:#285d64;font-size:24px}
+.albumEmpty p{font-size:14px;line-height:1.8;color:#62776d}
+.finishedMemoryBook{position:relative;margin-top:32px;text-align:start;max-width:100%}
+.finishedMemoryBook .memoryPage{padding-bottom:0}
+.finishedMemoryBook .albumSpread{grid-template-columns:1fr}
+.finishedMemoryBook .albumPhotos{padding:20px}
+.finishedMemoryBook .mbStats{grid-template-columns:repeat(2,minmax(0,1fr))}
+.finishedMemoryBook .mbSection{padding:24px}
+.finishedMemoryBook .mbCoverContent{padding:28px}
+.finishedMemoryBook .mbCoverContent h1{font-size:32px}
+@media(max-width:1000px){.routeLayout{grid-template-columns:minmax(0,1fr)}.routeDetail{display:block}.routeScroll{max-height:520px}}
+@media(max-width:700px){
+ .routeHeading{align-items:stretch;flex-direction:column}
+ .routeThemePicker select{max-width:100%}
+ .routeStop{width:43%;min-height:116px}
+ .routeStop strong{font-size:12px}
+ .routeDetail{padding:20px}
+ .memoryAlbum{padding:0 14px 22px}
+ .albumSpread{grid-template-columns:1fr;background:#fffaf0}
+ .albumPhotos{padding:22px}
+ .albumWords{padding:26px}
+ .albumPhotos img,.albumPhotos video{height:155px}
+ .albumPhotos.singlePhoto img,.albumPhotos.singlePhoto video{height:270px}
+ .memoryPage .mbCoverContent{padding:30px}
+}
+@media(prefers-reduced-motion:reduce){.albumSpread{animation:none}}
+@media print{
+ .albumControls,.albumAutoStatus,.bookCoverIllustration{display:none!important}
+ .memoryAlbum{padding:0}
+ .albumSpread,.albumSpread.isCurrent{display:grid!important;grid-template-columns:1fr 1fr;box-shadow:none;break-before:page;break-inside:avoid;min-height:0;animation:none}
+ .albumPhotos figure{transform:none!important}
+ .albumPhotos img,.albumPhotos video{height:160px}
+ .memoryPage .mbCover{break-after:page}
+ .albumWords{padding:24px}
+ .albumIllustration{min-height:270px}
+ .finishedMemoryBook{margin:0}
+}
+
+body .appShell .runtimePage .missionPerfRow b,body .appShell .runtimePage .rosterHint{color:#476974}
+body .appShell .runtimePage .missionPerfBar{background:#dce9df}
+body .appShell .runtimePage .missionPerfBar span{background:#459982}
