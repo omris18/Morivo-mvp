@@ -136,10 +136,10 @@ export default function AICreator({setExperience,setView,setActiveId,user,lang,t
    ...(hasDestinations?{
     selectedHotels:itinerary.hotelsByDestination.map(d=>{
      const idx=selectedHotelByDestination[d.destination];
-     return {destination:d.destination,hotel:idx===-2?{poll:true,candidates:d.options||[]}:idx>=0?(d.options||[])[idx]||null:null};
+     return {destination:d.destination,hotel:idx===-2?{poll:true,candidates:d.options||[]}:idx>=0?{...(d.options||[])[idx],candidates:d.options||[]}:null};
     }),
    }:{
-    selectedHotel:selectedHotelIndex===-2?{poll:true,candidates:itinerary.hotels||[]}:selectedHotelIndex>=0?(itinerary.hotels||[])[selectedHotelIndex]:null,
+    selectedHotel:selectedHotelIndex===-2?{poll:true,candidates:itinerary.hotels||[]}:selectedHotelIndex>=0?{...(itinerary.hotels||[])[selectedHotelIndex],candidates:itinerary.hotels||[]}:null,
    }),
   }:null;
   setPhase("building");setBuilding(true);setStep(0);

@@ -222,10 +222,18 @@ function attractionsPollMission(selected, location, lang) {
   };
 }
 
-function hotelMissionFromSelection(selected, location, lang, opts, destinationLabel) {
+function hotelMissionFromSelection(selected, location, lang, opts, destinationLabel, candidates) {
   if (!selected) return null;
   const text = optionsToMissionText([selected], 1, bookingSearchUrl, location, opts);
   if (!text) return null;
+  // Even though the organizer already picked one hotel during planning, keep the other
+  // suggestions they saw as poll options - participants can still vote for one of those, or
+  // write in their own, and the organizer makes the final call in Runtime (see Participant.js).
+  const options = (Array.isArray(candidates) ? candidates : []).slice(0, 4).map((c, i) => {
+    const name = String(c?.name || "").trim().slice(0, 100);
+    if (!name) return null;
+    return { id: `loc-${i}`, name, why: String(c?.why || "").trim().slice(0, 220), url: bookingSearchUrl(name, location, opts) };
+  }).filter(Boolean);
   return {
     id: `story-${Date.now()}-hotel-${Math.random().toString(36).slice(2, 7)}`,
     type: "story",
@@ -240,6 +248,7 @@ function hotelMissionFromSelection(selected, location, lang, opts, destinationLa
     // organizer confirms it in Runtime, then everyone advances together (see Participant.js).
     organizerDecides: true,
     destination: destinationLabel || location || "",
+    ...(options.length ? { options } : {}),
   };
 }
 
@@ -424,10 +433,10 @@ exports.generateExperience = onCall({ secrets: [openaiApiKey, geminiApiKey], cor
     ? Promise.resolve(Array.isArray(approvedItinerary.selectedHotels)
         ? approvedItinerary.selectedHotels.map((sel) => sel?.hotel?.poll
             ? hotelPollMission(sel.hotel.candidates, sel.destination, lang, hotelUrlOpts, sel.destination)
-            : hotelMissionFromSelection(sel?.hotel, sel.destination, lang, hotelUrlOpts, sel.destination)).filter(Boolean)
+            : hotelMissionFromSelection(sel?.hotel, sel.destination, lang, hotelUrlOpts, sel.destination, sel?.hotel?.candidates)).filter(Boolean)
         : [approvedItinerary.selectedHotel?.poll
             ? hotelPollMission(approvedItinerary.selectedHotel.candidates, location, lang, hotelUrlOpts)
-            : hotelMissionFromSelection(approvedItinerary.selectedHotel, location, lang, hotelUrlOpts)].filter(Boolean))
+            : hotelMissionFromSelection(approvedItinerary.selectedHotel, location, lang, hotelUrlOpts, undefined, approvedItinerary.selectedHotel?.candidates)].filter(Boolean))
     : (needsHotel && location) ? suggestHotel({ location, prompt, people, duration, lang, startDate, endDate, adults, children, childrenAges }).then((m) => m ? [m] : []) : Promise.resolve([]);
   const attractionsMissionPromise = hasApprovedPlan
     ? Promise.resolve(attractionsPollMission(approvedItinerary.selectedAttractions, location, lang))
