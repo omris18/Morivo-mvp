@@ -10,6 +10,7 @@ import ExperienceShare from "./ExperienceShare";
 import {missionLabels} from "../lib/experienceGuidance";
 import missionAnswers from "../functions/missionAnswers";
 import { getCurrentPosition } from "../lib/geo";
+import { pieceAtGridIndex } from "../lib/familyPuzzle";
 
 export default function Studio({ experience, setExperience, setView, t, lang }) {
   const he=lang==="he",labels=missionLabels[he?"he":"en"];
@@ -357,21 +358,34 @@ export default function Studio({ experience, setExperience, setView, t, lang }) 
               try{await uploadFamilyPhoto(experience.id,file)}catch(err){setPuzzlePhotoError(err.message)}finally{setPuzzlePhotoSaving(false);e.target.value=""}
             }}/>
           </label>
-          {(puzzlePhotoPreview||experience.familyPuzzle?.url)&&<div className="celebrationCartoonPreview">
-            <img src={experience.familyPuzzle?.url||puzzlePhotoPreview} alt={s.familyPuzzleTag}/>
+          {puzzlePhotoPreview&&!experience.familyPuzzle?.url&&<div className="celebrationCartoonPreview">
+            <img src={puzzlePhotoPreview} alt={s.familyPuzzleTag}/>
           </div>}
           {puzzlePhotoError&&<p className="quizNoCorrect">⚠ {puzzlePhotoError}</p>}
-          {experience.familyPuzzle?.url&&<div className="celebrationCartoonBox">
-            <button type="button" disabled={puzzleShuffling} onClick={async()=>{
-              setPuzzleShuffling(true);setPuzzleShuffleError("");
-              try{await reshuffleFamilyPuzzleLayout(experience.id,experience.familyPuzzle.totalPieces||8)}catch(err){setPuzzleShuffleError(err.message)}finally{setPuzzleShuffling(false)}
-            }}>{puzzleShuffling?s.saving:s.shufflePuzzleBtn}</button>
-            <button type="button" disabled={puzzleRemoving} onClick={async()=>{
-              setPuzzleRemoving(true);setPuzzleShuffleError("");
-              try{await removeFamilyPuzzle(experience.id);setPuzzlePhotoPreview(null)}catch(err){setPuzzleShuffleError(err.message)}finally{setPuzzleRemoving(false)}
-            }}>{puzzleRemoving?s.saving:s.familyPuzzleRemove}</button>
-            {puzzleShuffleError&&<p className="quizNoCorrect">⚠ {puzzleShuffleError}</p>}
-          </div>}
+          {experience.familyPuzzle?.url&&(()=>{
+            const total=experience.familyPuzzle.totalPieces||8,cols=4,rows=Math.ceil(total/cols);
+            return <div className="celebrationCartoonBox">
+              <div className="familyPuzzleGrid studioPuzzlePreview" style={{gridTemplateColumns:`repeat(${cols},1fr)`,aspectRatio:`${cols}/${rows}`}}>
+                {Array.from({length:total},(_,gridIdx)=>gridIdx).map(gridIdx=>{
+                  const n=pieceAtGridIndex(experience.familyPuzzle.layout,total,gridIdx);
+                  const col=gridIdx%cols,row=Math.floor(gridIdx/cols);
+                  return <div className="puzzleTile" key={gridIdx}>
+                    <div className="puzzleTileImage" style={{backgroundImage:`url(${experience.familyPuzzle.url})`,backgroundSize:`${cols*100}% ${rows*100}%`,backgroundPosition:`${cols>1?col/(cols-1)*100:0}% ${rows>1?row/(rows-1)*100:0}%`}}/>
+                    <span className="puzzlePieceNumber">{n}</span>
+                  </div>;
+                })}
+              </div>
+              <button type="button" disabled={puzzleShuffling} onClick={async()=>{
+                setPuzzleShuffling(true);setPuzzleShuffleError("");
+                try{await reshuffleFamilyPuzzleLayout(experience.id,total)}catch(err){setPuzzleShuffleError(err.message)}finally{setPuzzleShuffling(false)}
+              }}>{puzzleShuffling?s.saving:s.shufflePuzzleBtn}</button>
+              <button type="button" disabled={puzzleRemoving} onClick={async()=>{
+                setPuzzleRemoving(true);setPuzzleShuffleError("");
+                try{await removeFamilyPuzzle(experience.id);setPuzzlePhotoPreview(null)}catch(err){setPuzzleShuffleError(err.message)}finally{setPuzzleRemoving(false)}
+              }}>{puzzleRemoving?s.saving:s.familyPuzzleRemove}</button>
+              {puzzleShuffleError&&<p className="quizNoCorrect">⚠ {puzzleShuffleError}</p>}
+            </div>;
+          })()}
         </div>
 
         <p className="contextHint">{he?"בחרו תחנה קיימת מהרשימה כדי לערוך אותה, או הוסיפו משימה חדשה מהאפשרויות הבאות.":"Select a stop below to edit it, or add a new mission using these options."}</p>

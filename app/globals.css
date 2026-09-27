@@ -424,6 +424,8 @@ button:active{transform:scale(.96)}
 .puzzleTileImage{position:absolute;inset:0;background-repeat:no-repeat;transition:filter .3s,opacity .3s,transform .3s}
 .puzzleTile.locked .puzzleTileImage{filter:blur(9px) grayscale(1);transform:scale(1.08);opacity:.3}
 .puzzleLock{position:absolute;inset:0;display:grid;place-items:center;background:rgba(30,41,59,.55);color:#fff;font-size:20px}
+.studioPuzzlePreview{max-width:320px;margin-bottom:12px}
+.puzzlePieceNumber{position:absolute;top:5px;inset-inline-start:5px;width:22px;height:22px;border-radius:50%;display:grid;place-items:center;background:rgba(255,255,255,.92);color:#5b21b6;font-weight:900;font-size:11px;box-shadow:0 2px 6px rgba(0,0,0,.2)}
 .puzzleCompleteText{margin-top:10px;text-align:center;color:#166534;font-weight:800}
 .puzzleFlyPiece{position:fixed;z-index:1400;left:50%;top:50%;width:82px;height:82px;border-radius:14px;overflow:hidden;box-shadow:0 18px 45px rgba(15,23,42,.35);pointer-events:none;background-repeat:no-repeat;animation:puzzleFly 1.15s cubic-bezier(.2,.8,.2,1) forwards}
 @keyframes puzzleFly{0%{transform:translate(-50%,-50%) scale(.45) rotate(-18deg);opacity:0}25%{opacity:1;transform:translate(-50%,-50%) scale(1.15) rotate(8deg)}100%{transform:translate(-50%,-220%) scale(.65) rotate(0);opacity:0}}
