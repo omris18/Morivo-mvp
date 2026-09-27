@@ -1,6 +1,3 @@
-Warning: truncated output (original token count: 34542)
-Total output lines: 1082
-
 "use client";
 import {Fragment,useEffect,useRef,useState} from "react";
 import {generateExperienceArtworkRemote,uploadCelebrationPortrait,updateExperienceRemote} from "../lib/morivoData";
@@ -62,3 +59,4 @@ export default function ExperienceRoute({experience,people=[],media=[],answers=[
   </div>:<div className="routeEmpty"><DestinationBackdrop theme={theme}/><div><h3>{he?"המסלול שלכם עוד רגע מתחיל":"Your route is about to begin"}</h3><p>{he?"הוסיפו משימות לחוויה כדי לראות כאן תחנות, משתתפים וזיכרונות.":"Add missions to see your stops, participants and memories here."}</p><button onClick={onStudio}>{he?"בניית המסלול בסטודיו":"Build your route in Studio"}</button></div></div>}
  </section>;
 }
+
