@@ -815,3 +815,10 @@ body .appShell .stepNav button{background:#e4f2e9;border:1px solid #bfdcd0;color
 body .appShell .stepNav .primary{background:#e96b4e;color:white;border-color:#e96b4e}
 body .appShell .stepIndicator{color:#52767c}
 body .appShell :is(.itineraryStep,.itineraryOptionRow){background:#eff7ef;border-color:#c8ddd1;color:#164c5c}
+
+/* Contrast on the approved daylight surfaces. */
+body .appShell .firebaseStatus{background:#e4f3e9;border-color:#b8dccc;color:#246855}
+body .appShell .firebaseStatus .dot{background:#238464;box-shadow:none}
+body .appShell .aiCreate>.panel:first-child>p{color:#526f78}
+body .appShell :is(.aiTop .tag,.thinkingCopy .tag,.mbToolbarLabel){color:#397879}
+body .appShell .accountBar .accountSwitch{background:transparent;border:0;color:#19797e}
