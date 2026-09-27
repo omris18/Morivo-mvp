@@ -625,3 +625,40 @@ body{background:radial-gradient(circle at 78% -10%,rgba(123,199,216,.08),transpa
  .memoryPage .mbCover{min-height:280px}
  .memoryPage .mbChapter,.memoryPage .polaroid,.memoryPage .mbQuote{break-inside:avoid}
 }
+
+/* Account controls share the app's navy, sky and warm-gold palette. */
+.accountBar{width:100%;border:1px solid var(--m-line);border-radius:16px;background:rgba(13,29,41,.72);padding:16px 18px;color:var(--m-text)}
+.accountGuest{display:block}
+.accountIntro{display:flex;align-items:center;gap:10px;margin-bottom:14px}
+.accountIntro .accountMark{display:grid;place-items:center;flex:0 0 28px;height:28px;border-radius:9px;background:rgba(239,193,134,.1);color:var(--m-warm);font-size:17px}
+.accountIntro .accountMessage{flex:1;color:#bac8d1;font-size:13px;line-height:1.6}
+.accountBar button{border:1px solid rgba(164,188,201,.2);border-radius:10px;background:#102330;color:#e9eef0;min-height:44px;padding:10px 15px;font:inherit;font-size:13px;line-height:1.4;cursor:pointer;transition:background .15s,border-color .15s}
+.accountBar button:hover:not(:disabled){background:#1a3542;border-color:rgba(123,199,216,.5)}
+.accountBar .accountSwitch{border:0;background:transparent;color:var(--m-sky);font-size:12px;text-decoration:underline;text-underline-offset:4px;padding:8px 0;min-height:36px}
+.accountBar .accountSwitch:hover:not(:disabled){background:transparent;color:#c1e6ed}
+.accountForm{display:grid;grid-template-columns:auto minmax(120px,1fr) minmax(120px,1fr) auto;gap:12px;align-items:end}
+.accountField{display:flex;flex-direction:column;gap:6px;min-width:0}
+.accountField span{color:#aebec9;font-size:11px}
+.accountBar .accountField input{width:100%;min-width:0;min-height:44px;padding:11px 13px;background:#07141f;border:1px solid #29404e;border-radius:10px;font:inherit;font-size:13px;color:#f3f5f6}
+.accountField input::placeholder{color:#778c9c}
+.accountBar .primary{background:#efc186;border-color:#efc186;color:#142530;font-weight:700;box-shadow:none}
+.accountBar .primary:hover:not(:disabled){background:#f6d6aa;border-color:#f6d6aa}
+.accountBar button:focus-visible,.accountBar input:focus-visible{outline:2px solid #7bc7d8;outline-offset:3px}
+.accountBar button:disabled,.accountBar input:disabled{opacity:.6;cursor:wait}
+.accountError{margin:12px 0 0;padding:10px 12px;border:1px solid rgba(255,151,140,.3);border-radius:9px;background:rgba(180,60,50,.1);color:#ffc3b9;font-size:13px;line-height:1.6;overflow-wrap:anywhere}
+.accountSignedIn{justify-content:space-between}
+.accountIdentity{display:flex;align-items:center;gap:8px;flex-wrap:wrap;min-width:0}
+.accountIdentity b{color:#e8eff2;overflow-wrap:anywhere}
+@media(max-width:760px){
+ .accountForm{grid-template-columns:repeat(2,minmax(0,1fr))}
+ .accountGoogle{grid-column:1/-1}
+ .accountForm>.primary{grid-column:1/-1}
+ .accountIntro{flex-wrap:wrap}
+ .accountIntro .accountMessage{flex-basis:calc(100% - 40px)}
+ .accountIntro .accountSwitch{margin-inline-start:38px}
+}
+@media(max-width:420px){
+ .accountBar{padding:14px}
+ .accountForm{grid-template-columns:minmax(0,1fr)}
+ .accountBar .accountField input{font-size:16px}
+}
