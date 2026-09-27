@@ -56,11 +56,11 @@ export default function Dashboard({experience,experiences,setView,openExperience
    <div className="panel experiencePanel" id="yourExperiencesList">
      <div className="sectionHead"><div><div className="tag">{d.yourExperiences}</div><h2>{d.yourExperiences}</h2></div><button className="roundCreate" onClick={()=>setView("ai")} aria-label={d.createWithAI}>＋</button></div>
      <div className="experienceGrid">
-     {rows.map(x=><article className="experienceRow" key={x.id}>
+     {rows.map(x=><article className="experienceRow experienceRowClickable" key={x.id} role="button" tabIndex={0} onClick={()=>openExperience(x)} onKeyDown={e=>{if(e.key==="Enter"||e.key===" "){e.preventDefault();openExperience(x)}}}>
        <ExperienceCover experience={x}><span className={"experienceStatus "+(x.paused?"paused":x.status==="live"?"live":"draft")}>{x.paused?(he?"מושהית":"Paused"):x.status==="live"?(he?"פעילה עכשיו":"Live now"):(he?"בדרך להרפתקה":"In the making")}</span><span className="experienceCoverPlace">{x.location||x.type||"MORIVO"}</span></ExperienceCover>
        <div className="experienceInfo"><h3>{x.name||d.draft}</h3><p>{x.flow?.length||0} {he?"תחנות במסע":"stops in your story"}{x.startDate&&<> <span>·</span> {x.startDate}</>}</p></div>
        <div className="rowActions">
-         <button className="openExperience" onClick={()=>openExperience(x)}>{d.open}<span>→</span></button>
+         <button className="openExperience" onClick={e=>{e.stopPropagation();openExperience(x)}}>{d.open}<span>→</span></button>
          {firebaseConfigured && x.id && <button className="danger" disabled={deletingId===x.id} onClick={e=>remove(x,e)}>{deletingId===x.id?d.deleting:d.delete}</button>}
        </div>
      </article>)}

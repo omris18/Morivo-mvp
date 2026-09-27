@@ -53,14 +53,19 @@ export default function AICreator({setExperience,setView,setActiveId,user,lang,t
  function addDestination(){
   const v=destinationInput.trim();
   if(!v||form.destinations.includes(v))return;
-  setForm(f=>({...f,destinations:[...f.destinations,v]}));
+  const destinations=[...form.destinations,v];
+  setForm(f=>({...f,destinations,location:destinations.join(", ")}));
   setDestinationInput("");
  }
  function removeDestination(name){
-  setForm(f=>({...f,destinations:f.destinations.filter(d=>d!==name)}));
+  setForm(f=>{
+   const destinations=f.destinations.filter(d=>d!==name);
+   return {...f,destinations,location:destinations.join(", ")};
+  });
  }
  function goNext(){
   if(formStep===1&&!form.prompt.trim()){setStepError(a.describeFirst);document.querySelector('.aiPrompt')?.focus();return}
+  if(formStep===1&&isMultiDayFamilyTrip&&!form.destinations.length){setStepError(a.addDestinationFirst);document.querySelector('.destinationInputRow input')?.focus();return}
   setStepError("");
   setFormStep(s=>Math.min(TOTAL_STEPS,s+1));
  }
@@ -95,6 +100,7 @@ export default function AICreator({setExperience,setView,setActiveId,user,lang,t
  }
  async function goPlan(){
   if(!form.prompt.trim())return alert(a.describeFirst);
+  if(isMultiDayFamilyTrip&&!form.destinations.length)return alert(a.addDestinationFirst);
   if(!firebaseConfigured)return alert(a.needsFirebase);
   setPhase("planning");setPlanError(null);
   try{
@@ -223,9 +229,9 @@ export default function AICreator({setExperience,setView,setActiveId,user,lang,t
    {stepError&&<p className="guidanceError" role="alert">{stepError}</p>}
    <div className={"aiFormStep "+(formStep===1?"active":"")} data-step="1">
     <label htmlFor="ai-description">{a.prompt} *</label><textarea id="ai-description" className="aiPrompt" aria-required="true" aria-invalid={!!stepError} placeholder={lang==="he"?"לדוגמה: יום כיף בחי פארק עם ילדים בני 7–10, חידות קלילות ומשימות צילום.":"For example: a family day at the zoo with ages 7–10, easy riddles and photo missions."} value={form.prompt} onChange={e=>{setForm({...form,prompt:e.target.value});setStepError("")}}/>
-    <div className="fieldRow"><div><label>{a.type}</label><select value={form.type} onChange={e=>setForm({...form,type:e.target.value})}><option value=""></option>{TYPE_OPTIONS[lang].map(x=><option key={x} value={x}>{x}</option>)}</select></div><div><label>{a.location}</label><input value={form.location} onChange={e=>setForm({...form,location:e.target.value})}/></div></div>
+    <div className="fieldRow"><div><label>{a.type}</label><select value={form.type} onChange={e=>setForm({...form,type:e.target.value})}><option value=""></option>{TYPE_OPTIONS[lang].map(x=><option key={x} value={x}>{x}</option>)}</select></div>{!isMultiDayFamilyTrip&&<div><label>{a.location}</label><input value={form.location} onChange={e=>setForm({...form,location:e.target.value})}/></div>}</div>
     {isMultiDayFamilyTrip&&<div className="destinationsField">
-     <label>{a.destinationsLabel}</label>
+     <label>{a.destinationsLabel} *</label>
      <p className="destinationsHint">{a.destinationsHint}</p>
      <div className="destinationInputRow">
       <input value={destinationInput} placeholder={a.destinationPlaceholder} onChange={e=>setDestinationInput(e.target.value)} onKeyDown={e=>{if(e.key==="Enter"){e.preventDefault();addDestination()}}}/>
