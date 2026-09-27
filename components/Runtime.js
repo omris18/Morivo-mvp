@@ -8,7 +8,7 @@ import {reorderExperienceRemote,updateMissionRemote} from "../lib/morivoData";
 import journeyProgress from "../functions/journeyProgress";
 import QRCode from "qrcode";
 import {firebaseConfigured} from "../lib/firebase";
-import {subscribeEvents,subscribeParticipants,subscribeAllProgress,subscribeAnswers,sendOrganizerMessage,skipMissionForParticipant,awardBonusPoints,updateExperienceRemote,addParticipantCode,subscribeParticipantCodes,removeParticipantCode,subscribeLocationVotes} from "../lib/morivoData";
+import {subscribeEvents,subscribeParticipants,subscribeAllProgress,subscribeAnswers,sendOrganizerMessage,skipMissionForParticipant,awardBonusPoints,resetMissionForParticipant,updateExperienceRemote,addParticipantCode,subscribeParticipantCodes,removeParticipantCode,subscribeLocationVotes} from "../lib/morivoData";
 import {subscribeMedia} from "../lib/mediaData";
 import {writeNfcTag,nfcWriteSupported} from "../lib/nfc";
 const STUCK_MINUTES=3;
@@ -73,6 +73,11 @@ export default function Runtime({experience,setExperience,setView,t,user,lang,is
  function bonus(p){
    if(!firebaseConfigured)return alert(r.connectFirebaseCtrl);
    awardBonusPoints(experience.id,p.id,50).catch(e=>alert(e.message));
+ }
+ function resetCell(p,m){
+   if(!firebaseConfigured)return alert(r.connectFirebaseCtrl);
+   if(window.confirm(r.confirmResetMission(p.name||p.participantName||"",m.title)))
+     resetMissionForParticipant(experience.id,p.id,m.id).catch(e=>alert(e.message));
  }
  async function generateNfcForParticipant(p){
    if(!firebaseConfigured)return alert(r.connectFirebaseCtrl);
@@ -226,7 +231,7 @@ export default function Runtime({experience,setExperience,setView,t,user,lang,is
    const finished=!p.pending&&journeyFinished(p,flow);
    const mins=p.pending?null:minutesAgo(p.updatedAt);
    const stuck=!p.pending&&!finished&&mins!==null&&mins>=STUCK_MINUTES;
-   return <div className={"journeyTableRow "+(stuck?"stuckRow":"")+(p.pending?" pendingRow":"")} style={journeyGridStyle} key={p.id}><span><b>{p.name||p.participantName}</b>{mins!==null&&<small className="lastActive">{stuck?"⚠ ":""}{mins<1?r.justNow:r.minAgo(mins)}</small>}</span>{flow.map((m,i)=>{const done=missionDone(p,m,i),active=missionActive(p,m,flow),skipped=(p.skippedMissionIds||[]).includes(m.id);return <span key={m.id} className={done?"cellDone":active?"cellActive":"cellLocked"}>{done?"✓":active?"●":skipped?"↷":"·"}</span>})}<span>{p.pending?<small className="pendingTag">{r.notJoinedYet}</small>:<b>{p.points||0}</b>}</span><span className="rowActionBtns">{!p.pending&&<>{!finished&&<button className="skipBtn" onClick={()=>skip(p)} title={r.skipTitle}>⏭</button>}<button className="bonusBtn" onClick={()=>bonus(p)} title={r.bonusTitle}>🎁</button><button disabled={generatingFor===p.id} onClick={()=>generateNfcForParticipant(p)} title={r.generateNfcTitle}>{generatingFor===p.id?"…":"📲"}</button></>}</span></div>
+   return <div className={"journeyTableRow "+(stuck?"stuckRow":"")+(p.pending?" pendingRow":"")} style={journeyGridStyle} key={p.id}><span><b>{p.name||p.participantName}</b>{mins!==null&&<small className="lastActive">{stuck?"⚠ ":""}{mins<1?r.justNow:r.minAgo(mins)}</small>}</span>{flow.map((m,i)=>{const done=missionDone(p,m,i),active=missionActive(p,m,flow),skipped=(p.skippedMissionIds||[]).includes(m.id),resettable=!p.pending&&(done||skipped);return <span key={m.id} className={(done?"cellDone":active?"cellActive":"cellLocked")+(resettable?" cellResettable":"")} onClick={resettable?()=>resetCell(p,m):undefined} title={resettable?r.resetMissionCellTitle:undefined}>{done?"✓":active?"●":skipped?"↷":"·"}</span>})}<span>{p.pending?<small className="pendingTag">{r.notJoinedYet}</small>:<b>{p.points||0}</b>}</span><span className="rowActionBtns">{!p.pending&&<>{!finished&&<button className="skipBtn" onClick={()=>skip(p)} title={r.skipTitle}>⏭</button>}<button className="bonusBtn" onClick={()=>bonus(p)} title={r.bonusTitle}>🎁</button><button disabled={generatingFor===p.id} onClick={()=>generateNfcForParticipant(p)} title={r.generateNfcTitle}>{generatingFor===p.id?"…":"📲"}</button></>}</span></div>
  })}</div></details>
  <div className="actions"><button onClick={()=>setView("studio")}>{r.studioBtn}</button><button onClick={togglePause}>{experience.paused?`▶ ${r.resumeBtn}`:`⏸ ${r.pauseBtn}`}</button><button onClick={messageEveryone}>{r.messageEveryone}</button>{experience.joinCode&&<button className="primary" onClick={copyJoinLink}>{r.participantMode}</button>}</div></div>
  <div className="grid2" style={{marginTop:18}}><div className="panel"><div className="tag">{r.liveActivity}</div><div className="feed">{feed.map((x,i)=><div key={i}>{x}</div>)}</div></div><div className="panel"><div className="tag">{r.latestMemories}</div>{media.length?<div className="runtimeMedia">{media.slice(0,6).map(m=>m.contentType?.startsWith("video/")?<video key={m.id} src={m.downloadURL} muted/>:<img key={m.id} src={m.downloadURL} alt="memory"/>)}</div>:<p>{r.noPhotosYet}</p>}</div></div>
