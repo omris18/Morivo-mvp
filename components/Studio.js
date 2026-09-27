@@ -458,6 +458,15 @@ export default function Studio({ experience, setExperience, setView, t }) {
 
             {atom.type === "branch" && (
               <div className="branchEditor">
+                <label className="organizerDecidesCheck">
+                  <input
+                    type="checkbox"
+                    checked={!!atom.organizerDecides}
+                    onChange={(e) => patch({ organizerDecides: e.target.checked })}
+                  />
+                  {s.organizerDecidesLabel}
+                </label>
+                {atom.organizerDecides && <p className="organizerDecidesHint">{s.organizerDecidesHint}</p>}
                 <label>{s.branchOptionsLabel}</label>
                 {(atom.options || []).map((o) => (
                   <div className="branchOptionRow" key={o.id}>

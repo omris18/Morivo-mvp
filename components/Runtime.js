@@ -90,6 +90,10 @@ export default function Runtime({experience,setView,t,user}){
    if(!firebaseConfigured)return alert(r.connectFirebaseCtrl);
    updateExperienceRemote(experience.id,{paused:!experience.paused}).catch(e=>alert(e.message));
  }
+ function decideBranch(missionId,optionId){
+   if(!firebaseConfigured)return alert(r.connectFirebaseCtrl);
+   updateExperienceRemote(experience.id,{[`branchDecisions.${missionId}`]:optionId}).catch(e=>alert(e.message));
+ }
  useEffect(()=>{if(!firebaseConfigured||!experience.id||experience.id==="thailand-demo"){setPeople([{id:"1",name:"Omri"},{id:"2",name:"Tair"},{id:"3",name:"Maya"}]);setProgress([{uid:"1",currentMissionIndex:4,points:640},{uid:"2",currentMissionIndex:3,points:590},{uid:"3",currentMissionIndex:2,points:520}]);return}
  const a=subscribeParticipants(experience.id,setPeople),b=subscribeEvents(experience.id,evs=>setFeed(evs.map(x=>x.text))),c=subscribeMedia(experience.id,setMedia),d=subscribeAllProgress(experience.id,setProgress),e=subscribeAnswers(experience.id,setAnswers);return()=>{a();b();c();d();e()}},[experience.id]);
  useEffect(()=>{if(!experience.joinCode){setQrDataUrl(null);return}const link=`${window.location.origin}${window.location.pathname}?join=${experience.joinCode}`;QRCode.toDataURL(link,{margin:1,width:160,color:{dark:"#050b13",light:"#ffffff"}}).then(setQrDataUrl).catch(()=>setQrDataUrl(null))},[experience.joinCode]);
@@ -109,7 +113,20 @@ export default function Runtime({experience,setView,t,user}){
  const avgPoints=merged.length?Math.round(merged.reduce((s,p)=>s+(p.points||0),0)/merged.length):0;
  const dropOff=useMemo(()=>missionPerf.length&&merged.length?missionPerf.reduce((worst,m)=>worst===null||m.pct<worst.pct?m:worst,null):null,[missionPerf,merged.length]);
  const journeyGridStyle={gridTemplateColumns:`minmax(140px,1.5fr) repeat(${flow.length},42px) 70px 116px`,minWidth:`${140+flow.length*42+70+116+5*(flow.length+3)}px`};
- return <section className="runtimePage"><div className="panel"><div className="runtimeTitle"><div><div className="tag">{r.tag}</div><h2>{experience.name}</h2>{experience.paused&&<span className="pausedTag">⏸ {r.paused}</span>}</div><div className="joinMini"><small>{r.joinCode}</small><b>{experience.joinCode||r.publishFirst}</b>{qrDataUrl&&<img className="joinQr" src={qrDataUrl} alt="Join QR code"/>}</div></div>
+ const organizerBranches=flow.filter(m=>m.type==="branch"&&m.organizerDecides);
+ return <section className="runtimePage">
+ {organizerBranches.length>0&&<div className="panel routeDecisionsPanel"><div className="tag">{r.routeDecisions}</div><p className="rosterHint">{r.routeDecisionsHint}</p>
+  {organizerBranches.map(m=>{
+    const decided=experience.branchDecisions?.[m.id];
+    return <div className="orgDecisionRow" key={m.id}>
+     <b>{m.title}</b>
+     <div className="orgDecisionOptions">{(m.options||[]).map(o=>
+       <button key={o.id} type="button" className={decided===o.id?"primary":""} onClick={()=>decideBranch(m.id,o.id)}>{o.label||"—"}</button>
+     )}</div>
+    </div>;
+  })}
+ </div>}
+ <div className="panel"><div className="runtimeTitle"><div><div className="tag">{r.tag}</div><h2>{experience.name}</h2>{experience.paused&&<span className="pausedTag">⏸ {r.paused}</span>}</div><div className="joinMini"><small>{r.joinCode}</small><b>{experience.joinCode||r.publishFirst}</b>{qrDataUrl&&<img className="joinQr" src={qrDataUrl} alt="Join QR code"/>}</div></div>
  <div className="runtimeStats"><div><b>{merged.length}</b><span>{r.participants}</span></div><div><b>{flow.length}</b><span>{r.missions}</span></div><div><b>{media.length}</b><span>{r.memories}</span></div><div><b>{merged.filter(x=>(x.currentMissionIndex||0)>=flow.length).length}</b><span>{r.finished}</span></div></div>
  {merged.length>0&&<div className="runtimeStats insightsRow"><div><b>{completionRate}%</b><span>{r.completionRate}</span></div><div><b>{avgPoints}</b><span>{r.avgPoints}</span></div>{dropOff&&<div><b>{dropOff.pct}%</b><span>{r.dropOffAt} · {dropOff.title}</span></div>}</div>}
  <h3>{r.liveJourneyMap}</h3>

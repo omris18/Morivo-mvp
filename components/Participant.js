@@ -24,6 +24,8 @@ export default function Participant({experience,setExperience,setView,setActiveI
  const [prog,setProg]=useState({completedMissionIds:[],currentMissionIndex:0,points:0}),[file,setFile]=useState(null),[busy,setBusy]=useState(false),[pct,setPct]=useState(0);
  const [joining,setJoining]=useState(false);
  const [quizAnswer,setQuizAnswer]=useState(null);
+ const [quizFeedback,setQuizFeedback]=useState(null);
+ const [quizWrongAttempts,setQuizWrongAttempts]=useState(0);
  const [noteText,setNoteText]=useState("");
  const [puzzleAnswer,setPuzzleAnswer]=useState("");
  const [locStatus,setLocStatus]=useState(null);
@@ -70,7 +72,18 @@ export default function Participant({experience,setExperience,setView,setActiveI
  const finished=flow.length>0&&rawIdx>=flow.length;
  const idx=Math.min(rawIdx,Math.max(flow.length-1,0)), mission=finished?null:flow[idx];
  const badges=computeBadges(prog,flow);
- useEffect(()=>{setQuizAnswer(null);setNoteText("");setPuzzleAnswer("");setLocStatus(null);setQrVerified(false);stopScan()},[idx]);
+ useEffect(()=>{setQuizAnswer(null);setQuizFeedback(null);setQuizWrongAttempts(0);setNoteText("");setPuzzleAnswer("");setLocStatus(null);setQrVerified(false);stopScan()},[idx]);
+ const branchResolvingRef=useRef(false);
+ useEffect(()=>{branchResolvingRef.current=false},[idx]);
+ useEffect(()=>{
+  if(!mission||mission.type!=="branch"||!mission.organizerDecides||busy)return;
+  const decidedOptionId=experience.branchDecisions?.[mission.id];
+  if(!decidedOptionId||branchResolvingRef.current)return;
+  const option=(mission.options||[]).find(o=>o.id===decidedOptionId);
+  if(!option)return;
+  branchResolvingRef.current=true;
+  chooseBranch(option);
+ },[mission,experience.branchDecisions,busy]);
  useEffect(()=>()=>stopScan(),[]);
  const hasGpsCheckpoint=mission&&Number.isFinite(mission.lat)&&Number.isFinite(mission.lng);
  const hasQrCheckpoint=mission&&!!mission.qrCode;
@@ -118,11 +131,11 @@ export default function Participant({experience,setExperience,setView,setActiveI
   }catch(e){alert(e.message)}finally{setJoining(false)}
  }
  async function enableNotifications(){setPushState("asking");try{await enablePushNotifications(eid,uid);setPushState("on")}catch(e){alert(e.message);setPushState("idle")}}
- async function complete(){if(!mission)return;if(experience.paused)return alert(p.pausedByOrganizer);const isMedia=mission.type==="photo"||mission.type==="video";if(isMedia&&!file)return alert(p.chooseFirst(mission.type));if(mission.type==="quiz"&&!quizAnswer)return alert(p.chooseAnswerFirst);if(mission.type==="quiz"&&mission.answer&&quizAnswer!==mission.answer)return alert(p.wrongAnswer);if(mission.type==="note"&&!noteText.trim())return alert(p.writeSomethingFirst);if(mission.type==="puzzle"&&mission.answer&&puzzleAnswer.trim().toLowerCase()!==String(mission.answer).trim().toLowerCase())return alert(p.wrongAnswer);if(mission.type==="map"&&(hasGpsCheckpoint||hasQrCheckpoint)&&!((hasGpsCheckpoint&&locStatus&&locStatus.within)||(hasQrCheckpoint&&qrVerified)))return alert(p.getCloserFirst);setBusy(true);try{
+ async function complete(){if(!mission)return;if(experience.paused)return alert(p.pausedByOrganizer);const isMedia=mission.type==="photo"||mission.type==="video";if(isMedia&&!file)return alert(p.chooseFirst(mission.type));if(mission.type==="note"&&!noteText.trim())return alert(p.writeSomethingFirst);if(mission.type==="puzzle"&&mission.answer&&puzzleAnswer.trim().toLowerCase()!==String(mission.answer).trim().toLowerCase())return alert(p.wrongAnswer);if(mission.type==="map"&&(hasGpsCheckpoint||hasQrCheckpoint)&&!((hasGpsCheckpoint&&locStatus&&locStatus.within)||(hasQrCheckpoint&&qrVerified)))return alert(p.getCloserFirst);setBusy(true);try{
    if(isMedia&&firebaseConfigured)await uploadMissionPhoto({experienceId:eid,mission,file,participantName:name,onProgress:setPct});
    if(mission.type==="note"&&firebaseConfigured)await saveMissionAnswer(eid,mission,noteText.trim(),name);
    if(firebaseConfigured)await completeJourneyMission(eid,mission,idx,name);else setProg(pr=>({completedMissionIds:[...pr.completedMissionIds,mission.id],currentMissionIndex:idx+1,points:pr.points+(mission.points||100)}));
-   setFile(null);setPct(0);setQuizAnswer(null);setNoteText("");
+   setFile(null);setPct(0);setNoteText("");
  }catch(e){alert(e.message)}finally{setBusy(false)}}
  async function chooseBranch(option){
   if(!mission||busy)return;
@@ -134,6 +147,28 @@ export default function Participant({experience,setExperience,setView,setActiveI
    if(firebaseConfigured)await completeJourneyMission(eid,mission,idx,name,nextIndex);
    else setProg(pr=>({completedMissionIds:[...pr.completedMissionIds,mission.id],currentMissionIndex:nextIndex,points:pr.points+(mission.points||0)}));
   }catch(e){alert(e.message)}finally{setBusy(false)}
+ }
+ async function evaluateQuiz(opt){
+  if(!mission||busy||quizFeedback)return;
+  if(experience.paused)return alert(p.pausedByOrganizer);
+  setQuizAnswer(opt);
+  const isCorrect=!mission.answer||opt===mission.answer;
+  if(!isCorrect){
+   setQuizFeedback("wrong");
+   setQuizWrongAttempts(n=>n+1);
+   setTimeout(()=>{setQuizFeedback(null);setQuizAnswer(null)},900);
+   return;
+  }
+  setQuizFeedback("correct");
+  setBusy(true);
+  const penaltyMultiplier=Math.pow(0.9,quizWrongAttempts);
+  const effectivePoints=Math.max(10,Math.round((mission.points||100)*penaltyMultiplier));
+  setTimeout(async()=>{
+   try{
+    if(firebaseConfigured)await completeJourneyMission(eid,{...mission,points:effectivePoints},idx,name);
+    else setProg(pr=>({completedMissionIds:[...pr.completedMissionIds,mission.id],currentMissionIndex:idx+1,points:pr.points+effectivePoints}));
+   }catch(e){alert(e.message)}finally{setBusy(false);setQuizFeedback(null);setQuizAnswer(null)}
+  },650);
  }
  if(portal&&portalResolving){
   return <div className="portalShell" dir={dir} style={{backgroundImage:experienceGradient(portalCode)}}><div className="portalLoading">⏳ {p.portalResolving}</div></div>;
@@ -165,7 +200,7 @@ export default function Participant({experience,setExperience,setView,setActiveI
     </div>
    </div>;
  })}</div>
- {chromeless&&(experience.adultsCount>0||experience.childrenCount>0)&&<div className="familyPassport">
+ {chromeless&&!!experience.startDate&&(experience.adultsCount>0||experience.childrenCount>0)&&<div className="familyPassport">
   <div className="journeySectionTitle">{p.familyPassportTitle}</div>
   <div className="familyIcons">
    {Array.from({length:experience.adultsCount||0}).map((_,i)=><span key={"a"+i}>🧑</span>)}
@@ -187,7 +222,12 @@ export default function Participant({experience,setExperience,setView,setActiveI
  {finished?<div className="finishCard viewFade" key="finish"><div className="confetti">{Array.from({length:16}).map((_,i)=><span key={i}></span>)}</div><div className="finishIcon">🏆</div><h2>{p.journeyCompleteTitle}</h2><p>{p.journeyCompleteSub}</p>{badges.length>0&&<div className="badgeRow">{badges.map(b=><div className="badge" key={b.id} title={b.label}><span>{b.icon}</span><small>{b.label}</small></div>)}</div>}<button className="primary" onClick={()=>setView("memory")}>{p.openMemoryBook}</button></div>:mission&&<div className="phone journeyPhone viewFade" key={mission.id}><div className="missionType">{mission.type}</div><h3>{mission.title}</h3><p><LinkifiedText text={mission.text}/></p>
  {mission.type==="photo"&&<label className="uploadBox"><span>{p.choosePhoto}</span><input type="file" accept="image/*" capture="environment" onChange={e=>setFile(e.target.files?.[0]||null)}/></label>}
  {mission.type==="video"&&<label className="uploadBox"><span>{p.chooseVideo}</span><input type="file" accept="video/*" capture="environment" onChange={e=>setFile(e.target.files?.[0]||null)}/></label>}
- {mission.type==="quiz"&&<div className="choiceGrid">{(mission.options&&mission.options.length?mission.options:["A","B","C"]).map(opt=><button key={opt} type="button" className={quizAnswer===opt?"selected":""} onClick={()=>setQuizAnswer(opt)}>{opt}</button>)}</div>}{mission.type==="map"&&<>
+ {mission.type==="quiz"&&<>
+ <div className={"choiceGrid "+(quizFeedback==="wrong"?"quizShake":"")}>{(mission.options&&mission.options.length?mission.options:["A","B","C"]).map(opt=><button key={opt} type="button" disabled={busy||!!quizFeedback} className={quizAnswer===opt?"selected "+(quizFeedback||""):""} onClick={()=>evaluateQuiz(opt)}>{opt}</button>)}</div>
+ {quizFeedback==="wrong"&&<div className="quizFeedbackMsg wrong">✗ {p.wrongAnswer}</div>}
+ {quizFeedback==="correct"&&<div className="quizFeedbackMsg correct">✓ {p.correctAnswer}</div>}
+ {quizWrongAttempts>0&&!quizFeedback&&<div className="quizPenaltyHint">{p.pointsReduced(Math.round((1-Math.pow(0.9,quizWrongAttempts))*100))}</div>}
+</>}{mission.type==="map"&&<>
  {hasGpsCheckpoint&&<div className="mapMock gpsReal">📍<span>{locStatus==="checking"?p.checkingLocation:locStatus?.within?p.arrived:locStatus?p.metersAway(Math.round(locStatus.distance)):p.getToCheckpoint}</span><button type="button" disabled={locStatus==="checking"} onClick={checkLocation}>{p.checkMyLocation}</button></div>}
  {hasQrCheckpoint&&<div className="qrScanBox">
   {qrVerified&&<div className="qrVerifiedMsg">✅ {p.qrVerified}</div>}
@@ -198,8 +238,11 @@ export default function Participant({experience,setExperience,setView,setActiveI
  {!hasGpsCheckpoint&&!hasQrCheckpoint&&<div className="mapMock">📍<span>{p.locationCheckpoint}</span></div>}
 </>}{mission.type==="puzzle"&&<div className="puzzleBox">🧩<input value={puzzleAnswer} placeholder={p.puzzleAnswerPlaceholder} onChange={e=>setPuzzleAnswer(e.target.value)}/></div>}
  {mission.type==="note"&&<textarea className="noteInput" placeholder={p.writeMemory} value={noteText} onChange={e=>setNoteText(e.target.value)}/>}
- {mission.type==="branch"&&<div className="branchChoices">{(mission.options||[]).map(o=><button key={o.id} type="button" className="branchChoiceBtn" disabled={busy||experience.paused} onClick={()=>chooseBranch(o)}>{o.label}</button>)}</div>}
- {mission.type!=="branch"&&<>{busy&&(mission.type==="photo"||mission.type==="video")&&<div className="uploadProgress"><div style={{width:`${pct}%`}}></div><span>{pct}%</span></div>}<div className="mission">{p.reward}: {mission.reward||`${mission.points||100} pts`}</div><button className="primary" disabled={busy||experience.paused} onClick={complete}>{busy?p.saving:p.completeContinue}</button></>}</div>}</>;
+ {mission.type==="branch"&&(mission.organizerDecides
+  ? <div className="branchWaiting">⏳ {p.waitingForOrganizerDecision}</div>
+  : <div className="branchChoices">{(mission.options||[]).map(o=><button key={o.id} type="button" className="branchChoiceBtn" disabled={busy||experience.paused} onClick={()=>chooseBranch(o)}>{o.label}</button>)}</div>)}
+ {mission.type!=="branch"&&<div className="mission">{p.reward}: {mission.reward||`${mission.points||100} pts`}</div>}
+ {mission.type!=="branch"&&mission.type!=="quiz"&&<>{busy&&(mission.type==="photo"||mission.type==="video")&&<div className="uploadProgress"><div style={{width:`${pct}%`}}></div><span>{pct}%</span></div>}<button className="primary" disabled={busy||experience.paused} onClick={complete}>{busy?p.saving:p.completeContinue}</button></>}</div>}</>;
 
  const joinForm=<div className="participantJoin"><div className="participantJoinMark" aria-hidden="true"><span></span><span></span><span></span></div><div className="participantJoinEyebrow">MORIVO · EXPERIENCE</div><h2>{p.joinTitle}</h2><label htmlFor="participant-name">{p.yourName}</label><input id="participant-name" autoComplete="name" value={name} placeholder={p.namePlaceholder} onChange={e=>setName(e.target.value)}/><label htmlFor="participant-code">{p.joinCode}</label><input id="participant-code" autoCapitalize="characters" value={code} onChange={e=>setCode(e.target.value.toUpperCase())} onKeyDown={e=>e.key==="Enter"&&join()}/><div className="actions centerActions"><button className="primary" disabled={joining} onClick={join}>{joining?p.joining:p.joinBtn}</button></div></div>;
 
