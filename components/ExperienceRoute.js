@@ -1,5 +1,8 @@
+Warning: truncated output (original token count: 34542)
+Total output lines: 1082
+
 "use client";
-import {useEffect,useRef,useState,Fragment} from "react";
+import {Fragment,useEffect,useRef,useState} from "react";
 import {generateExperienceArtworkRemote,uploadCelebrationPortrait,updateExperienceRemote} from "../lib/morivoData";
 import {firebaseConfigured} from "../lib/firebase";
 import artContext from "../functions/experienceArtContext";
@@ -7,7 +10,7 @@ import {getExperienceTheme,VISUAL_THEMES,missionDone,missionActive,journeyFinish
 import RouteMissionPanel from "./RouteMissionPanel";
 import DestinationBackdrop from "./DestinationBackdrop";
 import LinkifiedText from "./LinkifiedText";
-const icons={photo:"📷",video:"▶",map:"⌖",quiz:"?",puzzle:"◇",note:"✎",story:"▤",reward:"✦"};
+const icons={photo:"📸",video:"🎬",map:"🗺️",quiz:"🧩",puzzle:"🔐",note:"✍️",story:"📖",reward:"🏆"};
 export default function ExperienceRoute({experience,people=[],media=[],answers=[],onMemory,onStudio,onTheme,onSwap,onSaveMission,lang}){
  const he=lang==="he",flow=experience.flow||[],theme=getExperienceTheme(experience);
  const [selected,setSelected]=useState(experience.flow?.[0]?.id||null),[saving,setSaving]=useState(false),[error,setError]=useState("");
@@ -49,7 +52,7 @@ export default function ExperienceRoute({experience,people=[],media=[],answers=[
   {flow.length?<div className="routeLayout">
    <div className="routeJourneyMap" aria-label={he?"מפת המסע לפי ימים ויעדים":"Journey map by days and destinations"}>
     <div className="routeMapLegend"><span><i className="legendDone">✓</i>{he?"הושלם":"Completed"}</span><span><i className="legendCurrent">●</i>{he?"מתבצע עכשיו":"In progress"}</span><span><i className="legendNext">→</i>{he?"המשימה הבאה":"Next"}</span></div>
-    {groups.map(g=><section className="routeDayGroup" key={g.key}><header><span className="routeDayBadge">{g.label}</span>{g.destination&&<small>{g.destination}</small>}</header><div className="routeMissionCircles">{g.missions.map(({m,i},mi)=>{const completed=people.length>0&&people.every(p=>p.pending||missionDone(p,m,i)),here=people.some(p=>!p.pending&&missionActive(p,m,flow)),next=!completed&&!here&&i===nextIndex;return <Fragment key={m.id}>{mi>0&&<span className="routeConnector" aria-hidden="true">→</span>}<button className={"routeMissionCircle "+(completed?"isDone ":"")+(here?"isCurrent ":"")+(next?"isNext ":"")} onClick={()=>selectMission(m.id)} aria-pressed={i===index} title={m.title}><span className="circleNumber">{completed?"✓":i+1}</span><span className="circleIcon">{icons[m.type]||theme.motif}</span><b>{m.title}</b><small>{completed?(he?"הושלם":"Done"):here?(he?"עכשיו":"Now"):next?(he?"הבא":"Next"):(he?"ממתינה":"Upcoming")}</small></button></Fragment>})}</div></section>)}
+    {groups.map(g=><section className="routeDayGroup" key={g.key}><header><span className="routeDayBadge">{g.label}</span>{g.destination&&<small>{g.destination}</small>}</header><div className="routeMissionCircles">{g.missions.map(({m,i},stopIndex)=><Fragment key={m.id}><button className={"routeMissionCircle "+(people.length>0&&people.every(p=>p.pending||missionDone(p,m,i)?true:false)?"isDone ":"")+(people.some(p=>!p.pending&&missionActive(p,m,flow))?"isCurrent ":"")+(!people.some(p=>!p.pending&&missionActive(p,m,flow))&&i===nextIndex?"isNext ":"")} onClick={()=>selectMission(m.id)} aria-pressed={i===index} title={m.title}><span className="circleNumber">{people.length>0&&people.every(p=>p.pending||missionDone(p,m,i))?"✓":i+1}</span><span className="circleIcon">{icons[m.type]||theme.motif}</span><b>{m.title}</b><small>{people.length>0&&people.every(p=>p.pending||missionDone(p,m,i))?(he?"הושלם":"Done"):people.some(p=>!p.pending&&missionActive(p,m,flow))?(he?"עכשיו":"Now"):i===nextIndex?(he?"הבא":"Next"):(he?"ממתינה":"Upcoming")}</small></button>{stopIndex<g.missions.length-1&&<span className="routeConnector" aria-hidden="true">←</span>}</Fragment>)}</div></section>)}
    </div>
    <div className="routeDetail">
     <RouteMissionPanel key={mission.id} mission={mission} index={index} flow={flow} people={people} media={media} answers={answers} onSave={onSaveMission} onSwap={onSwap?swap:undefined} onDirtyChange={setDirty} lang={lang}/>
