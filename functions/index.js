@@ -218,6 +218,7 @@ function attractionsPollMission(selected, location, lang) {
     isAttractionsPoll: true,
     organizerDecides: true,
     options,
+    destination: location || "",
   };
 }
 
@@ -238,6 +239,7 @@ function hotelMissionFromSelection(selected, location, lang, opts, destinationLa
     // it, not "complete" it like a real task. organizerDecides makes them wait until the
     // organizer confirms it in Runtime, then everyone advances together (see Participant.js).
     organizerDecides: true,
+    destination: destinationLabel || location || "",
   };
 }
 
@@ -266,6 +268,9 @@ function hotelPollMission(candidates, location, lang, opts, destinationLabel) {
     isLocationPoll: true,
     organizerDecides: true,
     options,
+    destination: destinationLabel || location || "",
+    // Runtime uses this metadata to place the poll beside the relevant destination/day.
+    isDestinationPoll: true,
   };
 }
 
@@ -460,10 +465,25 @@ exports.generateExperience = onCall({ secrets: [openaiApiKey, geminiApiKey], cor
 
   const [hotelMissions, attractionsMission] = await Promise.all([hotelMissionsPromise, attractionsMissionPromise]);
   const extras = [...hotelMissions, attractionsMission].filter(Boolean);
+  // Keep destination-specific approvals inside the matching part of a multi-day route.
+  // They must not become a global first step before the trip starts.
+  const routeFlow = [...flow];
+  for (const extra of extras) {
+    const destination = String(extra.destination || "").trim().toLowerCase();
+    if (!destination) { routeFlow.push(extra); continue; }
+    const words = destination.split(/[,/\s]+/).filter(Boolean);
+    const at = routeFlow.findIndex(m => {
+      const title = String(m.title || "").toLowerCase();
+      const text = String(m.text || "").toLowerCase();
+      return words.some(word => word.length > 2 && (title.includes(word) || text.includes(word)));
+    });
+    if (at >= 0) routeFlow.splice(at, 0, extra);
+    else routeFlow.push(extra);
+  }
 
   return {
     name: String(data.name || prompt).slice(0, 120),
-    flow: extras.length ? [...extras, ...flow] : flow,
+    flow: routeFlow,
   };
 });
 
