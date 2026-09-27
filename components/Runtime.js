@@ -11,7 +11,7 @@ import {subscribeMedia} from "../lib/mediaData";
 import {writeNfcTag,nfcWriteSupported} from "../lib/nfc";
 const STUCK_MINUTES=3;
 function minutesAgo(ts){ if(!ts?.toMillis)return null; return Math.floor((Date.now()-ts.toMillis())/60000); }
-export default function Runtime({experience,setExperience,setView,t,user,lang}){
+export default function Runtime({experience,setExperience,setView,t,user,lang,isMaster=false}){
  const r=t.runtime;
  const [people,setPeople]=useState([]),[feed,setFeed]=useState([]),[media,setMedia]=useState([]),[progress,setProgress]=useState([]),[answers,setAnswers]=useState([]),[locationVotes,setLocationVotes]=useState([]);
  const [qrDataUrl,setQrDataUrl]=useState(null);
@@ -107,7 +107,7 @@ export default function Runtime({experience,setExperience,setView,t,user,lang}){
  useEffect(()=>{if(!experience.joinCode){setQrDataUrl(null);return}const link=`${window.location.origin}${window.location.pathname}?join=${experience.joinCode}`;QRCode.toDataURL(link,{margin:1,width:160,color:{dark:"#050b13",light:"#ffffff"}}).then(setQrDataUrl).catch(()=>setQrDataUrl(null))},[experience.joinCode]);
  useEffect(()=>{if(!firebaseConfigured||!experience.id||experience.id==="thailand-demo")return;return subscribeParticipantCodes(experience.id,setRoster,e=>alert(r.rosterLoadError(e.message)))},[experience.id]);
  const flow=experience.flow||[];
- const canManage=!experience.id||user?.uid===experience.ownerUid;
+ const canManage=!experience.id||user?.uid===experience.ownerUid||isMaster;
  async function swapMissions(firstId,secondId){const order=flow.map(m=>m.id),a=order.indexOf(firstId),b=order.indexOf(secondId);if(a<0||b<0)return;[order[a],order[b]]=[order[b],order[a]];if(firebaseConfigured&&experience.id)await reorderExperienceRemote(experience.id,order,flow.map(m=>m.id));else setExperience(prev=>({...prev,flow:order.map(id=>prev.flow.find(m=>m.id===id))}));}
  async function saveMission(original,edited){if(firebaseConfigured&&experience.id)await updateMissionRemote(experience.id,original,edited);else setExperience(prev=>({...prev,flow:prev.flow.map(m=>m.id===original.id?{...edited,id:original.id}:m)}));}
  const merged=useMemo(()=>{

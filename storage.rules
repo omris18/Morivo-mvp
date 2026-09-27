@@ -2,8 +2,13 @@ rules_version = '2';
 service firebase.storage {
   match /b/{bucket}/o {
     function signedIn() { return request.auth != null; }
+    function isMaster() {
+      return signedIn() && request.auth.token.email_verified == true
+        && request.auth.token.email is string
+        && request.auth.token.email.lower() == 'omris18@gmail.com';
+    }
     function isExperienceOwner(experienceId) {
-      return signedIn() && firestore.get(/databases/(default)/documents/experiences/$(experienceId)).data.ownerUid == request.auth.uid;
+      return signedIn() && (isMaster() || firestore.get(/databases/(default)/documents/experiences/$(experienceId)).data.ownerUid == request.auth.uid);
     }
     match /experiences/{experienceId}/media/{uid}/{fileName} {
       allow read: if signedIn();

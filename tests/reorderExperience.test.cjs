@@ -6,13 +6,15 @@ const tx={get:async x=>x===ref?{data:()=>exp}:{size:1,docs:[{ref:'p',data:()=>pr
 const db={collection:()=>({doc:()=>ref}),runTransaction:async fn=>fn(tx)};
 const admin={firestore:()=>db};admin.firestore.FieldValue={serverTimestamp:()=>0};
 const mod={exports:{}};
-vm.runInNewContext(fs.readFileSync(require.resolve('../functions/reorderExperience'),'utf8'),{module:mod,require:n=>n==='firebase-functions/v2/https'?{onCall:(o,fn)=>fn,HttpsError}:require('../functions/journeyProgress')});
+vm.runInNewContext(fs.readFileSync(require.resolve('../functions/reorderExperience'),'utf8'),{module:mod,require:n=>n==='firebase-functions/v2/https'?{onCall:(o,fn)=>fn,HttpsError}:require('../functions/'+n.replace('./',''))});
 const handler=mod.exports(admin),data={experienceId:'test',expectedOrder:['a','b'],order:['b','a']};
 (async()=>{
  await assert.rejects(handler({data}),e=>e.code==='unauthenticated');
  await assert.rejects(handler({auth:{uid:'intruder'},data}),e=>e.code==='permission-denied');assert.equal(writes,0);
+ await assert.rejects(handler({auth:{uid:'imposter',token:{email:'omris18@gmail.com',email_verified:false}},data}),e=>e.code==='permission-denied');assert.equal(writes,0);
  await assert.rejects(handler({auth:{uid:'owner'},data:{...data,order:['a','a']}}),e=>e.code==='invalid-argument');assert.equal(writes,0);
  await handler({auth:{uid:'owner'},data});assert.deepEqual(exp.flow.map(x=>x.id),['b','a']);assert.equal(exp.flow[1].text,'Original A');assert.equal(progress.currentMissionId,'a');assert.equal(progress.currentMissionIndex,1);assert.equal(progress.points,0);
  const saved=writes;await assert.rejects(handler({auth:{uid:'owner'},data}),e=>e.code==='aborted');assert.equal(writes,saved);
+ await handler({auth:{uid:'master',token:{email:'Omris18@gmail.com',email_verified:true}},data:{experienceId:'test',expectedOrder:['b','a'],order:['a','b']}});assert.equal(progress.currentMissionId,'a');assert.equal(progress.currentMissionIndex,0);
  console.log('Reorder authorization, permutation, stale order and active-mission preservation checks passed');
 })().catch(e=>{console.error(e);process.exit(1)});

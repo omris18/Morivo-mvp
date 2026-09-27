@@ -6,14 +6,14 @@ const icons={
  runtime:<svg viewBox="0 0 24 24" aria-hidden="true"><path d="m8 5 11 7-11 7V5Z"/></svg>,
  memory:<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 3h12a2 2 0 0 1 2 2v16H7a3 3 0 0 1-3-3V4a1 1 0 0 1 1-1Zm2 14h10V5H6v12.2c.3-.1.7-.2 1-.2Zm2-9h6v2H9V8Zm0 4h5v2H9v-2Z"/></svg>
 };
-export default function Sidebar({view,setView,t}){
+export default function Sidebar({view,setView,t,isMaster=false,lang}){
  return <aside className="sidebar">
    <div className="brandLockup"><div><img className="morivoWordmark" src="/morivo-logo.svg" alt="Morivo"/><div className="tag">{t.brandTag}</div></div></div>
    <nav>{items.map(id=>
      <button key={id} onClick={()=>setView(id)} className={view===id?"active":""}>
       <span className="navIcon">{icons[id]}</span><span>{t.nav[id]}</span>
      </button>
-   )}</nav>
+   )}{isMaster&&<button onClick={()=>setView("master")} className={"masterNav "+(view==="master"?"active":"")}><span className="navIcon" aria-hidden="true">◈</span><span>{lang==="he"?"ניהול מערכת":"Master console"}</span><small>MASTER</small></button>}</nav>
    <div className="sidebarJourney"><div className="journeyLine"></div><small>CREATE · LIVE · REMEMBER</small></div>
  </aside>
 }

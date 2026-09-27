@@ -3,7 +3,7 @@ import {useState} from "react";
 import {firebaseConfigured} from "../lib/firebase";
 import {upgradeToEmailAccount, signInWithEmail, signOutUser, signInWithGoogle} from "../lib/morivoData";
 
-export default function Account({user,t}){
+export default function Account({user,t,isMaster=false,lang}){
  const [mode,setMode]=useState("save");
  const [error,setError]=useState("");
  const [email,setEmail]=useState(""),[password,setPassword]=useState(""),[busy,setBusy]=useState(false);
@@ -15,6 +15,7 @@ export default function Account({user,t}){
 
  if(isReal){
    return <div className="accountBar accountSignedIn">
+     {isMaster&&<span className="masterBadge">{lang==="he"?"מנהל מערכת":"MASTER"}</span>}
      <span className="accountIdentity">{a.signedInAs} <b dir="ltr">{user.email||user.displayName}</b></span>
      <button onClick={signOutUser}>{a.signOut}</button>
    </div>;

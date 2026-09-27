@@ -17,7 +17,7 @@ function MediaThumb({m}){
 
 const ICONS={photo:"📸",video:"🎥",quiz:"❓",puzzle:"🧩",note:"📝",map:"📍",story:"📖",reward:"🏆"};
 
-export default function Memory({experience,setExperience,setView,t,user,publicView,memoryId,dir,participantView=false}){
+export default function Memory({experience,setExperience,setView,t,user,publicView,memoryId,dir,participantView=false,isMaster=false}){
  const m2=t.memory;
  const [writing,setWriting]=useState(false);
  const [sharing,setSharing]=useState(false);
@@ -37,7 +37,7 @@ export default function Memory({experience,setExperience,setView,t,user,publicVi
  },[publicView,memoryId]);
 
  const exp=publicView?(localExp||{}):experience;
- const isOwner=!!(user?.uid&&exp.ownerUid&&user.uid===exp.ownerUid);
+ const isOwner=!!(user?.uid&&exp.ownerUid&&(user.uid===exp.ownerUid||isMaster));
 
  useEffect(()=>{if(!firebaseConfigured||!exp.id||exp.id==="thailand-demo"){setMedia([]);setAnswers([]);setProgress([]);return}
   const a=subscribeMedia(exp.id,setMedia),b=subscribeAnswers(exp.id,setAnswers),c=subscribeAllProgress(exp.id,setProgress);return()=>{a();b();c()}},[exp.id]);

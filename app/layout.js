@@ -13,6 +13,7 @@ export const viewport = {
   themeColor: "#faf6ed",
 };
 import "./globals.css";
+import "./morivo-refinement.css";
 export default function RootLayout({ children }) {
   return <html lang="en"><body>{children}</body></html>;
 }

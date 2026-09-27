@@ -9,7 +9,7 @@ const admin={firestore:()=>db,storage:()=>({bucket:()=>({name:'bucket',file:()=>
 class HttpsError extends Error {constructor(code,msg){super(msg);this.code=code}}
 class OpenAI {constructor(){this.images={generate:async options=>{calls++;assert.ok(options.prompt.includes('חי פארק'));return {data:[{b64_json:Buffer.from('test').toString('base64')}]}}}}}
 const moduleMock={exports:{}};
-vm.runInNewContext(fs.readFileSync(require.resolve('../functions/experienceArtwork'),'utf8'),{module:moduleMock,require:name=>name==='firebase-functions/v2/https'?{onCall:(opts,fn)=>fn,HttpsError}:name==='openai'?OpenAI:name==='./experienceArtContext'?{experienceArtContext}:require(name),Buffer,console});
+vm.runInNewContext(fs.readFileSync(require.resolve('../functions/experienceArtwork'),'utf8'),{module:moduleMock,require:name=>name==='firebase-functions/v2/https'?{onCall:(opts,fn)=>fn,HttpsError}:name==='openai'?OpenAI:name==='./experienceArtContext'?{experienceArtContext}:name==='./masterAccess'?require('../functions/masterAccess'):require(name),Buffer,console});
 const handler=moduleMock.exports(admin,{value:()=> 'test-only'});
 (async()=>{
  await assert.rejects(handler({data:{experienceId:'trip'}}),e=>e.code==='unauthenticated');

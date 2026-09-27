@@ -1,0 +1,11 @@
+const assert=require('node:assert/strict');
+const {isMasterToken,canManageExperience}=require('../functions/masterAccess');
+assert.equal(isMasterToken({email:'Omris18@gmail.com',email_verified:true}),true);
+for(const token of [null,{}, {email:'omris18@gmail.com'}, {email:'omris18@gmail.com',email_verified:false}, {email:'other@gmail.com',email_verified:true}, {email:'omris18@gmail.com.evil.test',email_verified:true}, {email:'omris18@gmail.com',email_verified:'true'}, {master:true}])assert.equal(isMasterToken(token),false);
+const exp={ownerUid:'owner'};
+assert.equal(canManageExperience({uid:'owner'},exp),true);
+assert.equal(canManageExperience({uid:'other'},exp),false);
+assert.equal(canManageExperience({uid:'master',token:{email:'omris18@gmail.com',email_verified:true}},exp),true);
+assert.equal(canManageExperience({uid:'imposter',token:{email:'omris18@gmail.com',email_verified:false}},exp),false);
+assert.equal(canManageExperience(null,exp),false);
+console.log('Master access: verified email only; owners retained; spoofing and unverified accounts denied.');
