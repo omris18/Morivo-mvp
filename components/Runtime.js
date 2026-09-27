@@ -114,6 +114,11 @@ export default function Runtime({experience,setExperience,setView,t,user,lang,is
    if(!names.length)return r.noVotesYet;
    try{return new Intl.ListFormat(lang==="he"?"he":lang,{style:"long",type:"conjunction"}).format(names)}catch{return names.join(", ")}
  }
+ function customOptionsFor(missionId){
+   const seen=new Map();
+   locationVotes.filter(v=>v.missionId===missionId&&v.customOption).forEach(v=>{if(!seen.has(v.customOption.id))seen.set(v.customOption.id,v.customOption)});
+   return [...seen.values()];
+ }
  useEffect(()=>{if(!firebaseConfigured||!experience.id||experience.id==="thailand-demo"){setPeople([]);setProgress([]);setFeed([]);setMedia([]);setAnswers([]);setLocationVotes([]);return}
  const a=subscribeParticipants(experience.id,setPeople),b=subscribeEvents(experience.id,evs=>setFeed(evs.map(x=>x.text))),c=subscribeMedia(experience.id,setMedia),d=subscribeAllProgress(experience.id,setProgress),e=subscribeAnswers(experience.id,setAnswers),f=subscribeLocationVotes(experience.id,setLocationVotes);return()=>{a();b();c();d();e();f()}},[experience.id]);
  useEffect(()=>{if(!experience.joinCode){setQrDataUrl(null);return}const link=`${window.location.origin}${window.location.pathname}?join=${experience.joinCode}`;QRCode.toDataURL(link,{margin:1,width:160,color:{dark:"#050b13",light:"#ffffff"}}).then(setQrDataUrl).catch(()=>setQrDataUrl(null))},[experience.joinCode]);
@@ -158,14 +163,6 @@ export default function Runtime({experience,setExperience,setView,t,user,lang,is
       {locationPolls.map(m=>{
         const decided=experience.locationDecisions?.[m.id];
         const isDecided=!!(decided&&decided.length);
-        if(!m.options||!m.options.length){
-          return <div className="orgDecisionRow" key={m.id}>
-           <b>{m.title}</b>
-           <div className="orgDecisionOptions">
-            <button type="button" className={isDecided?"primary":""} disabled={isDecided} onClick={()=>decideLocation(m.id,["confirmed"])}>{isDecided?`✓ ${r.confirmed}`:r.confirmDestination}</button>
-           </div>
-          </div>;
-        }
         if(m.isAttractionsPoll){
           const pending=pendingAttractionPicks[m.id]||decided||[];
           return <div className="orgDecisionRow" key={m.id}>
@@ -185,9 +182,18 @@ export default function Runtime({experience,setExperience,setView,t,user,lang,is
            {isDecided&&<span className="orgDecisionConfirmed">✓ {r.confirmed}</span>}
           </div>;
         }
+        const allOptions=[...(m.options||[]),...customOptionsFor(m.id)];
+        if(!allOptions.length){
+          return <div className="orgDecisionRow" key={m.id}>
+           <b>{m.title}</b>
+           <div className="orgDecisionOptions">
+            <button type="button" className={isDecided?"primary":""} disabled={isDecided} onClick={()=>decideLocation(m.id,["confirmed"])}>{isDecided?`✓ ${r.confirmed}`:r.confirmDestination}</button>
+           </div>
+          </div>;
+        }
         return <div className="orgDecisionRow" key={m.id}>
          <b>{m.title}</b>
-         <div className="orgDecisionOptionList">{m.options.map(o=>{
+         <div className="orgDecisionOptionList">{allOptions.map(o=>{
            const isPicked=decided?.[0]===o.id;
            return <div className={"orgDecisionOptionRow "+(isPicked?"picked":"")} key={o.id}>
             <div><b>{o.name}</b><small>{formatVoters(votersFor(m.id,o.id))}</small></div>

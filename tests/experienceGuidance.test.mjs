@@ -6,7 +6,7 @@ assert.equal(guidanceState({id:'draft',flow:[{id:'a'}]}).published,false);
 assert.equal(guidanceState({id:'live',status:'live',joinCode:'CODE'}).published,true);
 assert.equal(guidanceState({id:'broken',status:'live'}).published,false);
 assert.equal(guidanceState({id:'paused',status:'live',joinCode:'CODE',paused:true}).paused,true);
-assert.match(participantHint({type:'story',isLocationPoll:true},'he'),/ההצבעה נשמרת/);
+assert.match(participantHint({type:'story',isLocationPoll:true,organizerDecides:true},'he'),/ההצבעה נשמרת/);
 assert.match(participantHint({type:'branch',organizerDecides:true},'he'),/מחכים לבחירת המארגן/);
 assert.match(participantHint({type:'quiz'},'he'),/נבדקת מיד/);
 assert.match(participantHint({type:'map',lat:32,lng:35},'he'),/בדיקת המיקום/);

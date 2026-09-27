@@ -41,6 +41,7 @@ export default function Participant({experience,setExperience,setView,setActiveI
  const [pushState,setPushState]=useState("idle");
  const [translated,setTranslated]=useState(null);
  const [locationVotes,setLocationVotes]=useState([]);
+ const [suggestText,setSuggestText]=useState("");
  useEffect(()=>{if(deepLinkCode)setCode(deepLinkCode)},[deepLinkCode]);
  function acceptIdentity(result){
   setName(result.name);setUid(result.uid);setEid(result.experienceId);setActiveId(result.experienceId);setJoined(true);
@@ -92,7 +93,7 @@ export default function Participant({experience,setExperience,setView,setActiveI
  const finished=flow.length>0&&rawIdx>=flow.length;
  const idx=Math.min(rawIdx,Math.max(flow.length-1,0)), mission=finished?null:flow[idx];
  const badges=computeBadges(prog,flow);
- useEffect(()=>{setQuizAnswer(null);setQuizFeedback(null);setQuizWrongAttempts(0);setNoteText("");setPuzzleAnswer("");setLocStatus(null);setQrVerified(false);stopScan()},[mission?.id]);
+ useEffect(()=>{setQuizAnswer(null);setQuizFeedback(null);setQuizWrongAttempts(0);setNoteText("");setPuzzleAnswer("");setLocStatus(null);setQrVerified(false);setSuggestText("");stopScan()},[mission?.id]);
  const branchResolvingRef=useRef(false);
  const locationPollResolvingRef=useRef(false);
  useEffect(()=>{branchResolvingRef.current=false;locationPollResolvingRef.current=false},[mission?.id]);
@@ -181,14 +182,26 @@ export default function Participant({experience,setExperience,setView,setActiveI
    else setProg(pr=>({completedMissionIds:[...pr.completedMissionIds,mission.id],currentMissionIndex:idx+1,points:pr.points+(mission.points||0)}));
   }catch(e){alert(e.message)}finally{setBusy(false)}
  }
- async function voteLocation(optionId){
+ async function voteLocation(optionId,customOption){
   if(!mission||!firebaseConfigured)return;
   const myVoteDoc=locationVotes.find(v=>v.id===`${uid}_${mission.id}`);
   const current=myVoteDoc?.optionIds||[];
   const next=mission.isAttractionsPoll
    ?(current.includes(optionId)?current.filter(id=>id!==optionId):[...current,optionId])
    :[optionId];
-  try{await castLocationVote(eid,mission.id,next,name)}catch(e){alert(e.message)}
+  try{await castLocationVote(eid,mission.id,next,name,customOption||null)}catch(e){alert(e.message)}
+ }
+ function customOptionsFor(missionId){
+  const seen=new Map();
+  locationVotes.filter(v=>v.missionId===missionId&&v.customOption).forEach(v=>{if(!seen.has(v.customOption.id))seen.set(v.customOption.id,v.customOption)});
+  return [...seen.values()];
+ }
+ async function suggestCustomHotel(){
+  const text=suggestText.trim();
+  if(!mission||!text)return;
+  const customOption={id:`custom-${Date.now()}-${Math.random().toString(36).slice(2,7)}`,name:text.slice(0,100),why:""};
+  await voteLocation(customOption.id,customOption);
+  setSuggestText("");
  }
  async function evaluateQuiz(opt){
   if(!mission||busy||quizFeedback)return;
@@ -289,19 +302,41 @@ export default function Participant({experience,setExperience,setView,setActiveI
   : <div className="branchChoices">{(mission.options||[]).map(o=><button key={o.id} type="button" className="branchChoiceBtn" disabled={busy||experience.paused} onClick={()=>chooseBranch(o)}>{o.label}</button>)}</div>)}
  {mission.type==="story"&&mission.organizerDecides&&(()=>{
     const decided=experience.locationDecisions?.[mission.id];
-    if((decided&&decided.length)||!mission.options||!mission.options.length){
+    if(decided&&decided.length){
      return <div className="branchWaiting">⏳ {p.waitingForOrganizerDecision}</div>;
     }
+    if(mission.isAttractionsPoll){
+     const myVoteIds=locationVotes.find(v=>v.id===`${uid}_${mission.id}`)?.optionIds||[];
+     return <div className="locationPoll">
+      {(mission.options||[]).map(o=>{
+       const count=locationVotes.filter(v=>v.missionId===mission.id&&(v.optionIds||[]).includes(o.id)).length;
+       const myVote=myVoteIds.includes(o.id);
+       return <button key={o.id} type="button" className={"locationPollOption "+(myVote?"selected":"")} onClick={()=>voteLocation(o.id)}>
+        <b>{o.name}</b>{o.why&&<span>{o.why}</span>}
+        <small>{p.votesCount(count)}</small>
+       </button>;
+      })}
+      <p className="locationPollHint">{p.locationPollHint}</p>
+     </div>;
+    }
+    // Hotel-type mission (a poll, or the organizer's own already-chosen pick above) - participants
+    // can always vote for a listed option or add their own suggestion; the organizer reviews
+    // everything (including write-ins) and makes the final call in Runtime.
     const myVoteIds=locationVotes.find(v=>v.id===`${uid}_${mission.id}`)?.optionIds||[];
+    const allOptions=[...(mission.options||[]),...customOptionsFor(mission.id)];
     return <div className="locationPoll">
-     {mission.options.map(o=>{
+     {allOptions.map(o=>{
       const count=locationVotes.filter(v=>v.missionId===mission.id&&(v.optionIds||[]).includes(o.id)).length;
       const myVote=myVoteIds.includes(o.id);
-      return <button key={o.id} type="button" className={"locationPollOption "+(myVote?"selected":"")} onClick={()=>voteLocation(o.id)}>
+      return <button key={o.id} type="button" className={"locationPollOption "+(myVote?"selected":"")} onClick={()=>voteLocation(o.id,o.id.startsWith("custom-")?o:undefined)}>
        <b>{o.name}</b>{o.why&&<span>{o.why}</span>}
        <small>{p.votesCount(count)}</small>
       </button>;
      })}
+     <div className="locationPollSuggest">
+      <input value={suggestText} maxLength={100} placeholder={p.suggestYourOwn} onChange={e=>setSuggestText(e.target.value)} onKeyDown={e=>e.key==="Enter"&&suggestCustomHotel()}/>
+      <button type="button" disabled={!suggestText.trim()} onClick={suggestCustomHotel}>{p.suggestButton}</button>
+     </div>
      <p className="locationPollHint">{p.locationPollHint}</p>
     </div>;
    })()}

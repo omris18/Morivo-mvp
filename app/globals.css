@@ -98,6 +98,10 @@
 .locationPollOption small{font-size:11px;color:#efc186;margin-top:4px}
 .locationPollOption.selected{border-color:#7d5cff;background:linear-gradient(135deg,rgba(125,92,255,.32),rgba(95,205,248,.16))}
 .locationPollHint{font-size:12px;color:#9eaabd;text-align:center;margin:2px 0 0}
+.locationPollSuggest{display:flex;gap:8px}
+.locationPollSuggest input{flex:1;min-width:0;padding:12px 14px;border-radius:12px;border:1px solid rgba(125,92,255,.3);background:rgba(255,255,255,.06);color:inherit;font-size:14px}
+.locationPollSuggest button{border:1px solid rgba(125,92,255,.4);background:linear-gradient(135deg,rgba(125,92,255,.28),rgba(95,205,248,.16));color:inherit;border-radius:12px;padding:0 16px;font-weight:700}
+.locationPollSuggest button:disabled{opacity:.5}
 .routeDecisionsPanel{margin-bottom:18px}
 .orgDecisionRow{display:flex;flex-wrap:wrap;align-items:center;gap:10px;padding:10px 0;border-top:1px solid rgba(255,255,255,.08)}
 .orgDecisionRow:first-of-type{border-top:0}
