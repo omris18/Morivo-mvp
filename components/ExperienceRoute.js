@@ -25,6 +25,11 @@ export default function ExperienceRoute({experience,people=[],media=[],answers=[
  const index=Math.max(0,flow.findIndex(m=>m.id===selected)),mission=flow[index];
  const finished=people.filter(p=>!p.pending&&journeyFinished(p,flow)).length;
  const groups=(()=>{
+  const isThailand=/(תאילנד|thailand|פוקט|phuket)/i.test(String(`${experience.name||""} ${experience.location||""} ${experience.story||""}`));
+  if(isThailand&&flow.length>=20){
+   const buckets=[["פוקט",0,6],["קאו לאק",7,8],["קראבי",9,10],["קו סמוי",11,16],["פאטאיה",17,20],["בנגקוק",21,23],["חזרה לישראל",24,999]];
+   return buckets.map(([label,a,b])=>({key:`thai-${label}`,label,destination:label,missions:flow.slice(a,Math.min(flow.length,b+1)).map((m,i)=>({m,i:a+i}))})).filter(g=>g.missions.length);
+  }
   const explicit=Array.isArray(experience.destinations)?experience.destinations.map(String).filter(Boolean):[];
   const inferred=[...new Set(flow.flatMap(x=>{const t=String(`${x.title||""} ${x.text||""}`);return [...t.matchAll(/(?:להתארח|טיול|פארק|ב)(?:\s|-)?([א-ת]{3,})/g)].map(m=>m[1]);}))];
   const destinations=[...explicit,...inferred].filter((d,i,a)=>d&&a.findIndex(x=>x.toLocaleLowerCase()===d.toLocaleLowerCase())===i);
