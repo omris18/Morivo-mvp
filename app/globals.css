@@ -297,6 +297,10 @@ button:active{transform:scale(.96)}
 .flightRow select{padding:10px;border-radius:10px;border:1px solid rgba(255,255,255,.11);background:#071321;color:white}
 .portalLangSwitch{margin:0 0 14px auto;width:max-content}
 [dir="rtl"] .portalLangSwitch{margin:0 auto 14px 0}
+.participantPersonalLink{background:rgba(255,255,255,.96);border:1px solid rgba(15,35,55,.08);border-radius:16px;padding:14px 16px;margin:0 0 16px;text-align:center}
+.participantPersonalLink p{color:#3a4356!important;font-size:12.5px;line-height:1.6;margin:0 0 10px}
+.participantPersonalLink code{display:inline-block;background:#f1f0fb;color:#5f47d6;padding:6px 12px;border-radius:8px;font-weight:700;letter-spacing:.04em;margin-bottom:10px;font-size:12.5px;word-break:break-all}
+.participantPersonalLink button{display:block;margin:10px auto 0;border:0;border-radius:999px;padding:9px 18px;background:linear-gradient(135deg,#7d5cff,#5f7cff);color:#fff;font-weight:700;font-size:12.5px;cursor:pointer}
 .journeyGreeting{text-align:center;margin:2px 0 16px}
 .journeyGreeting h2{font:600 26px Georgia,serif;margin:0 0 4px;color:#fff}
 .journeyGreeting p{margin:0;color:#cdd8e6;font-size:12px;text-transform:uppercase;letter-spacing:.1em}
