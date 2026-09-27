@@ -5,6 +5,7 @@ import missionAnswers from "../functions/missionAnswers";
 import journeyProgress from "../functions/journeyProgress";
 import {useEffect,useRef,useState} from "react";
 import {createPortal} from "react-dom";
+import ParticipantJourneyMap from "./ParticipantJourneyMap";
 import jsQR from "jsqr";
 import {firebaseConfigured} from "../lib/firebase";
 import {joinExperienceByCode,joinExperienceByPersonalCode,subscribeExperience,subscribeMyProgress,initializeProgress,completeJourneyMission,saveMissionAnswer,subscribeMessages,translateExperienceRemote,subscribeLocationVotes,castLocationVote} from "../lib/morivoData";
@@ -253,22 +254,7 @@ export default function Participant({experience,setExperience,setView,setActiveI
  {latestMessage&&<div className="orgMessage"><span>📣 {latestMessage.text}</span><button onClick={()=>setDismissed(d=>[...d,latestMessage.id])}>✕</button></div>}
  {experience.paused&&!finished&&<div className="pausedBanner">⏸ {p.pausedByOrganizer}</div>}
  <div className="journeyProgressBar"><div className="journeyProgressFill" style={{width:`${progressPct}%`}}></div></div>
- <div className="journeyMap">{flow.map((m,i)=>{
-   const done=(prog.completedMissionIds||[]).includes(m.id),active=!finished&&i===idx;
-   const hasNav=Number.isFinite(m.lat)&&Number.isFinite(m.lng);
-   return <div className={"journeyStop "+(done?"done":active?"active":"locked")} key={m.id} role="button" tabIndex={0} onClick={()=>active?setMissionPopupOpen(true):setViewingMission(m)} onKeyDown={e=>{if(e.key==="Enter"||e.key===" "){e.preventDefault();active?setMissionPopupOpen(true):setViewingMission(m)}}}>
-    <div className="journeyStopDot">{done?"✓":active?"★":i+1}</div>
-    <div className="journeyStopCard">
-     {(m.day||m.date)&&<div className="journeyStopMeta">{m.day?p.dayBadge(m.day):""}{m.day&&m.date?" · ":""}{m.date?formatStopDate(m.date,lang):""}</div>}
-     <b>{m.title}</b>
-     {m.hotel&&<div className="journeyStopHotel">🏨 {m.hotel}</div>}
-     <div className="journeyStopActions">
-      <button type="button" className="journeyStopOpenBtn">{p.openMission}</button>
-      {hasNav&&<a className="journeyNavigateBtn" href={`https://www.google.com/maps/search/?api=1&query=${m.lat},${m.lng}`} target="_blank" rel="noopener noreferrer" onClick={e=>e.stopPropagation()}>🧭 {p.navigate}</a>}
-     </div>
-    </div>
-   </div>;
- })}</div>
+ <ParticipantJourneyMap experience={experience} flow={flow} prog={prog} idx={idx} finished={finished} lang={lang} p={p} onOpenMission={(m,isActive)=>{isActive?setMissionPopupOpen(true):setViewingMission(m)}}/>
  {chromeless&&!!experience.startDate&&(experience.adultsCount>0||experience.childrenCount>0)&&<div className="familyPassport">
   <div className="journeySectionTitle">{p.familyPassportTitle}</div>
   <div className="familyIcons">
