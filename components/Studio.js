@@ -9,7 +9,7 @@ import LinkifiedText from "./LinkifiedText";
 import ExperienceShare from "./ExperienceShare";
 import {missionLabels} from "../lib/experienceGuidance";
 import missionAnswers from "../functions/missionAnswers";
-import { getCurrentPosition } from "../lib/geo";
+import { getCurrentPosition, geocodeAddress } from "../lib/geo";
 import { pieceAtGridIndex } from "../lib/familyPuzzle";
 
 export default function Studio({ experience, setExperience, setView, t, lang }) {
@@ -21,6 +21,9 @@ export default function Studio({ experience, setExperience, setView, t, lang }) 
   const [selected, setSelected] = useState(flow[0]?.id || null);
   const [saving, setSaving] = useState(false);
   const [locating, setLocating] = useState(false);
+  const [addressInput, setAddressInput] = useState("");
+  const [geocoding, setGeocoding] = useState(false);
+  const [geocodeError, setGeocodeError] = useState("");
   const [revising, setRevising] = useState(false);
   const [revisePrompt, setRevisePrompt] = useState("");
   const [publishing, setPublishing] = useState(false);
@@ -38,6 +41,8 @@ export default function Studio({ experience, setExperience, setView, t, lang }) 
   const [puzzleRemoving, setPuzzleRemoving] = useState(false);
 
   const atom = flow.find((x) => x.id === selected) || null;
+
+  useEffect(() => { setAddressInput(atom?.address || ""); setGeocodeError(""); }, [atom?.id]);
 
   useEffect(() => {
     if (scrollToInspector && atom && inspectorRef.current) {
@@ -142,6 +147,20 @@ export default function Studio({ experience, setExperience, setView, t, lang }) 
       alert(e.message);
     } finally {
       setLocating(false);
+    }
+  }
+
+  async function findByAddress() {
+    if (!addressInput.trim()) return;
+    setGeocoding(true);
+    setGeocodeError("");
+    try {
+      const { lat, lng } = await geocodeAddress(addressInput.trim());
+      patch({ lat, lng, address: addressInput.trim() });
+    } catch (e) {
+      setGeocodeError(e.message);
+    } finally {
+      setGeocoding(false);
     }
   }
 
@@ -555,16 +574,35 @@ export default function Studio({ experience, setExperience, setView, t, lang }) 
               </div>
             )}
 
-            {atom.type === "map" && (
+            {atom.type === "map" && (()=>{
+              const hasGps = Number.isFinite(atom.lat) && Number.isFinite(atom.lng);
+              return <>
               <div className="gpsCheckpoint">
                 <label>{s.gpsCheckpoint}</label>
-                {Number.isFinite(atom.lat) && Number.isFinite(atom.lng) ? (
+                {hasGps ? (
                   <p className="gpsStatus">
                     {s.gpsSetAt} {atom.lat.toFixed(5)}, {atom.lng.toFixed(5)}
                   </p>
                 ) : (
                   <p className="gpsStatus">{s.gpsNotSet}</p>
                 )}
+                <div className="fieldRow">
+                  <div>
+                    <label>{s.addressLabel}</label>
+                    <input
+                      value={addressInput}
+                      placeholder={s.addressPlaceholder}
+                      onChange={(e) => setAddressInput(e.target.value)}
+                      onKeyDown={(e) => e.key === "Enter" && findByAddress()}
+                    />
+                  </div>
+                  <div>
+                    <button type="button" disabled={geocoding || !addressInput.trim()} onClick={findByAddress}>
+                      {geocoding ? s.locating : s.findByAddress}
+                    </button>
+                  </div>
+                </div>
+                {geocodeError && <p className="quizNoCorrect">⚠ {geocodeError}</p>}
                 <div className="fieldRow">
                   <div>
                     <button type="button" disabled={locating} onClick={setCheckpointHere}>
@@ -581,32 +619,35 @@ export default function Studio({ experience, setExperience, setView, t, lang }) 
                   </div>
                 </div>
               </div>
-            )}
 
-            {atom.type === "map" && (
               <div className="qrCheckpoint">
                 <label>{s.qrCheckpoint}</label>
-                <div className="fieldRow">
-                  <div>
-                    <input
-                      value={atom.qrCode || ""}
-                      placeholder={s.qrSetTo}
-                      onChange={(e) => patch({ qrCode: e.target.value.trim() || null })}
-                    />
+                {!hasGps ? (
+                  <p className="gpsStatus">{s.qrNeedsGpsFirst}</p>
+                ) : <>
+                  <div className="fieldRow">
+                    <div>
+                      <input
+                        value={atom.qrCode || ""}
+                        placeholder={s.qrSetTo}
+                        onChange={(e) => patch({ qrCode: e.target.value.trim() || null })}
+                      />
+                    </div>
+                    <div>
+                      <button type="button" onClick={generateQr}>{s.generateQr}</button>
+                    </div>
                   </div>
-                  <div>
-                    <button type="button" onClick={generateQr}>{s.generateQr}</button>
-                  </div>
-                </div>
-                {atom.qrCode && qrImgUrl && (
-                  <div className="qrPreviewWrap">
-                    <img className="qrPreview" src={qrImgUrl} alt="QR code" />
-                    <a href={qrImgUrl} download={`morivo-checkpoint-${atom.qrCode}.png`}>{s.downloadQr}</a>
-                    <button type="button" onClick={() => patch({ qrCode: null })}>{s.clearQr}</button>
-                  </div>
-                )}
+                  {atom.qrCode && qrImgUrl && (
+                    <div className="qrPreviewWrap">
+                      <img className="qrPreview" src={qrImgUrl} alt="QR code" />
+                      <a href={qrImgUrl} download={`morivo-checkpoint-${atom.qrCode}.png`}>{s.downloadQr}</a>
+                      <button type="button" onClick={() => patch({ qrCode: null })}>{s.clearQr}</button>
+                    </div>
+                  )}
+                </>}
               </div>
-            )}
+              </>;
+            })()}
 
             <label className="organizerDecidesCheck">
               <input
