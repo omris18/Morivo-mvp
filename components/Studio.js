@@ -155,6 +155,7 @@ export default function Studio({ experience, setExperience, setView, t }) {
         { id: `opt-${Date.now()}-1`, label: "", next: "" },
         { id: `opt-${Date.now()}-2`, label: "", next: "" },
       ] } : {}),
+      ...(type === "quiz" ? { options: ["", "", ""], answer: "" } : {}),
     };
 
     persist({
@@ -181,6 +182,32 @@ export default function Studio({ experience, setExperience, setView, t }) {
   function removeBranchOption(optionId) {
     if (!atom) return;
     patch({ options: (atom.options || []).filter((o) => o.id !== optionId) });
+  }
+
+  function addQuizOption() {
+    if (!atom) return;
+    patch({ options: [...(atom.options || []), ""] });
+  }
+
+  function updateQuizOption(index, value) {
+    if (!atom) return;
+    const prevValue = (atom.options || [])[index];
+    const options = (atom.options || []).map((o, i) => (i === index ? value : o));
+    const answer = atom.answer !== "" && atom.answer === prevValue ? value : atom.answer;
+    patch({ options, answer });
+  }
+
+  function removeQuizOption(index) {
+    if (!atom) return;
+    const removed = (atom.options || [])[index];
+    const options = (atom.options || []).filter((_, i) => i !== index);
+    const answer = atom.answer !== "" && atom.answer === removed ? "" : atom.answer;
+    patch({ options, answer });
+  }
+
+  function setQuizCorrect(index) {
+    if (!atom) return;
+    patch({ answer: (atom.options || [])[index] || "" });
   }
 
   function move(direction) {
@@ -405,6 +432,30 @@ export default function Studio({ experience, setExperience, setView, t }) {
               </>
             )}
 
+            {atom.type === "quiz" && (
+              <div className="quizEditor">
+                <label>{s.quizOptionsLabel}</label>
+                {(atom.options || []).map((opt, i) => (
+                  <div className="quizOptionRow" key={i}>
+                    <input
+                      type="radio"
+                      name="quizCorrectOption"
+                      checked={!!opt && atom.answer === opt}
+                      onChange={() => setQuizCorrect(i)}
+                    />
+                    <input
+                      value={opt}
+                      placeholder={s.quizOptionPlaceholder}
+                      onChange={(e) => updateQuizOption(i, e.target.value)}
+                    />
+                    <button type="button" className="danger" onClick={() => removeQuizOption(i)}>✕</button>
+                  </div>
+                ))}
+                <button type="button" onClick={addQuizOption}>+ {s.quizAddOption}</button>
+                {!atom.answer && <p className="quizNoCorrect">⚠ {s.quizPickCorrect}</p>}
+              </div>
+            )}
+
             {atom.type === "branch" && (
               <div className="branchEditor">
                 <label>{s.branchOptionsLabel}</label>
@@ -535,6 +586,16 @@ export default function Studio({ experience, setExperience, setView, t }) {
               </div>
             ) : (
               <>
+                {atom.type === "quiz" && (
+                  <div className="choiceGrid">
+                    {(atom.options && atom.options.length ? atom.options : [s.quizOptionPlaceholder]).map((opt, i) => (
+                      <button key={i} type="button" className={opt && atom.answer === opt ? "selected" : ""} disabled>
+                        {opt || s.quizOptionPlaceholder}
+                      </button>
+                    ))}
+                  </div>
+                )}
+
                 <div className="mission">
                   {atom.reward
                     ? `${s.rewardPrefix} ${atom.reward}`

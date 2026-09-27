@@ -15,15 +15,29 @@ const MISSION_TYPES = ["photo", "video", "quiz", "puzzle", "note", "map", "story
 function sanitizeFlow(rawFlow) {
   return (rawFlow || [])
     .filter((m) => m && typeof m === "object")
-    .map((m, i) => ({
-      id: `${MISSION_TYPES.includes(m.type) ? m.type : "story"}-${Date.now()}-${i}`,
-      type: MISSION_TYPES.includes(m.type) ? m.type : "story",
-      title: String(m.title || `Mission ${i + 1}`).slice(0, 120),
-      text: String(m.text || "").slice(0, 600),
-      reward: String(m.reward || "").slice(0, 120),
-      points: Number.isFinite(Number(m.points)) ? Math.max(50, Math.min(200, Math.round(Number(m.points)))) : 100,
-      ...(m.type === "puzzle" && m.answer ? { answer: String(m.answer).slice(0, 80) } : {}),
-    }));
+    .map((m, i) => {
+      const type = MISSION_TYPES.includes(m.type) ? m.type : "story";
+      const atom = {
+        id: `${type}-${Date.now()}-${i}`,
+        type,
+        title: String(m.title || `Mission ${i + 1}`).slice(0, 120),
+        text: String(m.text || "").slice(0, 600),
+        reward: String(m.reward || "").slice(0, 120),
+        points: Number.isFinite(Number(m.points)) ? Math.max(50, Math.min(200, Math.round(Number(m.points)))) : 100,
+      };
+      if (type === "puzzle" && m.answer) {
+        atom.answer = String(m.answer).slice(0, 80);
+      }
+      if (type === "quiz" && Array.isArray(m.options)) {
+        const options = m.options.slice(0, 4).map((o) => String(o || "").slice(0, 120)).filter(Boolean);
+        if (options.length >= 2) {
+          const rawAnswer = String(m.answer || "").slice(0, 120);
+          atom.options = options;
+          atom.answer = options.includes(rawAnswer) ? rawAnswer : options[0];
+        }
+      }
+      return atom;
+    });
 }
 
 const SYSTEM_PROMPT = `You design short interactive real-world "experiences" (treasure-hunt-style journeys) for an app called Morivo, used for family trips, birthdays, team building, school outings and similar events. Morivo is a global product used by people writing in many different languages - always respond in the same language the user wrote their description in, never default to English just because these instructions are in English.
@@ -39,7 +53,8 @@ Vary the mission types meaningfully:
 ${MISSION_TYPES.join(", ")}
 - "photo"/"video": ask participants to capture something specific and evocative, tied to a real detail from the description - not just "take a photo".
 - "note": ask for a short written memory, reflection or answer that only makes sense for this specific group and occasion.
-- "quiz"/"map": a lightweight in-context challenge, written using real names/places/facts from the description where possible (the app currently renders these as simple generic prompts, so keep the mission's "text" self-contained and understandable without extra UI).
+- "map": a lightweight in-context challenge, written using real names/places/facts from the description where possible (the app currently renders this as a simple generic prompt, so keep the mission's "text" self-contained and understandable without extra UI).
+- "quiz": a specific multiple-choice question built from a real detail in the description (a name, place, date, shared fact) - "text" is the question itself. Include an "options" array of exactly 3 or 4 short answer choices (a few words each, no "A."/"1." prefixes, no duplicates) and an "answer" field that is the exact text of the one correct option, copied character-for-character from "options". Exactly one option must be unambiguously correct given the description.
 - "puzzle": write a short, solvable riddle, cipher or word puzzle in "text" (built from a real detail in the description when possible - a name, place or shared memory), and include its solution as a separate "answer" field (a single word or short phrase, lowercase, no punctuation) - the app validates the participant's typed answer against it, so the riddle must have exactly one unambiguous correct answer.
 - "story": a narrative beat with no participant action, used for openings/transitions/closings - reference the actual occasion, not a generic "the beginning".
 - "reward": a payoff moment that ties back to something earlier in the journey.
@@ -47,9 +62,9 @@ ${MISSION_TYPES.join(", ")}
 Give the whole journey a real arc: a hook that pulls people in using a specific detail from the description, rising missions that build on each other and reference earlier moments, then a closing mission that pays off the theme. Titles must be punchy and specific to this exact experience - never generic labels like "The Beginning" or "Capture the Moment".
 
 Respond with STRICT JSON only, no markdown fencing, no commentary, matching exactly this shape:
-{"name": "short experience title", "flow": [{"type": "photo", "title": "short title", "text": "one to two sentence instruction shown to the participant", "reward": "short reward label", "points": 100, "answer": "only for type puzzle"}]}
+{"name": "short experience title", "flow": [{"type": "photo", "title": "short title", "text": "one to two sentence instruction shown to the participant", "reward": "short reward label", "points": 100, "answer": "only for type puzzle or quiz", "options": "only for type quiz - array of 3-4 short answer choices, including the exact text of \"answer\""}]}
 
-"type" must be one of: ${MISSION_TYPES.join(", ")}. "points" is an integer between 50 and 200. "answer" must only be present when "type" is "puzzle". Do not include an "id" field, the app assigns those.`;
+"type" must be one of: ${MISSION_TYPES.join(", ")}. "points" is an integer between 50 and 200. "answer" must only be present when "type" is "puzzle" or "quiz". "options" must only be present when "type" is "quiz". Do not include an "id" field, the app assigns those.`;
 
 const GEMINI_MODELS = ["gemini-3.6-flash", "gemini-2.5-flash", "gemini-2.0-flash", "gemini-flash-latest", "gemini-1.5-flash"];
 
@@ -426,6 +441,9 @@ exports.translateExperience = onCall({ secrets: [openaiApiKey], cors: true, time
     flow: flow.map((m) => ({
       id: m.id, type: m.type, title: m.title || "", text: m.text || "", reward: m.reward || "",
       ...(m.type === "puzzle" && m.answer ? { answer: m.answer } : {}),
+      ...(m.type === "quiz" && Array.isArray(m.options) && m.options.length
+        ? { options: m.options, answer: m.answer || "" }
+        : {}),
       ...(m.hotel ? { hotel: m.hotel } : {}),
       ...(m.type === "branch" && Array.isArray(m.options) && m.options.length
         ? { options: m.options.map((o) => ({ id: o.id, label: o.label || "" })) }
@@ -433,7 +451,7 @@ exports.translateExperience = onCall({ secrets: [openaiApiKey], cors: true, time
     })),
   };
 
-  const systemPrompt = `You translate content for an interactive experience app called Morivo into ${LANG_NAMES[targetLang]}, for a participant who doesn't speak the language it was originally written in. Translate naturally and idiomatically, not word-for-word - it should read like it was written natively in ${LANG_NAMES[targetLang]}. Translate every "name", "story", "title", "text" and "reward" field. A "hotel" field is a proper-noun hotel name - keep it exactly as-is, never translate or transliterate it. If a mission has an "answer" field (a puzzle's solution), translate it consistently with the translated "text" (the riddle) so the puzzle stays solvable: the translated answer must be exactly what a ${LANG_NAMES[targetLang]} speaker would naturally type as the answer to the translated riddle. If a mission has an "options" array (a branching choice), translate each option's "label" the same natural way; keep each option's "id" completely unchanged. Keep "id" and "type" fields completely unchanged - copy them through as given. Respond with STRICT JSON only, no markdown fencing, no commentary, matching exactly this shape: {"name":"...","story":"...","flow":[{"id":"...","type":"...","title":"...","text":"...","reward":"...","answer":"only if the input mission had one","hotel":"only if the input mission had one","options":"only if the input mission had one, same shape with translated label"}]}`;
+  const systemPrompt = `You translate content for an interactive experience app called Morivo into ${LANG_NAMES[targetLang]}, for a participant who doesn't speak the language it was originally written in. Translate naturally and idiomatically, not word-for-word - it should read like it was written natively in ${LANG_NAMES[targetLang]}. Translate every "name", "story", "title", "text" and "reward" field. A "hotel" field is a proper-noun hotel name - keep it exactly as-is, never translate or transliterate it. If a mission has an "answer" field (a puzzle's solution), translate it consistently with the translated "text" (the riddle) so the puzzle stays solvable: the translated answer must be exactly what a ${LANG_NAMES[targetLang]} speaker would naturally type as the answer to the translated riddle. If a "quiz" mission has an "options" array (a plain array of answer-choice strings) alongside its "answer", translate every option naturally, and the translated "answer" must be copied character-for-character from one of the translated "options" (the one that was correct in the original). If a mission has an "options" array of {id,label} objects (a branching choice), translate each option's "label" the same natural way; keep each option's "id" completely unchanged. Keep "id" and "type" fields completely unchanged - copy them through as given. Respond with STRICT JSON only, no markdown fencing, no commentary, matching exactly this shape: {"name":"...","story":"...","flow":[{"id":"...","type":"...","title":"...","text":"...","reward":"...","answer":"only if the input mission had one","hotel":"only if the input mission had one","options":"only if the input mission had one, same shape as given (array of strings for quiz, array of {id,label} for branch)"}]}`;
 
   let completion;
   try {
@@ -470,6 +488,14 @@ exports.translateExperience = onCall({ secrets: [openaiApiKey], cors: true, time
       text: t?.text !== undefined ? String(t.text).slice(0, 600) : m.text,
       reward: t?.reward !== undefined ? String(t.reward).slice(0, 120) : m.reward,
       ...(m.type === "puzzle" && t?.answer ? { answer: String(t.answer).slice(0, 80) } : {}),
+      ...(m.type === "quiz" && Array.isArray(m.options) && m.options.length
+        ? (() => {
+          const translated = Array.isArray(t?.options) ? t.options.map((o) => String(o || "").slice(0, 120)) : [];
+          const options = translated.length === m.options.length ? translated : m.options;
+          const rawAnswer = t?.answer ? String(t.answer).slice(0, 120) : "";
+          return { options, answer: options.includes(rawAnswer) ? rawAnswer : options[0] };
+        })()
+        : {}),
       ...(m.hotel && t?.hotel ? { hotel: String(t.hotel).slice(0, 120) } : {}),
       ...(m.type === "branch" && Array.isArray(m.options) && m.options.length
         ? {
@@ -589,9 +615,9 @@ ${chaptersText}`;
   return { story: finalStory };
 });
 
-const REVISE_SYSTEM_PROMPT = `You revise existing interactive "experiences" (mission journeys) for an app called Morivo, based on a specific instruction from the organizer - things like "make it funnier", "less competitive", "suitable for younger children", "add a mission about X", "shorten it". You are given the CURRENT mission list as JSON and an instruction. Apply the instruction thoughtfully across the missions where it's relevant - rewrite titles/text/rewards as needed, and only change the number or order of missions if the instruction actually implies that (like "add one more" or "cut it down"). Keep everything grounded and specific, never generic. Write in the same language the current missions are already written in (detect it automatically) unless the instruction explicitly asks to translate. A "puzzle" mission has an "answer" field (its solution) alongside "text" (its riddle) - if you keep a puzzle mission's riddle unchanged, keep its answer unchanged too; if you rewrite the riddle or add a new puzzle mission, write a matching new "answer" (single word or short phrase, lowercase, no punctuation). Respond with STRICT JSON only, no markdown fencing, no commentary, matching exactly this shape: {"flow":[{"type":"photo","title":"short title","text":"one to two sentence instruction","reward":"short reward label","points":100,"answer":"only for type puzzle"}]}
+const REVISE_SYSTEM_PROMPT = `You revise existing interactive "experiences" (mission journeys) for an app called Morivo, based on a specific instruction from the organizer - things like "make it funnier", "less competitive", "suitable for younger children", "add a mission about X", "shorten it". You are given the CURRENT mission list as JSON and an instruction. Apply the instruction thoughtfully across the missions where it's relevant - rewrite titles/text/rewards as needed, and only change the number or order of missions if the instruction actually implies that (like "add one more" or "cut it down"). Keep everything grounded and specific, never generic. Write in the same language the current missions are already written in (detect it automatically) unless the instruction explicitly asks to translate. A "puzzle" mission has an "answer" field (its solution) alongside "text" (its riddle) - if you keep a puzzle mission's riddle unchanged, keep its answer unchanged too; if you rewrite the riddle or add a new puzzle mission, write a matching new "answer" (single word or short phrase, lowercase, no punctuation). A "quiz" mission has an "options" array (3-4 short answer choices) alongside its "answer" (the exact text of the correct option, copied character-for-character from "options") - if you keep a quiz mission's question unchanged, keep its options and answer unchanged too; if you rewrite the question or add a new quiz mission, write matching new "options" and "answer". Respond with STRICT JSON only, no markdown fencing, no commentary, matching exactly this shape: {"flow":[{"type":"photo","title":"short title","text":"one to two sentence instruction","reward":"short reward label","points":100,"answer":"only for type puzzle or quiz","options":"only for type quiz"}]}
 
-"type" must be one of: ${MISSION_TYPES.join(", ")}. "points" is an integer between 50 and 200. "answer" must only be present when "type" is "puzzle".`;
+"type" must be one of: ${MISSION_TYPES.join(", ")}. "points" is an integer between 50 and 200. "answer" must only be present when "type" is "puzzle" or "quiz". "options" must only be present when "type" is "quiz".`;
 
 exports.reviseExperience = onCall({ secrets: [openaiApiKey], cors: true, timeoutSeconds: 60 }, async (request) => {
   if (!request.auth) {
@@ -607,7 +633,7 @@ exports.reviseExperience = onCall({ secrets: [openaiApiKey], cors: true, timeout
   }
 
   const client = new OpenAI({ apiKey: openaiApiKey.value().trim() });
-  const currentFlow = flow.map((m) => ({ type: m.type, title: m.title, text: m.text, reward: m.reward, points: m.points, ...(m.type === "puzzle" && m.answer ? { answer: m.answer } : {}) }));
+  const currentFlow = flow.map((m) => ({ type: m.type, title: m.title, text: m.text, reward: m.reward, points: m.points, ...(m.type === "puzzle" && m.answer ? { answer: m.answer } : {}), ...(m.type === "quiz" && Array.isArray(m.options) && m.options.length ? { options: m.options, answer: m.answer || "" } : {}) }));
   const userPrompt = `Current missions:\n${JSON.stringify(currentFlow)}\n\nInstruction: ${instruction}`;
 
   let completion;
