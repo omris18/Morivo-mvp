@@ -37,6 +37,11 @@ export default function AICreator({setExperience,setView,setActiveId,user,lang,t
  const [form,setForm]=useState({prompt:"",type:"",location:"",duration:"",startDate:"",endDate:"",people:"",peopleDetails:"",hotelBooked:false,interests:[],adults:"2",children:"0",childrenAges:[]}),[building,setBuilding]=useState(false),[step,setStep]=useState(0);
  const TOTAL_STEPS=3;
  const [formStep,setFormStep]=useState(1);
+ const [phase,setPhase]=useState("form");
+ const [itinerary,setItinerary]=useState(null);
+ const [planError,setPlanError]=useState(null);
+ const [selectedAttractionIds,setSelectedAttractionIds]=useState(new Set());
+ const [selectedHotelIndex,setSelectedHotelIndex]=useState(-1);
  function goNext(){
   if(formStep===1&&!form.prompt.trim())return alert(a.describeFirst);
   setFormStep(s=>Math.min(TOTAL_STEPS,s+1));
@@ -64,17 +69,48 @@ export default function AICreator({setExperience,setView,setActiveId,user,lang,t
   setForm(f=>({...f,interests:f.interests.includes(key)?f.interests.filter(x=>x!==key):[...f.interests,key]}));
  }
  useEffect(()=>{if(!building)return;const id=setInterval(()=>setStep(x=>Math.min(x+1,a.thinking.length-1)),900);return()=>clearInterval(id)},[building,lang]);
- async function build(){
+ function baseFields(){
+  const needsHotel=isFamilyTrip&&!form.hotelBooked;
+  return {prompt:form.prompt,type:form.type,location:form.location,duration:isFamilyTrip?(tripDays?`${tripDays} days`:""):form.duration,startDate:isFamilyTrip?form.startDate:null,endDate:isFamilyTrip?form.endDate:null,people:isFamilyTrip?String(Number(form.adults||0)+Number(form.children||0)):form.people,peopleDetails:form.peopleDetails,adults:isFamilyTrip?Number(form.adults||0):null,children:isFamilyTrip?Number(form.children||0):null,childrenAges:isFamilyTrip?form.childrenAges.map(Number).filter(Number.isFinite):[],lang,multiDay:isFamilyTrip,needsHotel,interests:isFamilyTrip?form.interests:[]};
+ }
+ async function goPlan(){
   if(!form.prompt.trim())return alert(a.describeFirst);
   if(!firebaseConfigured)return alert(a.needsFirebase);
-  setBuilding(true);setStep(0);
+  setPhase("planning");setPlanError(null);
+  try{
+   await ensureUser();
+   const propose=httpsCallable(functions,"proposeItinerary");
+   const result=await propose(baseFields());
+   setItinerary(result.data);
+   setSelectedAttractionIds(new Set((result.data.attractions||[]).map((_,i)=>i)));
+   setSelectedHotelIndex((result.data.hotels||[]).length?0:-1);
+   setPhase("review");
+  }catch(e){
+   console.error("Itinerary planning failed",e);
+   setPlanError(`${e.code||"error"}: ${e.message||e}`);
+   setPhase("form");
+  }
+ }
+ function updatePlanStep(stepNum,values){
+  setItinerary(it=>({...it,plan:it.plan.map(p=>p.step===stepNum?{...p,...values}:p)}));
+ }
+ function toggleAttraction(i){
+  setSelectedAttractionIds(prev=>{const next=new Set(prev);next.has(i)?next.delete(i):next.add(i);return next});
+ }
+ async function build(){
+  const approvedItinerary=itinerary?{
+   name:itinerary.name,
+   plan:itinerary.plan,
+   selectedAttractions:(itinerary.attractions||[]).filter((_,i)=>selectedAttractionIds.has(i)),
+   selectedHotel:selectedHotelIndex>=0?(itinerary.hotels||[])[selectedHotelIndex]:null,
+  }:null;
+  setPhase("building");setBuilding(true);setStep(0);
   const minWait=new Promise(r=>setTimeout(r,Math.max(4200,a.thinking.length*700)));
   let flow,name,usedAI=false,aiError=null;
   try{
    await ensureUser();
    const generate=httpsCallable(functions,"generateExperience");
-   const needsHotel=isFamilyTrip&&!form.hotelBooked;
-   const result=await generate({prompt:form.prompt,type:form.type,location:form.location,duration:isFamilyTrip?(tripDays?`${tripDays} days`:""):form.duration,startDate:isFamilyTrip?form.startDate:null,endDate:isFamilyTrip?form.endDate:null,people:isFamilyTrip?String(Number(form.adults||0)+Number(form.children||0)):form.people,peopleDetails:form.peopleDetails,adults:isFamilyTrip?Number(form.adults||0):null,children:isFamilyTrip?Number(form.children||0):null,childrenAges:isFamilyTrip?form.childrenAges.map(Number).filter(Number.isFinite):[],lang,multiDay:isFamilyTrip,needsHotel,interests:isFamilyTrip?form.interests:[]});
+   const result=await generate({...baseFields(),approvedItinerary});
    flow=result.data.flow;name=result.data.name;usedAI=true;
   }catch(e){
    console.error("AI generation failed, falling back to the draft generator",e);
@@ -117,6 +153,45 @@ export default function AICreator({setExperience,setView,setActiveId,user,lang,t
    </div>
    <div className="thinkingCopy"><div className="tag">{a.tag}</div><h1>{a.thinking[step]}</h1><p>{form.prompt}</p><div className="thinkingSteps">{a.thinking.map((x,i)=><i className={i<=step?"on":""} key={x}></i>)}</div></div>
   </section>;
+ if(phase==="planning")return <section className="aiThinking" dir={dir}>
+   <div className="thinkingWorld"><div className="planSpinner"></div></div>
+   <div className="thinkingCopy"><div className="tag">{a.tag}</div><h1>{a.planningTitle}</h1><p>{form.prompt}</p></div>
+  </section>;
+ if(phase==="review"&&itinerary)return <section className="itineraryReview" dir={dir}>
+  <div className="panel">
+   <div className="aiTop"><div className="tag">{a.tag}</div></div>
+   <h1>{a.reviewTitle}</h1><p>{a.reviewDesc}</p>
+   <div className="itineraryPlan">
+    {itinerary.plan.map(p=><div className="itineraryStep" key={p.step}>
+     <div className="itineraryStepBadge">{isFamilyTrip?a.dayBadge(p.step):a.partBadge(p.step)}</div>
+     <input value={p.title} onChange={e=>updatePlanStep(p.step,{title:e.target.value})}/>
+     <textarea value={p.summary} onChange={e=>updatePlanStep(p.step,{summary:e.target.value})}/>
+    </div>)}
+   </div>
+   {itinerary.attractions?.length>0&&<div className="itineraryOptions">
+    <div className="tag">{a.attractionsLabel}</div>
+    {itinerary.attractions.map((att,i)=><label className="itineraryOptionRow" key={i}>
+     <input type="checkbox" checked={selectedAttractionIds.has(i)} onChange={()=>toggleAttraction(i)}/>
+     <div><b>{att.name}</b><p>{att.why}</p></div>
+     <a href={att.url} target="_blank" rel="noopener noreferrer">🔗</a>
+    </label>)}
+   </div>}
+   {itinerary.hotels?.length>0&&<div className="itineraryOptions">
+    <div className="tag">{a.hotelsLabel}</div>
+    {itinerary.hotels.map((h,i)=><label className="itineraryOptionRow" key={i}>
+     <input type="radio" name="itineraryHotel" checked={selectedHotelIndex===i} onChange={()=>setSelectedHotelIndex(i)}/>
+     <div><b>{h.name}</b><p>{h.why}</p></div>
+     <a href={h.url} target="_blank" rel="noopener noreferrer">🔗</a>
+    </label>)}
+    <label className="itineraryOptionRow"><input type="radio" name="itineraryHotel" checked={selectedHotelIndex===-1} onChange={()=>setSelectedHotelIndex(-1)}/><div><b>{a.noHotelOption}</b></div></label>
+   </div>}
+   <div className="actions">
+    <button onClick={()=>setPhase("form")}>{a.backToDetails}</button>
+    <button onClick={goPlan}>🔄 {a.regeneratePlan}</button>
+    <button className="primary" onClick={build}>✦ {a.approveAndBuild}</button>
+   </div>
+  </div>
+ </section>;
  return <section className="aiCreate grid2" dir={dir}>
   <div className="panel">
    <div className="aiTop"><div className="tag">{a.tag}</div></div>
@@ -148,7 +223,8 @@ export default function AICreator({setExperience,setView,setActiveId,user,lang,t
     </div>
    </div>
 
-   <div className="actions finalActions"><button onClick={()=>setView("create")}>{a.blank}</button><button className="primary aiBuildButton" onClick={build}>✦ {a.build}</button></div>
+   {planError&&<div className="planError">⚠ {planError}</div>}
+   <div className="actions finalActions"><button onClick={()=>setView("create")}>{a.blank}</button><button className="primary aiBuildButton" onClick={goPlan}>✦ {a.planTrip}</button></div>
   </div>
   <div className={"panel aiPromise "+(shownHeroArt?"aiPromiseArt":"")} style={shownHeroArt?{backgroundImage:`url(${shownHeroArt})`}:undefined}>
    {shownHeroArt?<div className="aiPromiseShade"></div>:<div className="constellation">

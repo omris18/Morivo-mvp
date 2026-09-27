@@ -118,14 +118,19 @@ function optionsToMissionText(options, max, urlFor, location, urlOpts) {
   return lines.length ? lines.join("\n\n") : null;
 }
 
-async function suggestHotel({ location, prompt, people, duration, lang, startDate, endDate, adults, children, childrenAges }) {
+async function suggestHotelOptions({ location, prompt, people, duration, lang }) {
   const hotelPrompt = `Suggest 2 to 3 specific, realistic accommodation options in or near "${location}" that would suit this group: "${prompt}"${people ? ` (${people} people)` : ""}${duration ? `, staying for ${duration}` : ""}. For each option give a real, findable hotel/accommodation name or a specific well-known area, and a 1-2 sentence reason it fits this exact group - practical and specific, not generic travel-blog language. Write in the same language as the group description above (detect it automatically). Respond with STRICT JSON only, no markdown fencing, no commentary, matching exactly this shape: {"options":[{"name":"hotel or area name","why":"1-2 sentence reason"}]}`;
   const data = await askGeminiJSON(hotelPrompt, "hotel suggestion");
-  if (!Array.isArray(data?.options) || !data.options.length) return null;
+  return Array.isArray(data?.options) ? data.options.slice(0, 3) : [];
+}
+
+async function suggestHotel({ location, prompt, people, duration, lang, startDate, endDate, adults, children, childrenAges }) {
+  const options = await suggestHotelOptions({ location, prompt, people, duration, lang });
+  if (!options.length) return null;
   const stayAdults = Math.max(1, Number(adults) || Number(people) || 2);
   const stayChildren = Math.max(0, Number(children) || 0);
   const rooms = Math.max(1, Math.ceil((stayAdults + stayChildren) / 4));
-  const text = optionsToMissionText(data.options, 3, bookingSearchUrl, location, { checkin: startDate, checkout: endDate, adults: stayAdults, children: stayChildren, childrenAges, rooms });
+  const text = optionsToMissionText(options, 3, bookingSearchUrl, location, { checkin: startDate, checkout: endDate, adults: stayAdults, children: stayChildren, childrenAges, rooms });
   if (!text) return null;
   return {
     id: `story-${Date.now()}-hotel`,
@@ -148,12 +153,17 @@ const INTEREST_LABELS = {
   relaxation: "Relaxation & Wellness",
 };
 
-async function suggestAttractions({ location, prompt, people, duration, lang, interests }) {
+async function suggestAttractionOptions({ location, prompt, people, duration, lang, interests }) {
   const interestLabels = Array.isArray(interests) ? interests.map((i) => INTEREST_LABELS[i]).filter(Boolean) : [];
   const attrPrompt = `Suggest 3 to 4 specific, real attractions or activities in or near "${location}" that would suit this group: "${prompt}"${people ? ` (${people} people)` : ""}${duration ? `, over ${duration}` : ""}.${interestLabels.length ? ` The group specifically wants to focus on these categories: ${interestLabels.join(", ")} - prioritize real options that match those categories over generic sightseeing.` : ""} For each, give a real, findable attraction or activity name and a 1-2 sentence reason it fits this exact group - their ages, interests, and any dietary/religious/accessibility needs mentioned - practical and specific, not generic travel-blog language. Write in the same language as the group description above (detect it automatically). Respond with STRICT JSON only, no markdown fencing, no commentary, matching exactly this shape: {"options":[{"name":"attraction or activity name","why":"1-2 sentence reason"}]}`;
   const data = await askGeminiJSON(attrPrompt, "attraction suggestion");
-  if (!Array.isArray(data?.options) || !data.options.length) return null;
-  const text = optionsToMissionText(data.options, 4, mapsSearchUrl, location);
+  return Array.isArray(data?.options) ? data.options.slice(0, 4) : [];
+}
+
+async function suggestAttractions({ location, prompt, people, duration, lang, interests }) {
+  const options = await suggestAttractionOptions({ location, prompt, people, duration, lang, interests });
+  if (!options.length) return null;
+  const text = optionsToMissionText(options, 4, mapsSearchUrl, location);
   if (!text) return null;
   return {
     id: `story-${Date.now()}-attractions`,
@@ -165,18 +175,136 @@ async function suggestAttractions({ location, prompt, people, duration, lang, in
   };
 }
 
-exports.generateExperience = onCall({ secrets: [openaiApiKey, geminiApiKey], cors: true, timeoutSeconds: 60 }, async (request) => {
+function attractionsMissionFromSelection(selected, location, lang) {
+  if (!Array.isArray(selected) || !selected.length) return null;
+  const text = optionsToMissionText(selected, selected.length, mapsSearchUrl, location);
+  if (!text) return null;
+  return {
+    id: `story-${Date.now()}-attractions`,
+    type: "story",
+    title: lang === "he" ? "מה לעשות" : "Things to Do",
+    text: text.slice(0, 1400),
+    reward: "",
+    points: 0,
+  };
+}
+
+function hotelMissionFromSelection(selected, location, lang, opts) {
+  if (!selected) return null;
+  const text = optionsToMissionText([selected], 1, bookingSearchUrl, location, opts);
+  if (!text) return null;
+  return {
+    id: `story-${Date.now()}-hotel`,
+    type: "story",
+    title: lang === "he" ? "היכן להתארח" : "Where to Stay",
+    text,
+    reward: "",
+    points: 0,
+  };
+}
+
+const ITINERARY_SYSTEM_PROMPT = `You plan the outline of an interactive real-world experience for an app called Morivo, used for family trips, birthdays, team building, school outings and similar events. This is a PLANNING step, shown to the organizer for review and approval BEFORE the app builds the actual interactive missions - so give a clear, specific outline, not finished missions.
+
+Given a free-text description, break the experience into an ordered sequence of parts. If it is a multi-day trip, each part is one calendar day (in order, starting at 1) - the number of parts must equal the number of days. Otherwise (a single-sitting event), break it into 3 to 5 parts representing the natural arc of that one sitting (an opening/arrival, one or two main phases, a closing/payoff) - never label these as calendar days.
+
+For each part, write a short specific title (e.g. "Day 1 - Arrival & Shibuya" for a trip day, or "The Opening Challenge" for a single-sitting phase - translated into the description's language) and a 1-2 sentence summary of what that part focuses on. Every part must be grounded in a concrete detail from the description (people, occasion, place) - never generic filler like "Explore and have fun."
+
+Respond in the same language the description is written in - detect it automatically. Respond with STRICT JSON only, no markdown fencing, no commentary, matching exactly this shape:
+{"name": "short experience title", "plan": [{"step": 1, "title": "short specific title", "summary": "1-2 sentence plan for this part"}]}`;
+
+exports.proposeItinerary = onCall({ secrets: [openaiApiKey, geminiApiKey], cors: true, timeoutSeconds: 60 }, async (request) => {
   if (!request.auth) {
-    throw new HttpsError("unauthenticated", "Sign in (even anonymously) before generating an experience.");
+    throw new HttpsError("unauthenticated", "Sign in (even anonymously) before planning an experience.");
   }
 
-  const { prompt, type, location, duration, people, peopleDetails, adults, children, childrenAges, lang, multiDay, needsHotel, interests, startDate, endDate } = request.data || {};
+  const { prompt, type, location, duration, people, peopleDetails, lang, multiDay, needsHotel, interests, startDate, endDate, adults, children, childrenAges } = request.data || {};
 
   if (!prompt || !String(prompt).trim()) {
     throw new HttpsError("invalid-argument", "A description of the experience is required.");
   }
 
   const client = new OpenAI({ apiKey: openaiApiKey.value().trim() });
+  const userPrompt = [
+    `Description: ${prompt}`,
+    `Required output language for the title and every part: ${LANG_NAMES[lang] || "the language of the description"}. The destination country does not determine the language.`,
+    type ? `Experience type: ${type}` : null,
+    location ? `Location: ${location}` : null,
+    duration ? `Duration: ${duration}` : null,
+    people ? `Participants: ${people}` : null,
+    peopleDetails && String(peopleDetails).trim() ? `Who's joining (names, ages, relationships): ${String(peopleDetails).trim().slice(0, 600)}` : null,
+    multiDay ? `This is a multi-day trip - one part per calendar day, in order.` : `This is a single-sitting experience - 3 to 5 parts representing its arc, not calendar days.`,
+  ].filter(Boolean).join("\n");
+
+  const attractionsPromise = location ? suggestAttractionOptions({ location, prompt, people, duration, lang, interests }) : Promise.resolve([]);
+  const hotelPromise = (needsHotel && location) ? suggestHotelOptions({ location, prompt, people, duration, lang }) : Promise.resolve([]);
+
+  let completion;
+  try {
+    completion = await client.chat.completions.create({
+      model: "gpt-4o-mini",
+      messages: [
+        { role: "system", content: ITINERARY_SYSTEM_PROMPT },
+        { role: "user", content: userPrompt },
+      ],
+      response_format: { type: "json_object" },
+      temperature: 0.6,
+    });
+  } catch (err) {
+    console.error("OpenAI itinerary request failed", err);
+    throw new HttpsError("unavailable", "The AI service failed to respond. Please try again.");
+  }
+
+  let data;
+  try {
+    data = JSON.parse(completion.choices[0].message.content);
+  } catch (err) {
+    throw new HttpsError("internal", "The AI returned data in an unexpected format.");
+  }
+  if (!data || !Array.isArray(data.plan) || data.plan.length === 0) {
+    throw new HttpsError("internal", "The AI returned an unexpected itinerary shape.");
+  }
+
+  const [attractionOptions, hotelOptions] = await Promise.all([attractionsPromise, hotelPromise]);
+
+  const stayAdults = Math.max(1, Number(adults) || Number(people) || 2);
+  const stayChildren = Math.max(0, Number(children) || 0);
+  const rooms = Math.max(1, Math.ceil((stayAdults + stayChildren) / 4));
+  const hotelUrlOpts = { checkin: startDate, checkout: endDate, adults: stayAdults, children: stayChildren, childrenAges, rooms };
+
+  return {
+    name: String(data.name || prompt).slice(0, 120),
+    plan: data.plan.slice(0, 21).map((p, i) => ({
+      step: Number.isFinite(Number(p.step)) ? Number(p.step) : i + 1,
+      title: String(p.title || "").slice(0, 120),
+      summary: String(p.summary || "").slice(0, 400),
+    })),
+    attractions: attractionOptions.map((o) => ({
+      name: String(o?.name || "").slice(0, 100),
+      why: String(o?.why || "").slice(0, 220),
+      url: mapsSearchUrl(o?.name, location),
+    })),
+    hotels: hotelOptions.map((o) => ({
+      name: String(o?.name || "").slice(0, 100),
+      why: String(o?.why || "").slice(0, 220),
+      url: bookingSearchUrl(o?.name, location, hotelUrlOpts),
+    })),
+  };
+});
+
+exports.generateExperience = onCall({ secrets: [openaiApiKey, geminiApiKey], cors: true, timeoutSeconds: 60 }, async (request) => {
+  if (!request.auth) {
+    throw new HttpsError("unauthenticated", "Sign in (even anonymously) before generating an experience.");
+  }
+
+  const { prompt, type, location, duration, people, peopleDetails, adults, children, childrenAges, lang, multiDay, needsHotel, interests, startDate, endDate, approvedItinerary } = request.data || {};
+
+  if (!prompt || !String(prompt).trim()) {
+    throw new HttpsError("invalid-argument", "A description of the experience is required.");
+  }
+
+  const client = new OpenAI({ apiKey: openaiApiKey.value().trim() });
+
+  const hasApprovedPlan = approvedItinerary && Array.isArray(approvedItinerary.plan) && approvedItinerary.plan.length > 0;
 
   const userPrompt = [
     `Description: ${prompt}`,
@@ -187,11 +315,21 @@ exports.generateExperience = onCall({ secrets: [openaiApiKey, geminiApiKey], cor
     people ? `Participants: ${people}` : null,
     peopleDetails && String(peopleDetails).trim() ? `Who's joining (names, ages, relationships): ${String(peopleDetails).trim().slice(0, 600)}` : null,
     multiDay ? `This is a multi-day trip - structure the missions across the days as described above, not a single sitting.` : null,
+    hasApprovedPlan
+      ? `The organizer already reviewed and approved this exact outline - build missions that follow it part by part, in this order, do not invent a different structure or skip a part:\n${approvedItinerary.plan.map((p) => `${p.step}. ${p.title} - ${p.summary}`).join("\n")}`
+      : null,
     `Write "name", and every mission's "title", "text" and "reward", in the same language the Description above is written in - detect it automatically, it can be any language (Hebrew, English, Arabic, French, Spanish, German, Russian, or any other). Use natural, native-sounding phrasing for that language and its culture, not a literal translation. Only if the Description is too short or ambiguous to confidently detect a language, default to ${lang === "he" ? "Hebrew" : "English"}.`,
   ].filter(Boolean).join("\n");
 
-  const hotelMissionPromise = (needsHotel && location) ? suggestHotel({ location, prompt, people, duration, lang, startDate, endDate, adults, children, childrenAges }) : Promise.resolve(null);
-  const attractionsMissionPromise = (multiDay && location) ? suggestAttractions({ location, prompt, people, duration, lang, interests }) : Promise.resolve(null);
+  // When the organizer already picked specific attractions/hotel in the planning-review step,
+  // build those missions directly from that exact selection instead of asking the AI again -
+  // what they approved is what they get, not a fresh re-roll.
+  const hotelMissionPromise = hasApprovedPlan
+    ? Promise.resolve(hotelMissionFromSelection(approvedItinerary.selectedHotel, location, lang, { checkin: startDate, checkout: endDate, adults: Math.max(1, Number(adults) || Number(people) || 2), children: Math.max(0, Number(children) || 0), childrenAges, rooms: Math.max(1, Math.ceil((Math.max(1, Number(adults) || Number(people) || 2) + Math.max(0, Number(children) || 0)) / 4)) }))
+    : (needsHotel && location) ? suggestHotel({ location, prompt, people, duration, lang, startDate, endDate, adults, children, childrenAges }) : Promise.resolve(null);
+  const attractionsMissionPromise = hasApprovedPlan
+    ? Promise.resolve(attractionsMissionFromSelection(approvedItinerary.selectedAttractions, location, lang))
+    : (multiDay && location) ? suggestAttractions({ location, prompt, people, duration, lang, interests }) : Promise.resolve(null);
 
   let completion;
   try {
