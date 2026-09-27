@@ -5,7 +5,7 @@ import journeyProgress from "../functions/journeyProgress";
 import {useEffect,useRef,useState} from "react";
 import jsQR from "jsqr";
 import {firebaseConfigured} from "../lib/firebase";
-import {ensureUser,joinExperienceByCode,joinExperienceByPersonalCode,subscribeExperience,subscribeMyProgress,initializeProgress,completeJourneyMission,saveMissionAnswer,subscribeMessages,translateExperienceRemote} from "../lib/morivoData";
+import {ensureUser,joinExperienceByCode,joinExperienceByPersonalCode,subscribeExperience,subscribeMyProgress,initializeProgress,completeJourneyMission,saveMissionAnswer,subscribeMessages,translateExperienceRemote,subscribeLocationVotes,castLocationVote} from "../lib/morivoData";
 import {uploadMissionPhoto,subscribeMedia} from "../lib/mediaData";
 import {computeBadges} from "../lib/badges";
 import LinkifiedText from "./LinkifiedText";
@@ -39,6 +39,7 @@ export default function Participant({experience,setExperience,setView,setActiveI
  const [messages,setMessages]=useState([]),[dismissed,setDismissed]=useState([]);
  const [pushState,setPushState]=useState("idle");
  const [translated,setTranslated]=useState(null);
+ const [locationVotes,setLocationVotes]=useState([]);
  useEffect(()=>{if(deepLinkCode)setCode(deepLinkCode)},[deepLinkCode]);
  useEffect(()=>{
   if(!portal||!portalCode)return;
@@ -55,6 +56,7 @@ export default function Participant({experience,setExperience,setView,setActiveI
  useEffect(()=>{if(chromeless&&firebaseConfigured&&eid&&eid!=="thailand-demo")return subscribeMedia(eid,setCoverMedia)},[chromeless,eid]);
  useEffect(()=>{if(firebaseConfigured&&joined&&eid&&uid){initializeProgress(eid,uid);return subscribeMyProgress(eid,uid,setProg)}},[joined,eid,uid]);
  useEffect(()=>{if(firebaseConfigured&&joined&&eid)return subscribeMessages(eid,setMessages)},[joined,eid]);
+ useEffect(()=>{if(firebaseConfigured&&joined&&eid)return subscribeLocationVotes(eid,setLocationVotes)},[joined,eid]);
  useEffect(()=>{
   setTranslated(null);
   if(!firebaseConfigured||!joined||!eid||eid==="thailand-demo")return;
@@ -77,7 +79,8 @@ export default function Participant({experience,setExperience,setView,setActiveI
  const badges=computeBadges(prog,flow);
  useEffect(()=>{setQuizAnswer(null);setQuizFeedback(null);setQuizWrongAttempts(0);setNoteText("");setPuzzleAnswer("");setLocStatus(null);setQrVerified(false);stopScan()},[mission?.id]);
  const branchResolvingRef=useRef(false);
- useEffect(()=>{branchResolvingRef.current=false},[mission?.id]);
+ const locationPollResolvingRef=useRef(false);
+ useEffect(()=>{branchResolvingRef.current=false;locationPollResolvingRef.current=false},[mission?.id]);
  useEffect(()=>{
   if(!mission||mission.type!=="branch"||!mission.organizerDecides||busy)return;
   const decidedOptionId=experience.branchDecisions?.[mission.id];
@@ -87,6 +90,13 @@ export default function Participant({experience,setExperience,setView,setActiveI
   branchResolvingRef.current=true;
   chooseBranch(option);
  },[mission,experience.branchDecisions,busy]);
+ useEffect(()=>{
+  if(!mission||!mission.isLocationPoll||busy)return;
+  const decided=experience.locationDecisions?.[mission.id];
+  if(!decided||locationPollResolvingRef.current)return;
+  locationPollResolvingRef.current=true;
+  completeLocationPoll();
+ },[mission,experience.locationDecisions,busy]);
  useEffect(()=>()=>stopScan(),[]);
  const hasGpsCheckpoint=mission&&Number.isFinite(mission.lat)&&Number.isFinite(mission.lng);
  const hasQrCheckpoint=mission&&!!mission.qrCode;
@@ -150,6 +160,18 @@ export default function Participant({experience,setExperience,setView,setActiveI
    if(firebaseConfigured)await completeJourneyMission(eid,mission,idx,name,{nextMissionId:option.next||null});
    else setProg(pr=>({completedMissionIds:[...pr.completedMissionIds,mission.id],currentMissionIndex:nextIndex,points:pr.points+(mission.points||0)}));
   }catch(e){alert(e.message)}finally{setBusy(false)}
+ }
+ async function completeLocationPoll(){
+  if(!mission||busy)return;
+  setBusy(true);
+  try{
+   if(firebaseConfigured)await completeJourneyMission(eid,mission,idx,name);
+   else setProg(pr=>({completedMissionIds:[...pr.completedMissionIds,mission.id],currentMissionIndex:idx+1,points:pr.points+(mission.points||0)}));
+  }catch(e){alert(e.message)}finally{setBusy(false)}
+ }
+ async function voteLocation(optionId){
+  if(!mission||!firebaseConfigured)return;
+  try{await castLocationVote(eid,mission.id,optionId,name)}catch(e){alert(e.message)}
  }
  async function evaluateQuiz(opt){
   if(!mission||busy||quizFeedback)return;
@@ -246,8 +268,21 @@ export default function Participant({experience,setExperience,setView,setActiveI
  {mission.type==="branch"&&(mission.organizerDecides
   ? <div className="branchWaiting">⏳ {p.waitingForOrganizerDecision}</div>
   : <div className="branchChoices">{(mission.options||[]).map(o=><button key={o.id} type="button" className="branchChoiceBtn" disabled={busy||experience.paused} onClick={()=>chooseBranch(o)}>{o.label}</button>)}</div>)}
- {mission.type!=="branch"&&<div className="mission">{p.reward}: {mission.reward||`${mission.points||100} pts`}</div>}
- {mission.type!=="branch"&&mission.type!=="quiz"&&<>{busy&&(mission.type==="photo"||mission.type==="video")&&<div className="uploadProgress"><div style={{width:`${pct}%`}}></div><span>{pct}%</span></div>}<button className="primary" disabled={busy||experience.paused} onClick={complete}>{busy?p.saving:p.completeContinue}</button></>}</div>}</>;
+ {mission.isLocationPoll&&(experience.locationDecisions?.[mission.id]
+  ? <div className="branchWaiting">⏳ {p.waitingForOrganizerDecision}</div>
+  : <div className="locationPoll">
+     {(mission.options||[]).map(o=>{
+      const count=locationVotes.filter(v=>v.missionId===mission.id&&v.optionId===o.id).length;
+      const myVote=locationVotes.find(v=>v.id===uid)?.optionId===o.id;
+      return <button key={o.id} type="button" className={"locationPollOption "+(myVote?"selected":"")} onClick={()=>voteLocation(o.id)}>
+       <b>{o.name}</b>{o.why&&<span>{o.why}</span>}
+       <small>{p.votesCount(count)}</small>
+      </button>;
+     })}
+     <p className="locationPollHint">{p.locationPollHint}</p>
+    </div>)}
+ {mission.type!=="branch"&&!mission.isLocationPoll&&<div className="mission">{p.reward}: {mission.reward||`${mission.points||100} pts`}</div>}
+ {mission.type!=="branch"&&mission.type!=="quiz"&&!mission.isLocationPoll&&<>{busy&&(mission.type==="photo"||mission.type==="video")&&<div className="uploadProgress"><div style={{width:`${pct}%`}}></div><span>{pct}%</span></div>}<button className="primary" disabled={busy||experience.paused} onClick={complete}>{busy?p.saving:p.completeContinue}</button></>}</div>}</>;
 
  const joinForm=<div className="participantJoin"><div className="participantJoinMark" aria-hidden="true"><span></span><span></span><span></span></div><div className="participantJoinEyebrow">MORIVO · EXPERIENCE</div><h2>{p.joinTitle}</h2><label htmlFor="participant-name">{p.yourName}</label><input id="participant-name" autoComplete="name" value={name} placeholder={p.namePlaceholder} onChange={e=>setName(e.target.value)}/><label htmlFor="participant-code">{p.joinCode}</label><input id="participant-code" autoCapitalize="characters" value={code} onChange={e=>setCode(e.target.value.toUpperCase())} onKeyDown={e=>e.key==="Enter"&&join()}/><div className="actions centerActions"><button className="primary" disabled={joining} onClick={join}>{joining?p.joining:p.joinBtn}</button></div></div>;
 

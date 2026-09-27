@@ -222,6 +222,32 @@ function hotelMissionFromSelection(selected, location, lang, opts) {
   };
 }
 
+// The organizer chose "let the group vote" instead of picking one hotel - this becomes the
+// experience's first mission, but it's not something each participant completes on their own:
+// they vote, the organizer makes the final call in Runtime, and the journey only continues
+// once that decision lands (see organizerDecides handling in Participant.js/Runtime.js).
+function hotelPollMission(candidates, location, lang, opts) {
+  const options = (Array.isArray(candidates) ? candidates : []).slice(0, 4).map((c, i) => {
+    const name = String(c?.name || "").trim().slice(0, 100);
+    if (!name) return null;
+    return { id: `loc-${i}`, name, why: String(c?.why || "").trim().slice(0, 220), url: bookingSearchUrl(name, location, opts) };
+  }).filter(Boolean);
+  if (options.length < 2) return null;
+  return {
+    id: `story-${Date.now()}-locationpoll`,
+    type: "story",
+    title: lang === "he" ? "איפה נתארח?" : "Where should we stay?",
+    text: lang === "he"
+      ? "יש כמה אפשרויות מגורים לטיול הזה. הצביעו על מה שאתם מעדיפים - המארגן יקבל את ההחלטה הסופית, ומשם יוצאים למסע."
+      : "There are a few accommodation options for this trip. Vote for the one you'd prefer - the organizer will make the final call, and the journey begins from there.",
+    reward: "",
+    points: 0,
+    isLocationPoll: true,
+    organizerDecides: true,
+    options,
+  };
+}
+
 const ITINERARY_SYSTEM_PROMPT = `You plan the outline of an interactive real-world experience for an app called Morivo, used for family trips, birthdays, team building, school outings and similar events. This is a PLANNING step, shown to the organizer for review and approval BEFORE the app builds the actual interactive missions - so give a clear, specific outline, not finished missions.
 
 Given a free-text description, break the experience into an ordered sequence of parts. If it is a multi-day trip, each part is one calendar day (in order, starting at 1) - the number of parts must equal the number of days. Otherwise (a single-sitting event), break it into 3 to 5 parts representing the natural arc of that one sitting (an opening/arrival, one or two main phases, a closing/payoff) - never label these as calendar days.
@@ -343,8 +369,11 @@ exports.generateExperience = onCall({ secrets: [openaiApiKey, geminiApiKey], cor
   // When the organizer already picked specific attractions/hotel in the planning-review step,
   // build those missions directly from that exact selection instead of asking the AI again -
   // what they approved is what they get, not a fresh re-roll.
+  const hotelUrlOpts = { checkin: startDate, checkout: endDate, adults: Math.max(1, Number(adults) || Number(people) || 2), children: Math.max(0, Number(children) || 0), childrenAges, rooms: Math.max(1, Math.ceil((Math.max(1, Number(adults) || Number(people) || 2) + Math.max(0, Number(children) || 0)) / 4)) };
   const hotelMissionPromise = hasApprovedPlan
-    ? Promise.resolve(hotelMissionFromSelection(approvedItinerary.selectedHotel, location, lang, { checkin: startDate, checkout: endDate, adults: Math.max(1, Number(adults) || Number(people) || 2), children: Math.max(0, Number(children) || 0), childrenAges, rooms: Math.max(1, Math.ceil((Math.max(1, Number(adults) || Number(people) || 2) + Math.max(0, Number(children) || 0)) / 4)) }))
+    ? Promise.resolve(approvedItinerary.selectedHotel?.poll
+        ? hotelPollMission(approvedItinerary.selectedHotel.candidates, location, lang, hotelUrlOpts)
+        : hotelMissionFromSelection(approvedItinerary.selectedHotel, location, lang, hotelUrlOpts))
     : (needsHotel && location) ? suggestHotel({ location, prompt, people, duration, lang, startDate, endDate, adults, children, childrenAges }) : Promise.resolve(null);
   const attractionsMissionPromise = hasApprovedPlan
     ? Promise.resolve(attractionsMissionFromSelection(approvedItinerary.selectedAttractions, location, lang))

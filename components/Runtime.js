@@ -6,14 +6,14 @@ import {reorderExperienceRemote,updateMissionRemote} from "../lib/morivoData";
 import journeyProgress from "../functions/journeyProgress";
 import QRCode from "qrcode";
 import {firebaseConfigured} from "../lib/firebase";
-import {subscribeEvents,subscribeParticipants,subscribeAllProgress,subscribeAnswers,sendOrganizerMessage,skipMissionForParticipant,awardBonusPoints,updateExperienceRemote,addParticipantCode,subscribeParticipantCodes,removeParticipantCode} from "../lib/morivoData";
+import {subscribeEvents,subscribeParticipants,subscribeAllProgress,subscribeAnswers,sendOrganizerMessage,skipMissionForParticipant,awardBonusPoints,updateExperienceRemote,addParticipantCode,subscribeParticipantCodes,removeParticipantCode,subscribeLocationVotes} from "../lib/morivoData";
 import {subscribeMedia} from "../lib/mediaData";
 import {writeNfcTag,nfcWriteSupported} from "../lib/nfc";
 const STUCK_MINUTES=3;
 function minutesAgo(ts){ if(!ts?.toMillis)return null; return Math.floor((Date.now()-ts.toMillis())/60000); }
 export default function Runtime({experience,setExperience,setView,t,user,lang}){
  const r=t.runtime;
- const [people,setPeople]=useState([]),[feed,setFeed]=useState([]),[media,setMedia]=useState([]),[progress,setProgress]=useState([]),[answers,setAnswers]=useState([]);
+ const [people,setPeople]=useState([]),[feed,setFeed]=useState([]),[media,setMedia]=useState([]),[progress,setProgress]=useState([]),[answers,setAnswers]=useState([]),[locationVotes,setLocationVotes]=useState([]);
  const [qrDataUrl,setQrDataUrl]=useState(null);
  const [roster,setRoster]=useState([]),[rosterName,setRosterName]=useState(""),[addingRoster,setAddingRoster]=useState(false);
  const [writingCode,setWritingCode]=useState(null),[writeStatus,setWriteStatus]=useState("");
@@ -98,8 +98,12 @@ export default function Runtime({experience,setExperience,setView,t,user,lang}){
    if(!firebaseConfigured)return alert(r.connectFirebaseCtrl);
    updateExperienceRemote(experience.id,{[`branchDecisions.${missionId}`]:optionId}).catch(e=>alert(e.message));
  }
- useEffect(()=>{if(!firebaseConfigured||!experience.id||experience.id==="thailand-demo"){setPeople([]);setProgress([]);setFeed([]);setMedia([]);setAnswers([]);return}
- const a=subscribeParticipants(experience.id,setPeople),b=subscribeEvents(experience.id,evs=>setFeed(evs.map(x=>x.text))),c=subscribeMedia(experience.id,setMedia),d=subscribeAllProgress(experience.id,setProgress),e=subscribeAnswers(experience.id,setAnswers);return()=>{a();b();c();d();e()}},[experience.id]);
+ function decideLocation(missionId,optionId){
+   if(!firebaseConfigured)return alert(r.connectFirebaseCtrl);
+   updateExperienceRemote(experience.id,{[`locationDecisions.${missionId}`]:optionId}).catch(e=>alert(e.message));
+ }
+ useEffect(()=>{if(!firebaseConfigured||!experience.id||experience.id==="thailand-demo"){setPeople([]);setProgress([]);setFeed([]);setMedia([]);setAnswers([]);setLocationVotes([]);return}
+ const a=subscribeParticipants(experience.id,setPeople),b=subscribeEvents(experience.id,evs=>setFeed(evs.map(x=>x.text))),c=subscribeMedia(experience.id,setMedia),d=subscribeAllProgress(experience.id,setProgress),e=subscribeAnswers(experience.id,setAnswers),f=subscribeLocationVotes(experience.id,setLocationVotes);return()=>{a();b();c();d();e();f()}},[experience.id]);
  useEffect(()=>{if(!experience.joinCode){setQrDataUrl(null);return}const link=`${window.location.origin}${window.location.pathname}?join=${experience.joinCode}`;QRCode.toDataURL(link,{margin:1,width:160,color:{dark:"#050b13",light:"#ffffff"}}).then(setQrDataUrl).catch(()=>setQrDataUrl(null))},[experience.joinCode]);
  useEffect(()=>{if(!firebaseConfigured||!experience.id||experience.id==="thailand-demo")return;return subscribeParticipantCodes(experience.id,setRoster,e=>alert(r.rosterLoadError(e.message)))},[experience.id]);
  const flow=experience.flow||[];
@@ -121,7 +125,20 @@ export default function Runtime({experience,setExperience,setView,t,user,lang}){
  const dropOff=useMemo(()=>missionPerf.length&&merged.length?missionPerf.reduce((worst,m)=>worst===null||m.pct<worst.pct?m:worst,null):null,[missionPerf,merged.length]);
  const journeyGridStyle={gridTemplateColumns:`minmax(140px,1.5fr) repeat(${flow.length},42px) 70px 116px`,minWidth:`${140+flow.length*42+70+116+5*(flow.length+3)}px`};
  const organizerBranches=flow.filter(m=>m.type==="branch"&&m.organizerDecides);
+ const locationPolls=flow.filter(m=>m.isLocationPoll);
  return <section className="runtimePage">
+ {locationPolls.length>0&&<div className="panel routeDecisionsPanel"><div className="tag">{r.locationPollsTitle}</div><p className="rosterHint">{r.locationPollsHint}</p>
+  {locationPolls.map(m=>{
+    const decided=experience.locationDecisions?.[m.id];
+    return <div className="orgDecisionRow" key={m.id}>
+     <b>{m.title}</b>
+     <div className="orgDecisionOptions">{(m.options||[]).map(o=>{
+       const count=locationVotes.filter(v=>v.missionId===m.id&&v.optionId===o.id).length;
+       return <button key={o.id} type="button" className={decided===o.id?"primary":""} onClick={()=>decideLocation(m.id,o.id)}>{o.name} · {count} {r.votesShort}</button>;
+     })}</div>
+    </div>;
+  })}
+ </div>}
  {organizerBranches.length>0&&<div className="panel routeDecisionsPanel"><div className="tag">{r.routeDecisions}</div><p className="rosterHint">{r.routeDecisionsHint}</p>
   {organizerBranches.map(m=>{
     const decided=experience.branchDecisions?.[m.id];

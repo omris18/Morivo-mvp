@@ -107,7 +107,7 @@ export default function AICreator({setExperience,setView,setActiveId,user,lang,t
    name:itinerary.name,
    plan:itinerary.plan,
    selectedAttractions:(itinerary.attractions||[]).filter((_,i)=>selectedAttractionIds.has(i)),
-   selectedHotel:selectedHotelIndex>=0?(itinerary.hotels||[])[selectedHotelIndex]:null,
+   selectedHotel:selectedHotelIndex===-2?{poll:true,candidates:itinerary.hotels||[]}:selectedHotelIndex>=0?(itinerary.hotels||[])[selectedHotelIndex]:null,
   }:null;
   setPhase("building");setBuilding(true);setStep(0);
   const minWait=new Promise(r=>setTimeout(r,Math.max(4200,a.thinking.length*700)));
@@ -168,6 +168,7 @@ export default function AICreator({setExperience,setView,setActiveId,user,lang,t
      <div><b>{h.name}</b><p>{h.why}</p></div>
      <a href={h.url} target="_blank" rel="noopener noreferrer">🔗</a>
     </label>)}
+    {itinerary.hotels.length>1&&<label className="itineraryOptionRow"><input type="radio" name="itineraryHotel" checked={selectedHotelIndex===-2} onChange={()=>setSelectedHotelIndex(-2)}/><div><b>{a.letGroupVote}</b><p>{a.letGroupVoteDesc}</p></div></label>}
     <label className="itineraryOptionRow"><input type="radio" name="itineraryHotel" checked={selectedHotelIndex===-1} onChange={()=>setSelectedHotelIndex(-1)}/><div><b>{a.noHotelOption}</b></div></label>
    </div>}
    <div className="actions">

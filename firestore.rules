@@ -59,6 +59,17 @@ service cloud.firestore {
         allow delete: if signedIn() && (request.auth.uid == uid || isExperienceOwner(experienceId));
       }
 
+      // One vote doc per participant, for the "let the group vote" first-mission location
+      // poll - participants can only ever write their own vote; the organizer's final pick
+      // lives on the experience doc itself (locationDecisions), not here.
+      match /locationVotes/{uid} {
+        allow read: if signedIn();
+        allow create, update: if signedIn() && request.auth.uid == uid
+          && request.resource.data.missionId is string
+          && request.resource.data.optionId is string;
+        allow delete: if signedIn() && (request.auth.uid == uid || isExperienceOwner(experienceId));
+      }
+
       match /answers/{answerId} {
         allow read: if signedIn();
         allow create: if signedIn() && request.resource.data.uid == request.auth.uid
