@@ -12,6 +12,7 @@ const openaiApiKey = defineSecret("OPENAI_API_KEY");
 const geminiApiKey = defineSecret("GEMINI_API_KEY");
 const {normalizeMission} = require("./missionAnswers");
 exports.generateExperienceArtwork = require("./experienceArtwork")(admin, openaiApiKey);
+exports.generateCelebrationCartoon = require("./celebrationCartoon")(admin, openaiApiKey);
 exports.reorderExperience = require("./reorderExperience")(admin);
 exports.resolveParticipantIdentity = require("./participantIdentity")(admin);
 

@@ -292,7 +292,8 @@ export default function Participant({experience,setExperience,setView,setActiveI
   return <div className="portalShell" dir={dir} style={{backgroundImage:experienceGradient(portalCode)}}><div className="portalLoading">⚠ {portalError}<div><button onClick={()=>setResolveAttempt(x=>x+1)}>{lang==="he"?"ניסיון נוסף":"Try again"}</button></div></div></div>;
  }
  const coverPhoto=coverMedia.find(m=>!m.contentType?.startsWith("video/"));
- const portalBg=coverPhoto?`linear-gradient(180deg,rgba(5,11,19,.55),rgba(5,11,19,.92)),url(${coverPhoto.downloadURL})`:experienceGradient(experience.location||experience.type||experience.name);
+ const cartoonBg=experience.celebrationPortrait?.useAsBackground&&experience.celebrationPortrait?.cartoonUrl;
+ const portalBg=cartoonBg?`linear-gradient(180deg,rgba(5,11,19,.55),rgba(5,11,19,.92)),url(${cartoonBg})`:coverPhoto?`linear-gradient(180deg,rgba(5,11,19,.55),rgba(5,11,19,.92)),url(${coverPhoto.downloadURL})`:experienceGradient(experience.location||experience.type||experience.name);
  const completedCount=(prog.completedMissionIds||[]).length;
  const progressPct=flow.length?Math.round((completedCount/flow.length)*100):0;
  const joinedContent=<>
