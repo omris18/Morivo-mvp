@@ -1,5 +1,5 @@
 "use client";
-import {useEffect,useRef,useState} from "react";
+import {useEffect,useRef,useState,Fragment} from "react";
 import {generateExperienceArtworkRemote,uploadCelebrationPortrait,updateExperienceRemote} from "../lib/morivoData";
 import {firebaseConfigured} from "../lib/firebase";
 import artContext from "../functions/experienceArtContext";
@@ -49,7 +49,7 @@ export default function ExperienceRoute({experience,people=[],media=[],answers=[
   {flow.length?<div className="routeLayout">
    <div className="routeJourneyMap" aria-label={he?"מפת המסע לפי ימים ויעדים":"Journey map by days and destinations"}>
     <div className="routeMapLegend"><span><i className="legendDone">✓</i>{he?"הושלם":"Completed"}</span><span><i className="legendCurrent">●</i>{he?"מתבצע עכשיו":"In progress"}</span><span><i className="legendNext">→</i>{he?"המשימה הבאה":"Next"}</span></div>
-    {groups.map(g=><section className="routeDayGroup" key={g.key}><header><span className="routeDayBadge">{g.label}</span>{g.destination&&<small>{g.destination}</small>}</header><div className="routeMissionCircles">{g.missions.map(({m,i})=>{const completed=people.length>0&&people.every(p=>p.pending||missionDone(p,m,i)),here=people.some(p=>!p.pending&&missionActive(p,m,flow)),next=!completed&&!here&&i===nextIndex;return <button key={m.id} className={"routeMissionCircle "+(completed?"isDone ":"")+(here?"isCurrent ":"")+(next?"isNext ":"")} onClick={()=>selectMission(m.id)} aria-pressed={i===index} title={m.title}><span className="circleNumber">{completed?"✓":i+1}</span><span className="circleIcon">{icons[m.type]||theme.motif}</span><b>{m.title}</b><small>{completed?(he?"הושלם":"Done"):here?(he?"עכשיו":"Now"):next?(he?"הבא":"Next"):(he?"ממתינה":"Upcoming")}</small></button>})}</div></section>)}
+    {groups.map(g=><section className="routeDayGroup" key={g.key}><header><span className="routeDayBadge">{g.label}</span>{g.destination&&<small>{g.destination}</small>}</header><div className="routeMissionCircles">{g.missions.map(({m,i},mi)=>{const completed=people.length>0&&people.every(p=>p.pending||missionDone(p,m,i)),here=people.some(p=>!p.pending&&missionActive(p,m,flow)),next=!completed&&!here&&i===nextIndex;return <Fragment key={m.id}>{mi>0&&<span className="routeConnector" aria-hidden="true">→</span>}<button className={"routeMissionCircle "+(completed?"isDone ":"")+(here?"isCurrent ":"")+(next?"isNext ":"")} onClick={()=>selectMission(m.id)} aria-pressed={i===index} title={m.title}><span className="circleNumber">{completed?"✓":i+1}</span><span className="circleIcon">{icons[m.type]||theme.motif}</span><b>{m.title}</b><small>{completed?(he?"הושלם":"Done"):here?(he?"עכשיו":"Now"):next?(he?"הבא":"Next"):(he?"ממתינה":"Upcoming")}</small></button></Fragment>})}</div></section>)}
    </div>
    <div className="routeDetail">
     <RouteMissionPanel key={mission.id} mission={mission} index={index} flow={flow} people={people} media={media} answers={answers} onSave={onSaveMission} onSwap={onSwap?swap:undefined} onDirtyChange={setDirty} lang={lang}/>

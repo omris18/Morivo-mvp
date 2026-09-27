@@ -17,7 +17,7 @@ export default function Runtime({experience,setExperience,setView,t,user,lang,is
  const [people,setPeople]=useState([]),[feed,setFeed]=useState([]),[media,setMedia]=useState([]),[progress,setProgress]=useState([]),[answers,setAnswers]=useState([]),[locationVotes,setLocationVotes]=useState([]),[pendingAttractionPicks,setPendingAttractionPicks]=useState({});
  const [qrDataUrl,setQrDataUrl]=useState(null);
  const [roster,setRoster]=useState([]),[rosterName,setRosterName]=useState(""),[addingRoster,setAddingRoster]=useState(false);
- const [writingCode,setWritingCode]=useState(null),[writeStatus,setWriteStatus]=useState("");
+ const [writingCode,setWritingCode]=useState(null),[writeStatus,setWriteStatus]=useState("");\n const [surveyMission,setSurveyMission]=useState(null);
  const [generatingFor,setGeneratingFor]=useState(null);
  function personalLink(code){
    return `${window.location.origin}${window.location.pathname}?pcode=${code}`;
@@ -133,43 +133,9 @@ export default function Runtime({experience,setExperience,setView,t,user,lang,is
  <ExperienceShare experience={experience} lang={lang} setView={setView}/>
  {!people.length&&experience.status==="live"&&<p className="contextHint">{lang==="he"?"עדיין לא הצטרפו משתתפים. שתפו את הקישור שלמעלה; הרשימה תתעדכן אוטומטית כשיצטרפו.":"No participants yet. Share the link above; this view updates automatically when they join."}</p>}
  {locationPolls.length>0&&<div className="panel routeDecisionsPanel"><div className="tag">{r.locationPollsTitle}</div><p className="rosterHint">{r.locationPollsHint}</p>
-  {locationPolls.map(m=>{
-    const decided=experience.locationDecisions?.[m.id];
-    const isDecided=!!(decided&&decided.length);
-    if(!m.options||!m.options.length){
-      return <div className="orgDecisionRow" key={m.id}>
-       <b>{m.title}</b>
-       <div className="orgDecisionOptions">
-        <button type="button" className={isDecided?"primary":""} disabled={isDecided} onClick={()=>decideLocation(m.id,["confirmed"])}>{isDecided?`✓ ${r.confirmed}`:r.confirmDestination}</button>
-       </div>
-      </div>;
-    }
-    if(m.isAttractionsPoll){
-      const pending=pendingAttractionPicks[m.id]||decided||[];
-      return <div className="orgDecisionRow" key={m.id}>
-       <b>{m.title}</b>
-       <div className="orgDecisionOptions">{m.options.map(o=>{
-         const count=locationVotes.filter(v=>v.missionId===m.id&&(v.optionIds||[]).includes(o.id)).length;
-         const picked=pending.includes(o.id);
-         return <button key={o.id} type="button" disabled={isDecided} className={picked?"primary":""} onClick={()=>setPendingAttractionPicks(prev=>{
-           const cur=prev[m.id]||decided||[];
-           const next=cur.includes(o.id)?cur.filter(id=>id!==o.id):[...cur,o.id];
-           return {...prev,[m.id]:next};
-         })}>{o.name} · {count} {r.votesShort}</button>;
-       })}</div>
-       {!isDecided&&<button type="button" className="primary" disabled={!pending.length} onClick={()=>decideLocation(m.id,pending)}>{r.confirmSelection}</button>}
-       {isDecided&&<span className="orgDecisionConfirmed">✓ {r.confirmed}</span>}
-      </div>;
-    }
-    return <div className="orgDecisionRow" key={m.id}>
-     <b>{m.title}</b>
-     <div className="orgDecisionOptions">{m.options.map(o=>{
-       const count=locationVotes.filter(v=>v.missionId===m.id&&(v.optionIds||[]).includes(o.id)).length;
-       return <button key={o.id} type="button" className={decided?.[0]===o.id?"primary":""} onClick={()=>decideLocation(m.id,[o.id])}>{o.name} · {count} {r.votesShort}</button>;
-     })}</div>
-    </div>;
-  })}
+  {locationPolls.map(m=>{const decided=experience.locationDecisions?.[m.id];const isDecided=!!(decided&&decided.length);const total=locationVotes.filter(v=>v.missionId===m.id).length;return <div className="orgDecisionRow surveyRow" key={m.id}><div><b>{m.title}</b><small className="surveyTotal">{total} {lang==="he"?"משתתפים הצביעו":"participants voted"}</small></div><button type="button" className="surveyOpenButton" onClick={()=>setSurveyMission(m)}>📊 {lang==="he"?"הצג תוצאות סקר":"Show poll results"}</button>{isDecided&&<span className="surveyApproved">✓ {r.confirmed}</span>}</div>})}
  </div>}
+ {surveyMission&&<div className="surveyOverlay" role="dialog" aria-modal="true" onClick={e=>{if(e.target===e.currentTarget)setSurveyMission(null)}}><div className="surveyModal"><button className="surveyClose" onClick={()=>setSurveyMission(null)}>×</button><div className="tag">{lang==="he"?"תוצאות הסקר":"POLL RESULTS"}</div><h3>{surveyMission.title}</h3><p className="surveySubtitle">{lang==="he"?"מי הצביע לכל אפשרות":"Who voted for each option"}</p><div className="surveyOptions">{(surveyMission.options||[]).map(o=>{const voters=locationVotes.filter(v=>v.missionId===surveyMission.id&&((v.optionId===o.id)||(v.optionIds||[]).includes(o.id)));return <div className="surveyOption" key={o.id}><div className="surveyOptionHead"><b>{o.name}</b><span>{voters.length}</span></div><div className="surveyVoters">{voters.length?voters.map(v=><span key={v.id}>{v.participantName||v.name||"Participant"}</span>):<em>{lang==="he"?"עדיין אין הצבעות":"No votes yet"}</em>}</div></div>})}</div><div className="surveyModalActions"><button onClick={()=>setSurveyMission(null)}>{lang==="he"?"חזרה":"Back"}</button><button className="primary" onClick={()=>{const options=surveyMission.options||[];const counts=options.map(o=>({o,count:locationVotes.filter(v=>v.missionId===surveyMission.id&&((v.optionId===o.id)||(v.optionIds||[]).includes(o.id))).length})).sort((x,y)=>y.count-x.count);const selected=surveyMission.isAttractionsPoll?counts.filter(x=>x.count>0).map(x=>x.o.id):(counts[0]?[counts[0].o.id]:[]);if(selected.length)decideLocation(surveyMission.id,selected);setSurveyMission(null)}}>✓ {r.confirmSelection}</button></div></div></div>}
  {organizerBranches.length>0&&<div className="panel routeDecisionsPanel"><div className="tag">{r.routeDecisions}</div><p className="rosterHint">{r.routeDecisionsHint}</p>
   {organizerBranches.map(m=>{
     const decided=experience.branchDecisions?.[m.id];
