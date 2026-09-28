@@ -295,14 +295,19 @@ function hotelPollMission(candidates, location, lang, opts, destinationLabel) {
 
 const ITINERARY_SYSTEM_PROMPT = `You plan the outline of an interactive real-world experience for an app called Morivo, used for family trips, birthdays, team building, school outings and similar events. This is a PLANNING step, shown to the organizer for review and approval BEFORE the app builds the actual interactive missions - so give a clear, specific outline, not finished missions.
 
-Given a free-text description, break the experience into an ordered sequence of parts. If it is a multi-day trip, each part is one calendar day (in order, starting at 1) - the number of parts must equal the number of days. Otherwise (a single-sitting event), break it into 3 to 5 parts representing the natural arc of that one sitting (an opening/arrival, one or two main phases, a closing/payoff) - never label these as calendar days.
+Given a free-text description, break the experience into an ordered sequence of parts. If it is a multi-day trip, each part is one calendar day (in order, starting at 1) - the number of parts must equal the number of days, however many days that is - never stop partway through and skip to the end. Otherwise (a single-sitting event), break it into 3 to 5 parts representing the natural arc of that one sitting (an opening/arrival, one or two main phases, a closing/payoff) - never label these as calendar days.
 
-For each part, write a short specific title (e.g. "Day 1 - Arrival & Shibuya" for a trip day, or "The Opening Challenge" for a single-sitting phase - translated into the description's language) and a 1-2 sentence summary of what that part focuses on. Every part must be grounded in a concrete detail from the description (people, occasion, place) - never generic filler like "Explore and have fun."
+For each part, write a short specific title (e.g. "Day 1 - Arrival & Shibuya" for a trip day, or "The Opening Challenge" for a single-sitting phase - translated into the description's language).
 
-For a multi-day trip, each day's summary should read like a real day plan: name a morning starting point, hint at a midday choice (keep going vs. head back to rest), and an evening plan to close the day - not just one activity. If the description gives children's ages, balance the day between something for the kids and something for the adults.
+For a multi-day trip, each day's summary must be a real, walkable day plan built from REAL, findable places near that day's destination - you have real-world geographic knowledge of actual neighborhoods, beaches, cafes, restaurants and attractions, so use it instead of generic phrasing:
+- Morning: name a specific real place to start (an actual named beach, viewpoint, market or neighborhood - not "a nice beach"), plus a specific named cafe or breakfast spot actually worth visiting there.
+- Midday: phrase an actual decision the group faces - keep going to a second nearby real place, or head back to rest - naming that second place specifically, not "continue exploring."
+- Evening: name a specific real restaurant, promenade or activity to close the day.
+A reader should finish one day's summary knowing roughly where they're physically going and what they're doing across most of the day, with real names they could look up - 3 to 5 sentences, not one line.
+If children's ages are given, every day must include something the kids will enjoy (a playground, aquarium, kid-friendly beach) alongside something for the adults (a market, viewpoint, restaurant) - never make a whole day purely one or the other.
 
 Respond in the same language the description is written in - detect it automatically. Respond with STRICT JSON only, no markdown fencing, no commentary, matching exactly this shape:
-{"name": "short experience title", "plan": [{"step": 1, "title": "short specific title", "summary": "1-2 sentence plan for this part"}]}`;
+{"name": "short experience title", "plan": [{"step": 1, "title": "short specific title", "summary": "a real day plan as described above, or 1-2 sentences for a single-sitting part"}]}`;
 
 exports.proposeItinerary = onCall({ secrets: [openaiApiKey, geminiApiKey], cors: true, timeoutSeconds: 60 }, async (request) => {
   if (!request.auth) {
@@ -320,7 +325,6 @@ exports.proposeItinerary = onCall({ secrets: [openaiApiKey, geminiApiKey], cors:
   const destList = Array.isArray(destinations) ? destinations.map((d) => String(d || "").trim()).filter(Boolean).slice(0, 6) : [];
   const multiDestination = destList.length > 1;
 
-  const client = new OpenAI({ apiKey: openaiApiKey.value().trim() });
   const userPrompt = [
     `Description: ${prompt}`,
     `Required output language for the title and every part: ${LANG_NAMES[lang] || "the language of the description"}. The destination country does not determine the language.`,
@@ -330,7 +334,8 @@ exports.proposeItinerary = onCall({ secrets: [openaiApiKey, geminiApiKey], cors:
     duration ? `Duration: ${duration}` : null,
     people ? `Participants: ${people}` : null,
     peopleDetails && String(peopleDetails).trim() ? `Who's joining (names, ages, relationships): ${String(peopleDetails).trim().slice(0, 600)}` : null,
-    multiDay ? `This is a multi-day trip - one part per calendar day, in order.` : `This is a single-sitting experience - 3 to 5 parts representing its arc, not calendar days.`,
+    Array.isArray(childrenAges) && childrenAges.length ? `Children's ages on this trip: ${childrenAges.join(", ")} - every day must work for them alongside the adults, as described above.` : null,
+    multiDay ? `This is a multi-day trip - one part per calendar day, in order, for every day of the trip.` : `This is a single-sitting experience - 3 to 5 parts representing its arc, not calendar days.`,
   ].filter(Boolean).join("\n");
 
   const attractionsPromise = location ? suggestAttractionOptions({ location, prompt, people, duration, lang, interests, childrenAges }) : Promise.resolve([]);
@@ -338,27 +343,28 @@ exports.proposeItinerary = onCall({ secrets: [openaiApiKey, geminiApiKey], cors:
     ? (needsHotel ? Promise.all(destList.map((d) => suggestHotelOptions({ location: d, prompt, people, duration, lang }))) : Promise.resolve(null))
     : (needsHotel && location) ? suggestHotelOptions({ location, prompt, people, duration, lang }) : Promise.resolve([]);
 
-  let completion;
-  try {
-    completion = await client.chat.completions.create({
-      model: "gpt-4o-mini",
-      messages: [
-        { role: "system", content: ITINERARY_SYSTEM_PROMPT },
-        { role: "user", content: userPrompt },
-      ],
-      response_format: { type: "json_object" },
-      temperature: 0.6,
-    });
-  } catch (err) {
-    console.error("OpenAI itinerary request failed", err);
-    throw new HttpsError("unavailable", "The AI service failed to respond. Please try again.");
-  }
-
-  let data;
-  try {
-    data = JSON.parse(completion.choices[0].message.content);
-  } catch (err) {
-    throw new HttpsError("internal", "The AI returned data in an unexpected format.");
+  // Gemini has the real-world geographic grounding this needs (actual beaches, cafes,
+  // restaurants) - it's already relied on for that in suggestHotelOptions/suggestAttractionOptions
+  // above. Fall back to OpenAI only if Gemini comes back empty, so this stays as reliable as before.
+  let data = await askGeminiJSON(`${ITINERARY_SYSTEM_PROMPT}\n\n${userPrompt}`, "itinerary plan");
+  if (!data || !Array.isArray(data.plan) || data.plan.length === 0) {
+    const client = new OpenAI({ apiKey: openaiApiKey.value().trim() });
+    let completion;
+    try {
+      completion = await client.chat.completions.create({
+        model: "gpt-4o-mini",
+        messages: [
+          { role: "system", content: ITINERARY_SYSTEM_PROMPT },
+          { role: "user", content: userPrompt },
+        ],
+        response_format: { type: "json_object" },
+        temperature: 0.6,
+      });
+      data = JSON.parse(completion.choices[0].message.content);
+    } catch (err) {
+      console.error("Itinerary request failed (Gemini and OpenAI both unavailable)", err);
+      throw new HttpsError("unavailable", "The AI service failed to respond. Please try again.");
+    }
   }
   if (!data || !Array.isArray(data.plan) || data.plan.length === 0) {
     throw new HttpsError("internal", "The AI returned an unexpected itinerary shape.");
