@@ -15,8 +15,7 @@ import LinkifiedText from "./LinkifiedText";
 import {distanceMeters,getCurrentPosition} from "../lib/geo";
 import {enablePushNotifications,pushSupported} from "../lib/push";
 import {experienceGradient} from "../lib/theme";
-import {COUNTRY_FLAGS} from "../lib/i18n";
-import FlagIcon from "./FlagIcon";
+import LangSwitcher from "./LangSwitcher";
 import {isStampMission} from "../lib/stampMissions";
 import {unlockedPieces,gridIndexForPiece,pieceAtGridIndex} from "../lib/familyPuzzle";
 function formatStopDate(dateStr,lang){
@@ -491,9 +490,7 @@ export default function Participant({experience,setExperience,setView,setActiveI
 
  const joinForm=<div className="participantJoin"><div className="participantJoinMark" aria-hidden="true"><span></span><span></span><span></span></div><div className="participantJoinEyebrow">MORIVO · EXPERIENCE</div><h2>{p.joinTitle}</h2><p className="joinInstructions">{lang==="he"?(code?"הקוד כבר מוכן. כתבו את השם שיופיע למארגן ולחצו על הצטרפות.":"קיבלתם קישור או קוד מהמארגן? הזינו שם וקוד כדי להתחיל. אין צורך ליצור חשבון."):(code?"Your code is ready. Enter the name the organizer should see, then join.":"Enter your name and the code from your organizer to get started. No account is needed.")}</p><label htmlFor="participant-name">{p.yourName}</label><input id="participant-name" autoComplete="name" value={name} placeholder={p.namePlaceholder} onChange={e=>setName(e.target.value)}/><label htmlFor="participant-code">{p.joinCode}</label><input id="participant-code" autoCapitalize="characters" value={code} onChange={e=>setCode(e.target.value.toUpperCase())} onKeyDown={e=>e.key==="Enter"&&join()}/><div className="actions centerActions"><button className="primary" disabled={joining} onClick={join}>{joining?p.joining:p.joinBtn}</button></div></div>;
 
- const portalLangSwitch=<div className="langSwitchGlobal portalLangSwitch">
-   {COUNTRY_FLAGS.map(f=><button key={f.country} className={country===f.country?"active":""} onClick={()=>selectLang(f)} title={f.label} aria-label={f.label}><FlagIcon code={f.country}/></button>)}
-  </div>;
+ const portalLangSwitch=<LangSwitcher country={country} selectLang={selectLang} label={lang==="he"?"שינוי שפה":"Change language"} className="portalLangSwitch"/>;
 
  if(chromeless){
   return <div className="portalShell" dir={dir} style={{backgroundImage:portalBg}}><div className="portalCard">{portalLangSwitch}{!portal&&<div className="tag">{p.tag}</div>}{joined?joinedContent:joinForm}</div></div>;

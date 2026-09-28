@@ -73,11 +73,16 @@
 }
 @media(max-width:700px){.mbCoverContent h1{font-size:36px}.mbStats{grid-template-columns:repeat(2,1fr)}}
 .topBarRight{display:flex;align-items:center;gap:10px;flex-wrap:wrap}
-.langSwitchGlobal{display:flex;flex-wrap:wrap;gap:5px;max-width:230px;border:1px solid rgba(255,255,255,.12);border-radius:14px;padding:5px;background:rgba(0,0,0,.15)}
-.langSwitchGlobal button{width:26px;height:19px;padding:0;border-radius:4px;border:2px solid transparent;background:#0b1725;cursor:pointer;display:block;overflow:hidden;opacity:.75}
-.langSwitchGlobal button:hover{opacity:1}
-.langSwitchGlobal button.active{border-color:#fff;opacity:1;box-shadow:0 0 0 2px #7d5cff}
-.langSwitchGlobal .flagIcon,.langSwitchGlobal .flagIcon svg{display:block;width:100%;height:100%}
+.langSwitcherWrap{position:relative;width:max-content}
+.langSwitcherTrigger{display:flex;align-items:center;gap:4px;padding:4px 7px;border-radius:12px;border:1px solid rgba(255,255,255,.12);background:rgba(0,0,0,.15);cursor:pointer}
+.langSwitcherTrigger .flagIcon{width:22px;height:16px;display:block;overflow:hidden}
+.langSwitcherTrigger .flagIcon svg{display:block;width:100%;height:100%}
+.langSwitcherCaret{font-size:8px;color:#9eaabd;line-height:1}
+.langSwitcherPanel{position:absolute;top:calc(100% + 8px);inset-inline-start:0;z-index:60;display:grid;grid-template-columns:repeat(5,1fr);gap:5px;width:max-content;max-width:190px;border:1px solid rgba(255,255,255,.12);border-radius:14px;padding:8px;background:#0b1725;box-shadow:0 12px 30px rgba(0,0,0,.35)}
+.langSwitcherPanel button{width:26px;height:19px;padding:0;border-radius:4px;border:2px solid transparent;background:#0b1725;cursor:pointer;display:block;overflow:hidden;opacity:.75}
+.langSwitcherPanel button:hover{opacity:1}
+.langSwitcherPanel button.active{border-color:#fff;opacity:1;box-shadow:0 0 0 2px #7d5cff}
+.langSwitcherPanel .flagIcon,.langSwitcherPanel .flagIcon svg{display:block;width:100%;height:100%}
 [dir="rtl"] .experienceRow,[dir="rtl"] .accountBar,[dir="rtl"] .runtimeTitle,[dir="rtl"] .participantHeader{text-align:right}
 [dir="rtl"] .sidebar{border-right:0;border-left:1px solid rgba(255,255,255,.1)}
 [dir="rtl"] .sidebar button{text-align:right}
@@ -818,7 +823,11 @@ body{background:radial-gradient(circle at 78% -10%,rgba(123,199,216,.08),transpa
 }
 
 /* Account controls share the app's navy, sky and warm-gold palette. */
-.accountBar{width:100%;border:1px solid var(--m-line);border-radius:16px;background:rgba(13,29,41,.72);padding:16px 18px;color:var(--m-text)}
+.accountWrap{position:relative;width:max-content}
+.accountTrigger{display:flex;align-items:center;gap:4px;padding:8px 14px;border-radius:12px;border:1px solid rgba(255,255,255,.12);background:rgba(0,0,0,.15);color:inherit;cursor:pointer;font:inherit;font-size:13px;font-weight:700}
+.accountBar{border:1px solid var(--m-line);border-radius:16px;background:rgba(13,29,41,.72);padding:16px 18px;color:var(--m-text)}
+.accountPanel{position:absolute;top:calc(100% + 8px);inset-inline-start:0;z-index:60;width:320px;max-width:calc(100vw - 32px);box-shadow:0 20px 50px rgba(0,0,0,.4)}
+.accountGoogleHint{display:block;margin:-4px 0 4px;color:#9eaabd;font-size:11px;line-height:1.5}
 .accountGuest{display:block}
 .accountIntro{display:flex;align-items:center;gap:10px;margin-bottom:14px}
 .accountIntro .accountMark{display:grid;place-items:center;flex:0 0 28px;height:28px;border-radius:9px;background:rgba(239,193,134,.1);color:var(--m-warm);font-size:17px}
@@ -867,7 +876,7 @@ body .sidebar nav button:hover{background:#e5f3ec;color:#0f4c5c}
 body .sidebar nav button.active{background:#d8efec;color:#0f4c5c;box-shadow:none}
 body [dir="rtl"] .sidebar nav button.active{box-shadow:none}
 .sidebarJourney small{color:#5d7e80}.journeyLine{background:linear-gradient(90deg,#e9ba62,#60b5b4,transparent)}
-.topBar{border-color:#d7e5df}.langSwitchGlobal{background:#fffdf8!important;border-color:#d7e5df!important}
+.topBar{border-color:#d7e5df}.langSwitcherTrigger,.langSwitcherPanel{background:#fffdf8!important;border-color:#d7e5df!important}.langSwitcherPanel button{background:#fffdf8!important}
 body .appShell .panel,body .appShell .studioWorkspace,body .appShell .studioPreviewPanel{background:#fffdf8;border-color:#d7e5df;box-shadow:0 14px 40px rgba(34,86,78,.06)}
 body .appShell :is(h1,h2,h3,h4){color:#0f4c5c}
 body .appShell :is(p,label,small){color:#526f78}

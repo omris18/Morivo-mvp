@@ -12,7 +12,7 @@ import Participant from "../components/Participant";
 import Memory from "../components/Memory";
 import FirebaseStatus from "../components/FirebaseStatus";
 import Account from "../components/Account";
-import FlagIcon from "../components/FlagIcon";
+import LangSwitcher from "../components/LangSwitcher";
 import { firebaseConfigured, auth } from "../lib/firebase";
 import { onIdTokenChanged } from "firebase/auth";
 import { ensureUser, subscribeExperiences, subscribeExperience, completeGoogleRedirect } from "../lib/morivoData";
@@ -145,15 +145,11 @@ export default function Home(){
    <Sidebar view={view} setView={setView} t={t} isMaster={isMaster} lang={lang}/>
    <main className="content">
      <div className="topBar">
-       <FirebaseStatus t={t}/>
        <div className="topBarRight">
-         <div className="langSwitchGlobal">
-           {COUNTRY_FLAGS.map(f=>(
-             <button key={f.country} className={country===f.country?"active":""} onClick={()=>selectLang(f)} title={f.label} aria-label={f.label}><FlagIcon code={f.country}/></button>
-           ))}
-         </div>
+         <LangSwitcher country={country} selectLang={selectLang} label={lang==="he"?"שינוי שפה":"Change language"}/>
          <Account user={user} t={t} isMaster={isMaster} lang={lang}/>
        </div>
+       <FirebaseStatus t={t}/>
      </div>
      {isMaster&&activeId&&experience.ownerUid!==user?.uid&&["studio","runtime","memory"].includes(view)&&<div className="masterContext"><span>{lang==="he"?"מצב מאסטר · ניהול חוויה של משתמש אחר":"Master mode · managing another user's experience"}</span><button onClick={()=>setView("master")}>{lang==="he"?"כל החוויות":"All experiences"}</button></div>}
      <div className="viewFade" key={view}><ScreenGuidance {...props} view={view}/>{(!["studio","runtime","memory"].includes(view)||experience.id)&&Screen}</div>
