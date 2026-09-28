@@ -113,29 +113,56 @@ function mapsSearchUrl(name, location) {
   return `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(q)}`;
 }
 
-async function askGeminiJSON(promptText, label) {
+// Grounding with Google Search lets Gemini check live search results instead of only recalling
+// its pretrained knowledge - this is the difference between a real, correctly-named, currently
+// open cafe and a confident-sounding guess. The tool's shape differs by model generation (1.5 vs
+// newer), and forcing strict JSON mode together with a search tool isn't reliable across all of
+// them, so grounded calls skip responseMimeType and rely on extractJson to pull the JSON out of
+// whatever text comes back instead.
+function groundingToolForModel(model) {
+  return String(model).includes("1.5")
+    ? { google_search_retrieval: { dynamic_retrieval_config: { mode: "MODE_DYNAMIC", dynamic_threshold: 0.3 } } }
+    : { google_search: {} };
+}
+
+function extractJson(raw) {
+  const cleaned = String(raw).replace(/```json|```/gi, "").trim();
+  try {
+    return JSON.parse(cleaned);
+  } catch {}
+  const start = cleaned.indexOf("{");
+  const end = cleaned.lastIndexOf("}");
+  if (start === -1 || end === -1 || end <= start) return null;
+  try {
+    return JSON.parse(cleaned.slice(start, end + 1));
+  } catch {
+    return null;
+  }
+}
+
+async function askGeminiJSON(promptText, label, opts) {
+  const grounded = !!opts?.grounded;
   for (const model of GEMINI_MODELS) {
     try {
+      const generationConfig = grounded
+        ? { maxOutputTokens: 8192 }
+        : { responseMimeType: "application/json", maxOutputTokens: 8192 };
+      const body = { contents: [{ parts: [{ text: promptText }] }], generationConfig };
+      if (grounded) body.tools = [groundingToolForModel(model)];
       const res = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${geminiApiKey.value().trim()}`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          contents: [{ parts: [{ text: promptText }] }],
-          generationConfig: { responseMimeType: "application/json", maxOutputTokens: 8192 },
-        }),
+        body: JSON.stringify(body),
       });
       if (!res.ok) {
         console.error(`Gemini ${label} HTTP error (model ${model})`, res.status, await res.text());
         continue;
       }
       const json = await res.json();
-      const raw = json?.candidates?.[0]?.content?.parts?.[0]?.text;
+      const raw = (json?.candidates?.[0]?.content?.parts || []).map((p) => p.text).filter(Boolean).join("\n");
       if (!raw) continue;
-      try {
-        return JSON.parse(raw);
-      } catch {
-        continue;
-      }
+      const parsed = extractJson(raw);
+      if (parsed) return parsed;
     } catch (err) {
       console.error(`Gemini ${label} request failed (model ${model})`, err);
     }
@@ -154,8 +181,8 @@ function optionsToMissionText(options, max, urlFor, location, urlOpts) {
 }
 
 async function suggestHotelOptions({ location, prompt, people, duration, lang }) {
-  const hotelPrompt = `Suggest 2 to 3 specific, realistic accommodation options in or near "${location}" that would suit this group: "${prompt}"${people ? ` (${people} people)` : ""}${duration ? `, staying for ${duration}` : ""}. For each option give a real, findable hotel/accommodation name or a specific well-known area, and a 1-2 sentence reason it fits this exact group - practical and specific, not generic travel-blog language. Write in the same language as the group description above (detect it automatically). Respond with STRICT JSON only, no markdown fencing, no commentary, matching exactly this shape: {"options":[{"name":"hotel or area name","why":"1-2 sentence reason"}]}`;
-  const data = await askGeminiJSON(hotelPrompt, "hotel suggestion");
+  const hotelPrompt = `Suggest 2 to 3 specific, realistic accommodation options in or near "${location}" that would suit this group: "${prompt}"${people ? ` (${people} people)` : ""}${duration ? `, staying for ${duration}` : ""}. Use search to confirm each option is a real, currently operating place with a correct, findable name - never invent a plausible-sounding name you are not sure is real. For each option give that real hotel/accommodation name or a specific well-known area, and a 1-2 sentence reason it fits this exact group - practical and specific, not generic travel-blog language. Write in the same language as the group description above (detect it automatically). Respond with STRICT JSON only, no markdown fencing, no commentary, matching exactly this shape: {"options":[{"name":"hotel or area name","why":"1-2 sentence reason"}]}`;
+  const data = await askGeminiJSON(hotelPrompt, "hotel suggestion", { grounded: true });
   return Array.isArray(data?.options) ? data.options.slice(0, 3) : [];
 }
 
@@ -191,8 +218,8 @@ const INTEREST_LABELS = {
 async function suggestAttractionOptions({ location, prompt, people, duration, lang, interests, childrenAges }) {
   const interestLabels = Array.isArray(interests) ? interests.map((i) => INTEREST_LABELS[i]).filter(Boolean) : [];
   const kidsNote = Array.isArray(childrenAges) && childrenAges.length ? ` The group includes children aged ${childrenAges.join(", ")} - include a mix of options that work for both the kids and the adults, not only one or the other.` : "";
-  const attrPrompt = `Suggest 3 to 4 specific, real attractions or activities in or near "${location}" that would suit this group: "${prompt}"${people ? ` (${people} people)` : ""}${duration ? `, over ${duration}` : ""}.${interestLabels.length ? ` The group specifically wants to focus on these categories: ${interestLabels.join(", ")} - prioritize real options that match those categories over generic sightseeing.` : ""}${kidsNote} For each, give a real, findable attraction or activity name and a 1-2 sentence reason it fits this exact group - their ages, interests, and any dietary/religious/accessibility needs mentioned - practical and specific, not generic travel-blog language. Write in the same language as the group description above (detect it automatically). Respond with STRICT JSON only, no markdown fencing, no commentary, matching exactly this shape: {"options":[{"name":"attraction or activity name","why":"1-2 sentence reason"}]}`;
-  const data = await askGeminiJSON(attrPrompt, "attraction suggestion");
+  const attrPrompt = `Suggest 3 to 4 specific, real attractions or activities in or near "${location}" that would suit this group: "${prompt}"${people ? ` (${people} people)` : ""}${duration ? `, over ${duration}` : ""}.${interestLabels.length ? ` The group specifically wants to focus on these categories: ${interestLabels.join(", ")} - prioritize real options that match those categories over generic sightseeing.` : ""}${kidsNote} Use search to confirm each option is a real, currently operating place with a correct, findable name - never invent a plausible-sounding name you are not sure is real. For each, give that real attraction or activity name and a 1-2 sentence reason it fits this exact group - their ages, interests, and any dietary/religious/accessibility needs mentioned - practical and specific, not generic travel-blog language. Write in the same language as the group description above (detect it automatically). Respond with STRICT JSON only, no markdown fencing, no commentary, matching exactly this shape: {"options":[{"name":"attraction or activity name","why":"1-2 sentence reason"}]}`;
+  const data = await askGeminiJSON(attrPrompt, "attraction suggestion", { grounded: true });
   return Array.isArray(data?.options) ? data.options.slice(0, 4) : [];
 }
 
@@ -308,11 +335,11 @@ Given a free-text description, break the experience into an ordered sequence of 
 
 For each part, write a short specific title (e.g. "Day 1 - Arrival & Shibuya" for a trip day, or "The Opening Challenge" for a single-sitting phase - translated into the description's language).
 
-For a multi-day trip, each day's summary must be a real, walkable day plan built from REAL, findable places near that day's destination - you have real-world geographic knowledge of actual neighborhoods, beaches, cafes, restaurants and attractions, so use it instead of generic phrasing:
-- Morning: name a specific real place to start (an actual named beach, viewpoint, market or neighborhood - not "a nice beach"), plus a specific named cafe or breakfast spot actually worth visiting there.
+For a multi-day trip, each day's summary must be a real, walkable day plan built from REAL, findable places near that day's destination. You have search available - use it for every day to find and confirm actual named neighborhoods, beaches, cafes, restaurants and attractions near that specific destination, rather than writing from memory alone. Only name a place you are confident is real and correctly spelled; if you are not sure a place is real, search for an alternative instead of guessing:
+- Morning: name a specific real place to start (an actual named beach, viewpoint, market or neighborhood - not "a nice beach" or "explore the area"), plus a specific named cafe or breakfast spot actually worth visiting there.
 - Midday: phrase an actual decision the group faces - keep going to a second nearby real place, or head back to rest - naming that second place specifically, not "continue exploring."
 - Evening: name a specific real restaurant, promenade or activity to close the day.
-A reader should finish one day's summary knowing roughly where they're physically going and what they're doing across most of the day, with real names they could look up - 3 to 5 sentences, not one line.
+A reader should finish one day's summary knowing roughly where they're physically going and what they're doing across most of the day, with real, searchable names - never a vague summary like "explore the beaches of X" with no specific place named. Write 3 to 5 sentences per day, not one line.
 If children's ages are given, every day must include something the kids will enjoy (a playground, aquarium, kid-friendly beach) alongside something for the adults (a market, viewpoint, restaurant) - never make a whole day purely one or the other.
 
 Respond in the same language the description is written in - detect it automatically. Respond with STRICT JSON only, no markdown fencing, no commentary, matching exactly this shape:
@@ -356,7 +383,7 @@ exports.proposeItinerary = onCall({ secrets: [openaiApiKey, geminiApiKey], cors:
   // Gemini has the real-world geographic grounding this needs (actual beaches, cafes,
   // restaurants) - it's already relied on for that in suggestHotelOptions/suggestAttractionOptions
   // above. Fall back to OpenAI only if Gemini comes back empty, so this stays as reliable as before.
-  let data = await askGeminiJSON(`${ITINERARY_SYSTEM_PROMPT}\n\n${userPrompt}`, "itinerary plan");
+  let data = await askGeminiJSON(`${ITINERARY_SYSTEM_PROMPT}\n\n${userPrompt}`, "itinerary plan", { grounded: true });
   if (!data || !Array.isArray(data.plan) || data.plan.length === 0) {
     const client = new OpenAI({ apiKey: openaiApiKey.value().trim() });
     let completion;
