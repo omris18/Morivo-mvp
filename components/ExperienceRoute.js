@@ -48,9 +48,9 @@ export default function ExperienceRoute({experience,people=[],media=[],answers=[
      <button type="button" onClick={async()=>{setSaving(true);setError("");try{await updateExperienceRemote(experience.id,{"celebrationPortrait.useAsBackground":!experience.celebrationPortrait?.useAsBackground})}catch(e){setError(e.message)}finally{setSaving(false)}}}>{experience.celebrationPortrait?.useAsBackground?(he?"הפסקת השימוש כרקע המשימות":"Stop using as missions background"):(he?"שימוש כרקע המשימות":"Use as missions background")}</button>
     </div>}
    </div>}</div>}
-  {groups.length>1&&groups.every(g=>g.destination)&&<nav className="journeyPathMap" aria-label={he?"מסלול היעדים":"Destination path"}>
+  {(()=>{const destGroups=groups.filter(g=>g.destination);return destGroups.length>1&&<nav className="journeyPathMap" aria-label={he?"מסלול היעדים":"Destination path"}>
    <span className="journeyPathEdge" aria-hidden="true">✈️</span>
-   {groups.map((g,gi)=>{
+   {destGroups.map((g,gi)=>{
     const allDone=people.length>0&&people.every(p=>p.pending||g.missions.every(({m,i})=>missionDone(p,m,i)));
     const isCurrent=!allDone&&people.some(p=>!p.pending&&g.missions.some(({m})=>missionActive(p,m,flow)));
     return <button key={g.key} type="button" className={"journeyPathStop "+(allDone?"isDone ":"")+(isCurrent?"isCurrent ":"")} onClick={()=>document.getElementById("route-group-"+g.key)?.scrollIntoView({behavior:"smooth",block:"start"})}>
@@ -60,7 +60,7 @@ export default function ExperienceRoute({experience,people=[],media=[],answers=[
     </button>;
    })}
    <span className="journeyPathEdge" aria-hidden="true">🏁</span>
-  </nav>}
+  </nav>})()}
   {flow.length?<div className="routeLayout">
    <div className="routeJourneyMap" style={cartoonBg?{backgroundImage:`linear-gradient(rgba(255,255,255,.84),rgba(255,255,255,.84)),url(${mapBackdrop})`,backgroundSize:"cover",backgroundPosition:"center",backgroundRepeat:"no-repeat"}:{backgroundImage:`url(${mapBackdrop})`}} aria-label={he?"מפת המסע לפי ימים ויעדים":"Journey map by days and destinations"}>
     <div className="routeMapLegend"><span><i className="legendDone">✓</i>{he?"הושלם":"Completed"}</span><span><i className="legendCurrent">●</i>{he?"מתבצע עכשיו":"In progress"}</span><span><i className="legendNext">→</i>{he?"המשימה הבאה":"Next"}</span></div>
