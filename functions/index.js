@@ -142,11 +142,19 @@ function extractJson(raw) {
 
 async function askGeminiJSON(promptText, label, opts) {
   const grounded = !!opts?.grounded;
+  const validate = opts?.validate;
+  // A response that parses but fails the caller's own sanity check (e.g. a multi-destination
+  // itinerary that revisits an earlier stop) is still better than nothing - keep the first one
+  // that parses as a fallback while we keep trying the rest of the model chain for a clean one.
+  let fallbackCandidate = null;
   for (const model of GEMINI_MODELS) {
     try {
+      // Some models (esp. older ones) can't hold a full long trip's worth of real, named-place
+      // detail in 8k tokens without the model itself truncating the day count to fit - give it
+      // real headroom. Models with a lower true ceiling than this just 400 and get skipped below.
       const generationConfig = grounded
-        ? { maxOutputTokens: 8192 }
-        : { responseMimeType: "application/json", maxOutputTokens: 8192 };
+        ? { maxOutputTokens: 16384 }
+        : { responseMimeType: "application/json", maxOutputTokens: 16384 };
       const body = { contents: [{ parts: [{ text: promptText }] }], generationConfig };
       if (grounded) body.tools = [groundingToolForModel(model)];
       const res = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${geminiApiKey.value().trim()}`, {
@@ -162,12 +170,15 @@ async function askGeminiJSON(promptText, label, opts) {
       const raw = (json?.candidates?.[0]?.content?.parts || []).map((p) => p.text).filter(Boolean).join("\n");
       if (!raw) continue;
       const parsed = extractJson(raw);
-      if (parsed) return parsed;
+      if (!parsed) continue;
+      if (!validate || validate(parsed)) return parsed;
+      console.error(`Gemini ${label} response failed validation (model ${model}), trying next model`);
+      if (!fallbackCandidate) fallbackCandidate = parsed;
     } catch (err) {
       console.error(`Gemini ${label} request failed (model ${model})`, err);
     }
   }
-  return null;
+  return fallbackCandidate;
 }
 
 function optionsToMissionText(options, max, urlFor, location, urlOpts) {
@@ -331,19 +342,21 @@ function hotelPollMission(candidates, location, lang, opts, destinationLabel) {
 
 const ITINERARY_SYSTEM_PROMPT = `You plan the outline of an interactive real-world experience for an app called Morivo, used for family trips, birthdays, team building, school outings and similar events. This is a PLANNING step, shown to the organizer for review and approval BEFORE the app builds the actual interactive missions - so give a clear, specific outline, not finished missions.
 
-Given a free-text description, break the experience into an ordered sequence of parts. If it is a multi-day trip, each part is one calendar day (in order, starting at 1) - the number of parts must equal the number of days, however many days that is - never stop partway through and skip to the end. Otherwise (a single-sitting event), break it into 3 to 5 parts representing the natural arc of that one sitting (an opening/arrival, one or two main phases, a closing/payoff) - never label these as calendar days.
+Given a free-text description, break the experience into an ordered sequence of parts. If it is a multi-day trip, each part is one calendar day (in order, starting at 1) - the number of parts must equal the number of days, however many days that is - never stop partway through and skip to the end. Never let a longer trip crowd out this rule - if a full-detail day plan for every remaining day would not fit, write shorter day summaries instead (still following the morning/midday/evening structure below, just more concisely) rather than shortening the trip itself. Otherwise (a single-sitting event), break it into 3 to 5 parts representing the natural arc of that one sitting (an opening/arrival, one or two main phases, a closing/payoff) - never label these as calendar days.
 
 For each part, write a short specific title (e.g. "Day 1 - Arrival & Shibuya" for a trip day, or "The Opening Challenge" for a single-sitting phase - translated into the description's language).
+
+If the trip has multiple named destinations, visited in a given order: assign each day to exactly one destination, and cover the destinations as one contiguous block per destination, strictly in the order given - once the plan has moved on to a later destination, never schedule a day back at an earlier one, and never introduce a transit or layover city as its own day or as the setting for the closing day. The very last day of the trip must take place in, and depart from, the last destination in the given list - not an earlier stop the group already left.
 
 For a multi-day trip, each day's summary must be a real, walkable day plan built from REAL, findable places near that day's destination. You have search available - use it for every day to find and confirm actual named neighborhoods, beaches, cafes, restaurants and attractions near that specific destination, rather than writing from memory alone. Only name a place you are confident is real and correctly spelled; if you are not sure a place is real, search for an alternative instead of guessing:
 - Morning: name a specific real place to start (an actual named beach, viewpoint, market or neighborhood - not "a nice beach" or "explore the area"), plus a specific named cafe or breakfast spot actually worth visiting there.
 - Midday: phrase an actual decision the group faces - keep going to a second nearby real place, or head back to rest - naming that second place specifically, not "continue exploring."
 - Evening: name a specific real restaurant, promenade or activity to close the day.
-A reader should finish one day's summary knowing roughly where they're physically going and what they're doing across most of the day, with real, searchable names - never a vague summary like "explore the beaches of X" with no specific place named. Write 3 to 5 sentences per day, not one line.
+A reader should finish one day's summary knowing roughly where they're physically going and what they're doing across most of the day, with real, searchable names - never a vague summary like "explore the beaches of X" with no specific place named. Write 3 to 5 sentences per day for trips up to about 2 weeks; for longer trips, keep the same morning/midday/evening structure and real named places but write 2 to 3 tighter sentences per day instead, so every day of a long trip still gets full coverage.
 If children's ages are given, every day must include something the kids will enjoy (a playground, aquarium, kid-friendly beach) alongside something for the adults (a market, viewpoint, restaurant) - never make a whole day purely one or the other.
 
 Respond in the same language the description is written in - detect it automatically. Respond with STRICT JSON only, no markdown fencing, no commentary, matching exactly this shape:
-{"name": "short experience title", "plan": [{"step": 1, "title": "short specific title", "summary": "a real day plan as described above, or 1-2 sentences for a single-sitting part"}]}`;
+{"name": "short experience title", "plan": [{"step": 1, "title": "short specific title", "summary": "a real day plan as described above, or 1-2 sentences for a single-sitting part", "destination": "only when the trip has multiple named destinations - the exact destination name this day belongs to, copied exactly from the given destination list"}]}`;
 
 exports.proposeItinerary = onCall({ secrets: [openaiApiKey, geminiApiKey], cors: true, timeoutSeconds: 90 }, async (request) => {
   if (!request.auth) {
@@ -360,13 +373,29 @@ exports.proposeItinerary = onCall({ secrets: [openaiApiKey, geminiApiKey], cors:
   // destination rather than a single whole-trip hotel list - see hotelsByDestination below.
   const destList = Array.isArray(destinations) ? destinations.map((d) => String(d || "").trim()).filter(Boolean).slice(0, 6) : [];
   const multiDestination = destList.length > 1;
+  const normDest = (s) => String(s).toLocaleLowerCase().trim().replace(/[\s\-–_]+/g, "");
+  const destOrder = destList.map(normDest);
+  // Catches the exact failure mode organizers reported: the model schedules a day back at a
+  // destination the trip already moved past (e.g. a "layover" day re-visiting an earlier city
+  // right before the flight home) instead of strictly following the given visiting order.
+  function planRespectsDestinationOrder(plan) {
+    if (destOrder.length < 2 || !Array.isArray(plan)) return true;
+    let maxIndexSeen = -1;
+    for (const step of plan) {
+      const idx = destOrder.indexOf(normDest(step?.destination || ""));
+      if (idx === -1) continue;
+      if (idx < maxIndexSeen) return false;
+      maxIndexSeen = Math.max(maxIndexSeen, idx);
+    }
+    return true;
+  }
 
   const userPrompt = [
     `Description: ${prompt}`,
     `Required output language for the title and every part: ${LANG_NAMES[lang] || "the language of the description"}. The destination country does not determine the language.`,
     type ? `Experience type: ${type}` : null,
     location ? `Location: ${location}` : null,
-    multiDestination ? `The trip visits these destinations in order: ${destList.join(", ")} - group the parts by destination and name the destination in each part's title.` : null,
+    multiDestination ? `The trip visits these destinations, in this exact order, each exactly once: ${destList.join(", ")}. Assign each day's "destination" field one of these exact names, cover them in this order with no going back, and name the destination in each part's title too.` : null,
     duration ? `Duration: ${duration}` : null,
     people ? `Participants: ${people}` : null,
     peopleDetails && String(peopleDetails).trim() ? `Who's joining (names, ages, relationships): ${String(peopleDetails).trim().slice(0, 600)}` : null,
@@ -383,7 +412,10 @@ exports.proposeItinerary = onCall({ secrets: [openaiApiKey, geminiApiKey], cors:
   // Gemini has the real-world geographic grounding this needs (actual beaches, cafes,
   // restaurants) - it's already relied on for that in suggestHotelOptions/suggestAttractionOptions
   // above. Fall back to OpenAI only if Gemini comes back empty, so this stays as reliable as before.
-  let data = await askGeminiJSON(`${ITINERARY_SYSTEM_PROMPT}\n\n${userPrompt}`, "itinerary plan", { grounded: true });
+  let data = await askGeminiJSON(`${ITINERARY_SYSTEM_PROMPT}\n\n${userPrompt}`, "itinerary plan", {
+    grounded: true,
+    validate: multiDestination ? (d) => planRespectsDestinationOrder(d?.plan) : undefined,
+  });
   if (!data || !Array.isArray(data.plan) || data.plan.length === 0) {
     const client = new OpenAI({ apiKey: openaiApiKey.value().trim() });
     let completion;
@@ -396,9 +428,12 @@ exports.proposeItinerary = onCall({ secrets: [openaiApiKey, geminiApiKey], cors:
         ],
         response_format: { type: "json_object" },
         temperature: 0.6,
-        max_tokens: 8000,
+        max_tokens: 16000,
       });
       data = JSON.parse(completion.choices[0].message.content);
+      if (multiDestination && !planRespectsDestinationOrder(data?.plan)) {
+        console.error("Itinerary fallback (OpenAI) also violated destination order - using it anyway, nothing better available");
+      }
     } catch (err) {
       console.error("Itinerary request failed (Gemini and OpenAI both unavailable)", err);
       throw new HttpsError("unavailable", "The AI service failed to respond. Please try again.");
@@ -421,6 +456,7 @@ exports.proposeItinerary = onCall({ secrets: [openaiApiKey, geminiApiKey], cors:
       step: Number.isFinite(Number(p.step)) ? Number(p.step) : i + 1,
       title: String(p.title || "").slice(0, 120),
       summary: String(p.summary || "").slice(0, 400),
+      ...(multiDestination ? { destination: String(p.destination || "").slice(0, 100) } : {}),
     })),
     attractions: attractionOptions.map((o) => ({
       name: String(o?.name || "").slice(0, 100),
@@ -477,7 +513,7 @@ exports.generateExperience = onCall({ secrets: [openaiApiKey, geminiApiKey], cor
     multiDay ? `This is a multi-day trip - structure the missions across the days as described above, not a single sitting.` : null,
     multiDay ? dayCountInstruction(duration) : null,
     hasApprovedPlan
-      ? `The organizer already reviewed and approved this exact outline - build missions that follow it part by part, in this order, do not invent a different structure or skip a part:\n${approvedItinerary.plan.map((p) => `${p.step}. ${p.title} - ${p.summary}`).join("\n")}`
+      ? `The organizer already reviewed and approved this exact outline - build missions that follow it part by part, in this order, do not invent a different structure, skip a part, or move a day to a different destination than the one given for it:\n${approvedItinerary.plan.map((p) => `${p.step}. ${p.title}${p.destination ? ` [${p.destination}]` : ""} - ${p.summary}`).join("\n")}`
       : null,
     `Write "name", and every mission's "title", "text" and "reward", in the same language the Description above is written in - detect it automatically, it can be any language (Hebrew, English, Arabic, French, Spanish, German, Russian, or any other). Use natural, native-sounding phrasing for that language and its culture, not a literal translation. Only if the Description is too short or ambiguous to confidently detect a language, default to ${lang === "he" ? "Hebrew" : "English"}.`,
   ].filter(Boolean).join("\n");
