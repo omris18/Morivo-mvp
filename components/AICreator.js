@@ -147,7 +147,7 @@ export default function AICreator({setExperience,setView,setActiveId,user,lang,t
   let flow,name,usedAI=false,aiError=null;
   try{
    await ensureUser();
-   const generate=httpsCallable(functions,"generateExperience",{timeout:120000});
+   const generate=httpsCallable(functions,"generateExperience",{timeout:170000});
    const result=await generate({...baseFields(),approvedItinerary});
    flow=result.data.flow;name=result.data.name;usedAI=true;
   }catch(e){

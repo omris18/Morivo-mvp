@@ -584,7 +584,7 @@ exports.proposeItinerary = onCall({ secrets: [openaiApiKey, geminiApiKey], cors:
   };
 });
 
-exports.generateExperience = onCall({ secrets: [openaiApiKey, geminiApiKey], cors: true, timeoutSeconds: 120 }, async (request) => {
+exports.generateExperience = onCall({ secrets: [openaiApiKey, geminiApiKey], cors: true, timeoutSeconds: 180 }, async (request) => {
   if (!request.auth) {
     throw new HttpsError("unauthenticated", "Sign in (even anonymously) before generating an experience.");
   }
@@ -638,36 +638,98 @@ exports.generateExperience = onCall({ secrets: [openaiApiKey, geminiApiKey], cor
     ? Promise.resolve(attractionsPollMission(approvedItinerary.selectedAttractions, location, lang))
     : (multiDay && location) ? suggestAttractions({ location, prompt, people, duration, lang, interests, childrenAges }) : Promise.resolve(null);
 
-  let completion;
-  try {
-    completion = await client.chat.completions.create({
+  // A short approved plan can safely be turned into missions in one call; a long one hits the
+  // exact same single-huge-call reliability problem proposeItinerary's plan step had (mission
+  // text is if anything more verbose per day than a plan summary) - chunk it the same way: split
+  // the approved plan into groups (consecutive same-destination runs when the plan has them,
+  // otherwise fixed day-batches) and build each group's missions with its own call. The day
+  // count is guaranteed by the approved plan itself (already exactly right, thanks to that same
+  // chunking fix), never re-decided by this step.
+  const MISSION_CHUNK_THRESHOLD = 10;
+
+  function groupPlanForMissionChunks(plan) {
+    const hasDestinations = plan.some((p) => p.destination);
+    const groups = [];
+    if (hasDestinations) {
+      for (const p of plan) {
+        const key = p.destination || "";
+        const g = groups[groups.length - 1];
+        if (g && g.key === key) g.steps.push(p);
+        else groups.push({ key, steps: [p] });
+      }
+    } else {
+      const batchSize = 6;
+      for (let i = 0; i < plan.length; i += batchSize) groups.push({ key: "", steps: plan.slice(i, i + batchSize) });
+    }
+    return groups.map((g) => g.steps);
+  }
+
+  async function generateMissionChunk(planSteps, isFirst, isLast) {
+    const chunkPrompt = [
+      `Description: ${prompt}`,
+      `Required output language for every name, title, instruction and reward: ${LANG_NAMES[lang] || "the language of the description"}. The destination country does not determine the language.`,
+      type ? `Experience type: ${type}` : null,
+      people ? `Participants: ${people}` : null,
+      peopleDetails && String(peopleDetails).trim() ? `Who's joining (names, ages, relationships): ${String(peopleDetails).trim().slice(0, 600)}` : null,
+      Array.isArray(childrenAges) && childrenAges.length ? `Children's ages on this trip: ${childrenAges.join(", ")} - use these to pick age-appropriate activities and balance each day between kids and adults.` : null,
+      Array.isArray(interests) && interests.length ? `The group is especially interested in: ${interests.map((i) => INTEREST_LABELS[i] || i).join(", ")} - favor missions built around these over generic sightseeing.` : null,
+      needsHotel === false ? `The group already has accommodation booked - do not suggest or ask about where to stay.` : null,
+      `This is one part of a longer ${approvedItinerary.plan.length}-day trip - keep most days lean (their opener plus at most one more mission) rather than several missions per day, so the whole trip's total mission count stays manageable.`,
+      `Build missions for ONLY these approved day-parts, in this exact order, one per day-part - do not invent a different structure, skip a part, merge parts together, or move a day to a different destination than the one given for it:\n${planSteps.map((p) => `${p.step}. ${p.title}${p.destination ? ` [${p.destination}]` : ""} - ${p.summary}`).join("\n")}`,
+      isFirst ? null : `This chunk is NOT the start of the trip - the journey already began before it, so do not write an opening "welcome"/hook mission here.`,
+      isLast ? null : `This chunk is NOT the end of the trip - more days follow after it, so do not write a closing/farewell/"the trip is over" mission here.`,
+      `Write "name", and every mission's "title", "text" and "reward", in the same language the Description above is written in - detect it automatically, it can be any language (Hebrew, English, Arabic, French, Spanish, German, Russian, or any other). Use natural, native-sounding phrasing for that language and its culture, not a literal translation. Only if the Description is too short or ambiguous to confidently detect a language, default to ${lang === "he" ? "Hebrew" : "English"}.`,
+    ].filter(Boolean).join("\n");
+
+    const completion = await client.chat.completions.create({
       model: "gpt-4o",
       messages: [
         { role: "system", content: SYSTEM_PROMPT },
-        { role: "user", content: userPrompt },
+        { role: "user", content: chunkPrompt },
         { role: "system", content: "Final language check: identify the language of the Description, not the destination. Write the experience name and every mission title, instruction and reward entirely in that language. A trip to Rome described in English must be written in English, never Italian or Spanish. Keep proper place names unchanged." },
       ],
       response_format: { type: "json_object" },
       temperature: 0.6,
       max_tokens: 16000,
     });
+    const data = JSON.parse(completion.choices[0].message.content);
+    return { name: data?.name, rawFlow: Array.isArray(data?.flow) ? data.flow : [] };
+  }
+
+  let flow, generatedName;
+  try {
+    if (hasApprovedPlan && approvedItinerary.plan.length > MISSION_CHUNK_THRESHOLD) {
+      const groups = groupPlanForMissionChunks(approvedItinerary.plan);
+      const chunkResults = await Promise.all(groups.map((steps, i) => generateMissionChunk(steps, i === 0, i === groups.length - 1)));
+      // Sanitize once over the merged raw flow, not per chunk - sanitizeFlow derives each
+      // mission's id from a timestamp plus its index within the array it's given, and chunks
+      // resolving in the same millisecond could otherwise hand out colliding ids.
+      flow = sanitizeFlow(chunkResults.flatMap((r) => r.rawFlow));
+      generatedName = chunkResults[0]?.name;
+    } else {
+      const completion = await client.chat.completions.create({
+        model: "gpt-4o",
+        messages: [
+          { role: "system", content: SYSTEM_PROMPT },
+          { role: "user", content: userPrompt },
+          { role: "system", content: "Final language check: identify the language of the Description, not the destination. Write the experience name and every mission title, instruction and reward entirely in that language. A trip to Rome described in English must be written in English, never Italian or Spanish. Keep proper place names unchanged." },
+        ],
+        response_format: { type: "json_object" },
+        temperature: 0.6,
+        max_tokens: 16000,
+      });
+      const data = JSON.parse(completion.choices[0].message.content);
+      flow = Array.isArray(data?.flow) ? sanitizeFlow(data.flow) : [];
+      generatedName = data?.name;
+    }
   } catch (err) {
     console.error("OpenAI request failed", err);
     throw new HttpsError("unavailable", "The AI service failed to respond. Please try again.");
   }
 
-  let data;
-  try {
-    data = JSON.parse(completion.choices[0].message.content);
-  } catch (err) {
-    throw new HttpsError("internal", "The AI returned data in an unexpected format.");
-  }
-
-  if (!data || !Array.isArray(data.flow) || data.flow.length === 0) {
+  if (!Array.isArray(flow) || flow.length === 0) {
     throw new HttpsError("internal", "The AI returned an unexpected experience shape.");
   }
-
-  const flow = sanitizeFlow(data.flow);
 
   const [hotelMissions, attractionsMission] = await Promise.all([hotelMissionsPromise, attractionsMissionPromise]);
   const extras = [...hotelMissions, attractionsMission].filter(Boolean);
@@ -688,7 +750,7 @@ exports.generateExperience = onCall({ secrets: [openaiApiKey, geminiApiKey], cor
   }
 
   return {
-    name: String(data.name || prompt).slice(0, 120),
+    name: String(generatedName || prompt).slice(0, 120),
     flow: routeFlow,
   };
 });
