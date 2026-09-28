@@ -16,6 +16,7 @@ import LangSwitcher from "../components/LangSwitcher";
 import { firebaseConfigured, auth } from "../lib/firebase";
 import { onIdTokenChanged } from "firebase/auth";
 import { ensureUser, subscribeExperiences, subscribeExperience, completeGoogleRedirect } from "../lib/morivoData";
+import { listenForForegroundPush } from "../lib/push";
 import { STRINGS, getDir, COUNTRY_FLAGS } from "../lib/i18n";
 
 const DEMO={
@@ -100,6 +101,11 @@ export default function Home(){
    });
    completeGoogleRedirect().catch(console.error).finally(()=>{ ensureUser().catch(console.error); });
    return ()=>{generation++;unsubExp();unsubAuth()};
+ },[]);
+
+ useEffect(()=>{
+   const unsub=listenForForegroundPush();
+   return unsub;
  },[]);
 
  useEffect(()=>{
