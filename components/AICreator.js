@@ -1,11 +1,22 @@
 "use client";
 import PhotoJourney from "./PhotoJourney";
 import CelebrationPhotoPicker from "./CelebrationPhotoPicker";
-import {useEffect,useState} from "react";
+import {useEffect,useRef,useState} from "react";
 import {httpsCallable} from "firebase/functions";
 import {firebaseConfigured,functions} from "../lib/firebase";
 import {createExperienceRemote,ensureUser,subscribeSiteAsset,generateBrandImageRemote} from "../lib/morivoData";
 
+function CircularProgress({pct}){
+ const clamped=Math.max(0,Math.min(100,pct)),r=42,c=2*Math.PI*r;
+ return <div className="circularProgress" role="progressbar" aria-valuenow={Math.round(clamped)} aria-valuemin={0} aria-valuemax={100}>
+  <svg viewBox="0 0 100 100">
+   <defs><linearGradient id="circularProgressGradient" x1="0" y1="0" x2="1" y2="1"><stop offset="0%" stopColor="#7d5cff"/><stop offset="100%" stopColor="#ffb648"/></linearGradient></defs>
+   <circle className="circularProgressTrack" cx="50" cy="50" r={r} fill="none" strokeWidth="8"/>
+   <circle className="circularProgressFill" cx="50" cy="50" r={r} fill="none" strokeWidth="8" strokeDasharray={c} strokeDashoffset={c*(1-clamped/100)} strokeLinecap="round"/>
+  </svg>
+  <span className="circularProgressLabel">{Math.round(clamped)}%</span>
+ </div>;
+}
 const TYPE_OPTIONS={
  en:["Family Trip","Family Day Trip","Birthday","Team Building","School","Museum"],
  he:["טיול משפחתי","טיול משפחתי חד יומי","יום הולדת","גיבוש צוות","בית ספר","מוזיאון"]
@@ -39,6 +50,8 @@ export default function AICreator({setExperience,setView,setActiveId,user,lang,t
  const [portraitFile,setPortraitFile]=useState(null);
  const [form,setForm]=useState({prompt:"",type:"",location:"",duration:"",startDate:"",endDate:"",people:"",peopleDetails:"",hotelBooked:false,interests:[],adults:"2",children:"0",childrenAges:[],destinations:[]}),[building,setBuilding]=useState(false),[step,setStep]=useState(0);
  const [destinationInput,setDestinationInput]=useState("");
+ const dragFromIndexRef=useRef(null);
+ const [dragOverIndex,setDragOverIndex]=useState(null);
  const TOTAL_STEPS=3;
  const [formStep,setFormStep]=useState(1);
  const [stepError,setStepError]=useState("");
@@ -60,6 +73,15 @@ export default function AICreator({setExperience,setView,setActiveId,user,lang,t
  function removeDestination(name){
   setForm(f=>{
    const destinations=f.destinations.filter(d=>d!==name);
+   return {...f,destinations,location:destinations.join(", ")};
+  });
+ }
+ function reorderDestinations(fromIndex,toIndex){
+  if(fromIndex===toIndex)return;
+  setForm(f=>{
+   const destinations=[...f.destinations];
+   const [moved]=destinations.splice(fromIndex,1);
+   destinations.splice(toIndex,0,moved);
    return {...f,destinations,location:destinations.join(", ")};
   });
  }
@@ -94,6 +116,12 @@ export default function AICreator({setExperience,setView,setActiveId,user,lang,t
   setForm(f=>({...f,interests:f.interests.includes(key)?f.interests.filter(x=>x!==key):[...f.interests,key]}));
  }
  useEffect(()=>{if(!building)return;const id=setInterval(()=>setStep(x=>Math.min(x+1,a.thinking.length-1)),900);return()=>clearInterval(id)},[building,lang]);
+ // The plan step has no discrete "thinking" phrases to count through like building does, so its
+ // ring fill is time-based instead - it eases toward 92% and holds there (never claiming 100%
+ // until the real response lands) so a long multi-destination trip's longer wait still reads as
+ // active progress rather than a stalled bar.
+ const [planningPct,setPlanningPct]=useState(0);
+ useEffect(()=>{if(phase!=="planning"){setPlanningPct(0);return}const id=setInterval(()=>setPlanningPct(x=>x<92?x+Math.max(0.4,(92-x)*0.03):x),300);return()=>clearInterval(id)},[phase]);
  function baseFields(){
   const needsHotel=isMultiDayFamilyTrip&&!form.hotelBooked;
   return {prompt:form.prompt,type:form.type,location:form.location,duration:isMultiDayFamilyTrip?(tripDays?`${tripDays} days`:""):form.duration,startDate:isMultiDayFamilyTrip?form.startDate:null,endDate:isMultiDayFamilyTrip?form.endDate:null,people:isFamilyTrip?String(Number(form.adults||0)+Number(form.children||0)):form.people,peopleDetails:form.peopleDetails,adults:isFamilyTrip?Number(form.adults||0):null,children:isFamilyTrip?Number(form.children||0):null,childrenAges:isFamilyTrip?form.childrenAges.map(Number).filter(Number.isFinite):[],lang,multiDay:isMultiDayFamilyTrip,needsHotel,interests:isFamilyTrip?form.interests:[],destinations:isMultiDayFamilyTrip?form.destinations:[]};
@@ -169,11 +197,11 @@ export default function AICreator({setExperience,setView,setActiveId,user,lang,t
  }
  if(building)return <section className="aiThinking" dir={dir}>
    <PhotoJourney building image={shownLoadingArt||undefined}/>
-   <div className="thinkingCopy"><div className="tag">{a.tag}</div><h1>{a.thinking[step]}</h1><p>{form.prompt}</p><div className="thinkingSteps">{a.thinking.map((x,i)=><i className={i<=step?"on":""} key={x}></i>)}</div></div>
+   <div className="thinkingCopy"><div className="tag">{a.tag}</div><CircularProgress pct={a.thinking.length>1?(step/(a.thinking.length-1))*100:100}/><h1>{a.thinking[step]}</h1><p>{form.prompt}</p><div className="thinkingSteps">{a.thinking.map((x,i)=><i className={i<=step?"on":""} key={x}></i>)}</div></div>
   </section>;
  if(phase==="planning")return <section className="aiThinking" dir={dir}>
    <PhotoJourney building image={shownLoadingArt||undefined}/>
-   <div className="thinkingCopy"><div className="tag">{a.tag}</div><h1>{a.planningTitle}</h1><p>{form.prompt}</p></div>
+   <div className="thinkingCopy"><div className="tag">{a.tag}</div><CircularProgress pct={planningPct}/><h1>{a.planningTitle}</h1><p>{form.prompt}</p></div>
   </section>;
  if(phase==="review"&&itinerary)return <section className="itineraryReview" dir={dir}>
   <div className="panel">
@@ -237,7 +265,21 @@ export default function AICreator({setExperience,setView,setActiveId,user,lang,t
       <input value={destinationInput} placeholder={a.destinationPlaceholder} onChange={e=>setDestinationInput(e.target.value)} onKeyDown={e=>{if(e.key==="Enter"){e.preventDefault();addDestination()}}}/>
       <button type="button" onClick={addDestination}>+ {a.addDestination}</button>
      </div>
-     {form.destinations.length>0&&<div className="chipRow">{form.destinations.map(d=><button type="button" key={d} className="chip selected" onClick={()=>removeDestination(d)}>{d} ✕</button>)}</div>}
+     {form.destinations.length>0&&<>
+      {form.destinations.length>1&&<p className="destinationsHint destinationsOrderHint">{a.destinationsOrderHint}</p>}
+      <div className="chipRow destinationRouteRow">{form.destinations.map((d,i)=><span className="destinationChipWrap" key={d}>
+       {i>0&&<span className="destinationRouteArrow" aria-hidden="true">{dir==="rtl"?"←":"→"}</span>}
+       <button type="button" draggable className={"chip selected destinationChip "+(dragOverIndex===i?"dragOver":"")}
+        onDragStart={e=>{dragFromIndexRef.current=i;e.dataTransfer.effectAllowed="move"}}
+        onDragOver={e=>{e.preventDefault();e.dataTransfer.dropEffect="move";if(dragOverIndex!==i)setDragOverIndex(i)}}
+        onDragLeave={()=>setDragOverIndex(x=>x===i?null:x)}
+        onDrop={e=>{e.preventDefault();const from=dragFromIndexRef.current;dragFromIndexRef.current=null;setDragOverIndex(null);if(Number.isInteger(from))reorderDestinations(from,i)}}
+        onDragEnd={()=>{dragFromIndexRef.current=null;setDragOverIndex(null)}}
+        onClick={()=>removeDestination(d)}>
+        <span className="destinationChipHandle" aria-hidden="true">⠿</span>{d} ✕
+       </button>
+      </span>)}</div>
+     </>}
     </div>}
     {/birthday|יום הולדת/i.test(form.type)&&<CelebrationPhotoPicker file={portraitFile} onChange={setPortraitFile} lang={lang}/>}
    </div>

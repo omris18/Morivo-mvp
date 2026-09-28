@@ -12,7 +12,7 @@ function dayRangeText(missions,lang){
  return lang==="he"?`ימים ${first}–${last}`:`Days ${first}–${last}`;
 }
 
-export default function ParticipantJourneyMap({experience,flow,prog,idx,finished,lang,p,onOpenMission}){
+export default function ParticipantJourneyMap({experience,flow,prog,idx,finished,lang,p,missionDayLocked,onOpenMission}){
  const he=lang==="he";
  const rawGroups=buildRouteGroups(experience,flow,he);
  const singleDestination=rawGroups.length<=1&&rawGroups[0];
@@ -73,9 +73,9 @@ export default function ParticipantJourneyMap({experience,flow,prog,idx,finished
        {g.missions.map(({m,i})=>{
         const mDone=completedIds.includes(m.id);
         const isActive=!finished&&i===idx;
-        const dayState=mDone?"done":isActive?"today":"future";
+        const dayState=mDone?"done":isActive?(missionDayLocked?"locked":"today"):"future";
         return <button type="button" key={m.id} className={`destinationDay ${dayState}`} onClick={e=>{e.stopPropagation();onOpenMission(m,isActive)}} aria-label={m.title}>
-         <span className="destinationDayDot">{m.day||i+1}{mDone&&<i className="destinationDayCheck">✓</i>}{typeIcons[m.type]&&<i className="destinationDayType">{typeIcons[m.type]}</i>}</span>
+         <span className="destinationDayDot">{isActive&&missionDayLocked?"🔒":(m.day||i+1)}{mDone&&<i className="destinationDayCheck">✓</i>}{typeIcons[m.type]&&<i className="destinationDayType">{typeIcons[m.type]}</i>}</span>
         </button>;
        })}
       </div>

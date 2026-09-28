@@ -18,6 +18,7 @@ import {experienceGradient} from "../lib/theme";
 import LangSwitcher from "./LangSwitcher";
 import {isStampMission} from "../lib/stampMissions";
 import {unlockedPieces,gridIndexForPiece,pieceAtGridIndex} from "../lib/familyPuzzle";
+import {isMissionDayLocked,missionUnlockDate} from "../lib/experienceVisuals";
 function formatStopDate(dateStr,lang){
  try{ return new Intl.DateTimeFormat(lang==="he"?"he-IL":lang,{day:"numeric",month:"short"}).format(new Date(dateStr+"T00:00:00")); }
  catch{ return dateStr; }
@@ -116,6 +117,12 @@ export default function Participant({experience,setExperience,setView,setActiveI
  // would never trigger once a path leaves some missions unvisited.
  const finished=flow.length>0&&rawIdx>=flow.length;
  const idx=Math.min(rawIdx,Math.max(flow.length-1,0)), mission=finished?null:flow[idx];
+ // The state machine can already point at day 2's mission the moment day 1's missions are
+ // done - that's fine for tracking progress, but the participant shouldn't be able to act on
+ // it before day 2 actually starts. This never blocks the completion itself (handled in the
+ // popup below and in complete()), just gates the interactive form vs. a "opens on X" notice.
+ const missionDayLocked=mission?isMissionDayLocked(experience.startDate,mission):false;
+ const missionUnlocksOn=missionDayLocked?missionUnlockDate(experience.startDate,mission):null;
  const badges=computeBadges(prog,flow);
  const earnedStamps=flow.filter(m=>isStampMission(m)&&(prog.completedMissionIds||[]).includes(m.id));
  const puzzleTotal=experience.familyPuzzle?.totalPieces||8;
@@ -224,7 +231,7 @@ export default function Participant({experience,setExperience,setView,setActiveI
    await uploadMissionPhoto({experienceId:eid,mission:targetMission,file:batch[i],participantName:name,onProgress:filePct=>onOverallProgress(Math.round(((i+filePct/100)/batch.length)*100))});
   }
  }
- async function complete(){if(!mission)return;if(experience.paused)return alert(p.pausedByOrganizer);const isMedia=mission.type==="photo"||mission.type==="video";if(isMedia&&!files.length)return alert(p.chooseFirst(mission.type));if(mission.type==="note"&&!noteText.trim())return alert(p.writeSomethingFirst);if(mission.type==="puzzle"&&!puzzleAnswer.trim())return alert(p.writeSomethingFirst);if(mission.type==="puzzle"&&mission.answer&&!missionAnswers.answerMatches(puzzleAnswer,mission.answer))return alert(p.wrongAnswer);if(mission.type==="map"&&(hasGpsCheckpoint||hasQrCheckpoint)&&!((hasGpsCheckpoint&&locStatus&&locStatus.within)||(hasQrCheckpoint&&qrVerified)))return alert(p.getCloserFirst);setBusy(true);try{
+ async function complete(){if(!mission)return;if(missionDayLocked)return alert(p.missionDayLockedHint(missionUnlocksOn?formatStopDate(missionUnlocksOn.toISOString().slice(0,10),lang):""));if(experience.paused)return alert(p.pausedByOrganizer);const isMedia=mission.type==="photo"||mission.type==="video";if(isMedia&&!files.length)return alert(p.chooseFirst(mission.type));if(mission.type==="note"&&!noteText.trim())return alert(p.writeSomethingFirst);if(mission.type==="puzzle"&&!puzzleAnswer.trim())return alert(p.writeSomethingFirst);if(mission.type==="puzzle"&&mission.answer&&!missionAnswers.answerMatches(puzzleAnswer,mission.answer))return alert(p.wrongAnswer);if(mission.type==="map"&&(hasGpsCheckpoint||hasQrCheckpoint)&&!((hasGpsCheckpoint&&locStatus&&locStatus.within)||(hasQrCheckpoint&&qrVerified)))return alert(p.getCloserFirst);setBusy(true);try{
    if(isMedia&&firebaseConfigured)await uploadBatch(mission,files,setPct);
    if(["note","puzzle"].includes(mission.type)&&firebaseConfigured)await saveMissionAnswer(eid,mission,mission.type==="note"?noteText.trim():puzzleAnswer.trim(),name);
    if(firebaseConfigured)await completeJourneyMission(eid,mission,idx,name);else setProg(pr=>({completedMissionIds:[...pr.completedMissionIds,mission.id],currentMissionIndex:idx+1,points:pr.points+(mission.points||100)}));
@@ -324,7 +331,7 @@ export default function Participant({experience,setExperience,setView,setActiveI
  {latestMessage&&<div className="orgMessage"><span>📣 {latestMessage.text}</span><button onClick={()=>setDismissed(d=>[...d,latestMessage.id])}>✕</button></div>}
  {experience.paused&&!finished&&<div className="pausedBanner">⏸ {p.pausedByOrganizer}</div>}
  <div className="journeyProgressBar"><div className="journeyProgressFill" style={{width:`${progressPct}%`}}></div></div>
- <ParticipantJourneyMap experience={experience} flow={flow} prog={prog} idx={idx} finished={finished} lang={lang} p={p} onOpenMission={(m,isActive)=>{
+ <ParticipantJourneyMap experience={experience} flow={flow} prog={prog} idx={idx} finished={finished} lang={lang} p={p} missionDayLocked={missionDayLocked} onOpenMission={(m,isActive)=>{
    if(isActive){setMissionPopupOpen(true);return}
    const doneAlready=(prog.completedMissionIds||[]).includes(m.id);
    if(doneAlready&&(m.type==="photo"||m.type==="video")){setRevisitMission(m);return}
@@ -406,6 +413,8 @@ export default function Participant({experience,setExperience,setView,setActiveI
   <button className="primary" onClick={()=>setHelpOpen(false)}>{p.helpGotIt}</button>
  </div></div>,document.body)}
  {missionPopupOpen&&mission&&!finished&&typeof document!=="undefined"&&createPortal(<div className="missionPopupOverlay" role="presentation" onClick={()=>setMissionPopupOpen(false)}><div className="missionPopupCard" role="dialog" aria-modal="true" onClick={e=>e.stopPropagation()}><button type="button" className="missionPopupClose" aria-label={lang==="he"?"סגירה":"Close"} onClick={()=>setMissionPopupOpen(false)}>×</button>{mission.day?<div className="missionPopupBadge">{mission.day}</div>:null}{popupMeta(mission,lang)&&<div className="missionPopupMeta">{popupMeta(mission,lang)}</div>}<div className="missionType">{missionLabels[lang==="he"?"he":"en"][mission.type]||mission.type}</div><h3>{mission.title}</h3><p className="participantInstruction">{participantHint(mission,lang)}</p><p><LinkifiedText text={mission.text}/></p>{mission.hotel&&<div className="journeyStopHotel">🏨 {mission.hotel}</div>}{navUrl(mission)&&<a className="journeyNavigateBtn" href={navUrl(mission)} target="_blank" rel="noopener noreferrer">🧭 {p.navigate}</a>}
+ {missionDayLocked&&<div className="dayLockedNotice">🔒 {p.missionDayLockedHint(missionUnlocksOn?formatStopDate(missionUnlocksOn.toISOString().slice(0,10),lang):"")}</div>}
+ {!missionDayLocked&&<>
  {(mission.type==="photo"||mission.type==="video")&&<div className="uploadChoiceGrid">
   <label className="uploadChoiceCard"><input type="file" accept={mission.type==="photo"?"image/*":"video/*"} multiple onChange={e=>{stageFiles([...e.target.files],mission,files,setFiles,setUploadNotice);e.target.value=""}}/><span className="uploadChoiceIcon">🖼️</span><b>{p.chooseFromGallery}</b><small>{p.chooseFromGalleryHint}</small></label>
   <label className="uploadChoiceCard"><input type="file" accept={mission.type==="photo"?"image/*":"video/*"} capture="environment" onChange={e=>{stageFiles([...e.target.files],mission,files,setFiles,setUploadNotice);e.target.value=""}}/><span className="uploadChoiceIcon">📷</span><b>{p.takeNewMedia}</b><small>{p.takeNewMediaHint}</small></label>
@@ -473,7 +482,8 @@ export default function Participant({experience,setExperience,setView,setActiveI
     </div>;
    })()}
  {mission.type!=="branch"&&!(mission.type==="story"&&mission.organizerDecides)&&<div className="mission">{p.reward}: {mission.reward||`${mission.points||100} pts`}</div>}
- {mission.type!=="branch"&&mission.type!=="quiz"&&!(mission.type==="story"&&mission.organizerDecides)&&<>{busy&&(mission.type==="photo"||mission.type==="video")&&<div className="uploadProgress"><div style={{width:`${pct}%`}}></div><span>{pct}%</span></div>}<button className="primary" disabled={busy||experience.paused} onClick={complete}>{busy?p.saving:p.completeContinue}</button></>}</div></div>,document.body)}
+ {mission.type!=="branch"&&mission.type!=="quiz"&&!(mission.type==="story"&&mission.organizerDecides)&&<>{busy&&(mission.type==="photo"||mission.type==="video")&&<div className="uploadProgress"><div style={{width:`${pct}%`}}></div><span>{pct}%</span></div>}<button className="primary" disabled={busy||experience.paused} onClick={complete}>{busy?p.saving:p.completeContinue}</button></>}
+ </>}</div></div>,document.body)}
  {revisitMission&&typeof document!=="undefined"&&createPortal(<div className="missionPopupOverlay" role="presentation" onClick={()=>setRevisitMission(null)}><div className="missionPopupCard" role="dialog" aria-modal="true" onClick={e=>e.stopPropagation()}><button type="button" className="missionPopupClose" aria-label={lang==="he"?"סגירה":"Close"} onClick={()=>setRevisitMission(null)}>×</button>{revisitMission.day?<div className="missionPopupBadge">{revisitMission.day}</div>:null}{popupMeta(revisitMission,lang)&&<div className="missionPopupMeta">{popupMeta(revisitMission,lang)}</div>}<div className="missionType">{missionLabels[lang==="he"?"he":"en"][revisitMission.type]||revisitMission.type}</div><h3>{revisitMission.title}</h3><div className="missionPopupStatus done">✓ {p.missionDoneHint}</div><p className="participantInstruction">{p.revisitUploadHint}</p>{revisitMission.hotel&&<div className="journeyStopHotel">🏨 {revisitMission.hotel}</div>}{navUrl(revisitMission)&&<a className="journeyNavigateBtn" href={navUrl(revisitMission)} target="_blank" rel="noopener noreferrer">🧭 {p.navigate}</a>}
   <div className="uploadChoiceGrid">
    <label className="uploadChoiceCard"><input type="file" accept={revisitMission.type==="photo"?"image/*":"video/*"} multiple onChange={e=>{stageFiles([...e.target.files],revisitMission,revisitFiles,setRevisitFiles,setRevisitNotice);e.target.value=""}}/><span className="uploadChoiceIcon">🖼️</span><b>{p.chooseFromGallery}</b><small>{p.chooseFromGalleryHint}</small></label>

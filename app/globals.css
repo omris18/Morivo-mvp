@@ -366,7 +366,11 @@ button:active{transform:scale(.96)}
 .missionPopupMeta{font-weight:700;color:#7d5cff;font-size:13px;margin-bottom:4px}
 .missionPopupCard .missionType{color:#9aa3b8;margin-bottom:4px}
 .missionPopupCard h3{font-size:23px;margin:6px 0 10px;color:#152233}
-.missionPopupCard .participantInstruction{background:#eef7f3;border-inline-start:3px solid #4fb99a;border-radius:12px;padding:10px 14px;font-size:13px;color:#2a5b4d;text-align:start;margin:10px 0}
+/* experience-guidance.css forces .participantInstruction to a pale cyan meant for the dark
+   page background elsewhere - this white popup card needs its own !important to win that fight
+   and stay readable (dark text on a light tint), not washed-out pale text on near-white. */
+.missionPopupCard .participantInstruction{background:#eef7f3!important;border-inline-start:3px solid #4fb99a;border-radius:12px;padding:10px 14px;font-size:13px!important;color:#2a5b4d!important;text-align:start;margin:10px 0;line-height:1.6!important}
+.dayLockedNotice{background:#fdf0e2;border:1px solid rgba(168,100,32,.25);color:#a86420;border-radius:14px;padding:12px 14px;font-size:13px;font-weight:700;text-align:start;margin:14px 0}
 .missionPopupCard>p{text-align:start;color:#3a4356}
 .missionPopupCard .journeyStopHotel{text-align:start;font-size:13px;color:#546074;margin:8px 0 0}
 .missionPopupCard .journeyNavigateBtn{display:inline-flex;margin:6px 0 4px}
@@ -415,6 +419,7 @@ button:active{transform:scale(.96)}
 .journeySvgMap .destinationDay.done .destinationDayDot{background:#16a34a;color:#fff}
 .journeySvgMap .destinationDay.today .destinationDayDot{background:#f97316;color:#fff;transform:scale(1.12);box-shadow:0 0 0 4px rgba(249,115,22,.17),0 4px 10px rgba(15,23,42,.16)}
 .journeySvgMap .destinationDay.future .destinationDayDot{background:#e5e7eb;color:#94a3b8}
+.journeySvgMap .destinationDay.locked .destinationDayDot{background:#94a3b8;color:#fff;font-size:11px}
 .journeySvgMap .destinationDayCheck{position:absolute;top:-4px;inset-inline-end:-4px;width:12px;height:12px;border-radius:50%;background:#16a34a;color:#fff;font-size:8px;font-style:normal;display:grid;place-items:center;border:1.5px solid #fff;box-shadow:0 1px 3px rgba(15,23,42,.25)}
 .journeySvgMap .destinationDayType{position:absolute;bottom:-4px;inset-inline-start:-4px;width:13px;height:13px;border-radius:50%;background:#fff;font-size:8px;font-style:normal;display:grid;place-items:center;border:1px solid rgba(15,23,42,.12);box-shadow:0 1px 3px rgba(15,23,42,.2)}
 .journeySvgMap .mapDayBadge{position:absolute;top:-10px;left:-7px;min-width:34px;height:34px;padding:0 7px;border-radius:999px;display:grid;place-items:center;background:#fff;color:var(--accent);font-weight:900;font-size:10px;box-shadow:0 5px 13px rgba(15,23,42,.17)}
@@ -494,6 +499,14 @@ button:active{transform:scale(.96)}
 .destinationInputRow{display:flex;gap:8px}
 .destinationInputRow input{flex:1}
 .chipRow{display:flex;flex-wrap:wrap;gap:8px;margin-top:8px}
+.destinationsOrderHint{color:#efc186}
+.destinationRouteRow{align-items:center}
+.destinationChipWrap{display:flex;align-items:center;gap:8px}
+.destinationRouteArrow{color:#6d7c93;font-size:15px;font-weight:800}
+.destinationChip{cursor:grab;display:inline-flex;align-items:center;gap:6px}
+.destinationChip:active{cursor:grabbing}
+.destinationChip.dragOver{border-color:#efc186;background:rgba(239,193,134,.22);transform:scale(1.04)}
+.destinationChipHandle{opacity:.55;font-size:12px}
 .chip{border:1px solid rgba(255,255,255,.14);background:#0b1725;color:#b7c2d2;padding:9px 14px;border-radius:999px;font-size:13px;min-height:auto;transition:border-color .15s ease,color .15s ease,background-color .15s ease}
 .chip.selected{border-color:rgba(239,193,134,.5);background:rgba(239,193,134,.12);color:#efc186}
 .aiPromise{
@@ -620,6 +633,11 @@ body{background:radial-gradient(circle at 78% -10%,rgba(123,199,216,.08),transpa
 .aiThinking .coreGlow{background:radial-gradient(circle,rgba(239,193,134,.28),rgba(123,199,216,.14) 48%,transparent 72%)}
 .aiThinking .bookBuild span{background:rgba(239,193,134,.08);border-color:rgba(239,193,134,.34)}
 .thinkingCopy .tag{font-size:10px;letter-spacing:.17em}.thinkingCopy h1{font:500 clamp(40px,4.5vw,64px)/1.04 Georgia,serif;letter-spacing:-.035em;color:#f7f2eb;margin:14px 0 18px}.thinkingCopy p{font-size:14px;line-height:1.7;color:#8396a9;max-width:450px}.thinkingSteps{gap:7px}.thinkingSteps i{height:2px;width:34px;background:#1b2a38}.thinkingSteps i.on{background:linear-gradient(90deg,var(--m-warm),var(--m-sky))}
+.circularProgress{position:relative;width:88px;height:88px;margin:14px 0 4px}
+.circularProgress svg{width:100%;height:100%;transform:rotate(-90deg)}
+.circularProgressTrack{stroke:#1b2a38}
+.circularProgressFill{stroke:url(#circularProgressGradient);transition:stroke-dashoffset .3s ease}
+.circularProgressLabel{position:absolute;inset:0;display:grid;place-items:center;font-size:16px;font-weight:800;color:#f7f2eb}
 @media(max-width:900px){.aiCreate,.aiThinking{grid-template-columns:1fr}.aiPromise{min-height:520px}.aiCreate>.panel:first-child{padding:28px}.aiPromise .constellation{height:245px}.thinkingWorld{height:400px}}
 
 
