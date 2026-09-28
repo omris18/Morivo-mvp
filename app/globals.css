@@ -538,6 +538,8 @@ body{background:radial-gradient(circle at 78% -10%,rgba(123,199,216,.08),transpa
 .brandLockup{display:flex;align-items:center;gap:12px;padding:0 8px 28px;margin-bottom:12px;border-bottom:1px solid var(--m-line)}
 .brandLockup .brand{font-family:Georgia,serif;font-size:22px;letter-spacing:.08em;color:#fff}
 .brandLockup .tag{font-size:9px;letter-spacing:.14em;color:#718295;margin-top:2px}
+.brandIcon{width:40px;height:40px;flex:0 0 40px;border-radius:12px;display:block;box-shadow:0 6px 16px rgba(124,58,237,.35)}
+.brandWordmark{display:block;font-size:21px;font-weight:800;letter-spacing:-.01em;color:#fff}
 .brandMark{width:30px;height:30px;position:relative;transform:rotate(-18deg)}
 .brandMark span{position:absolute;width:16px;height:4px;border-radius:99px;background:linear-gradient(90deg,var(--m-warm),var(--m-sky));left:6px}
 .brandMark span:nth-child(1){top:6px;transform:rotate(45deg)}.brandMark span:nth-child(2){top:13px;left:10px}.brandMark span:nth-child(3){top:20px;transform:rotate(-45deg)}
@@ -889,7 +891,7 @@ body{background:radial-gradient(circle at 78% -10%,rgba(123,199,216,.08),transpa
 body{background:radial-gradient(ellipse at 88% 4%,#d9f1ef 0,transparent 45%),radial-gradient(ellipse at 4% 70%,#ffe4d3 0,transparent 42%),#faf6ed;color:#153e4b}
 body .sidebar{background:linear-gradient(180deg,#fffef9,#f0f8f1);border-color:#d7e5df;box-shadow:4px 0 30px rgba(44,92,87,.03)}
 .brandLockup{padding:0 4px 24px;border-color:#d7e5df}
-.morivoWordmark{display:block;width:158px;max-width:100%;height:48px;object-fit:contain}
+.brandWordmark{color:#153e4b}
 .brandLockup .tag{color:#53747a;margin:9px 0 0;font-size:8px}
 body .sidebar nav button{color:#466c74;white-space:nowrap}
 body .sidebar nav button span:last-child{width:auto}
@@ -984,7 +986,8 @@ body .appShell .memoryPage .mbShare .mbHeading{color:#24646b}
  .photoJourneyBuilding{height:360px;margin:0 8px 26px}
 }
 @media(max-width:700px){
- .morivoWordmark{width:132px;height:40px}
+ .brandIcon{width:34px;height:34px;flex:0 0 34px}
+ .brandWordmark{font-size:18px}
  body .sidebar{padding:16px}
  .brandLockup{padding-bottom:12px;margin-bottom:6px}
  body .morivoHero{padding:26px 20px;gap:28px}

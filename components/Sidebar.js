@@ -17,7 +17,7 @@ export default function Sidebar({view,setView,t,isMaster=false,lang}){
  function go(id){setView(id);setExpanded(false)}
  return <>
    <aside className="sidebar">
-     <div className="brandLockup"><div><img className="morivoWordmark" src="/morivo-logo.svg" alt="Morivo"/><div className="tag">{t.brandTag}</div></div></div>
+     <div className="brandLockup"><img className="brandIcon" src="/morivo-icon.svg" alt=""/><div><span className="brandWordmark">Morivo</span><div className="tag">{t.brandTag}</div></div></div>
      <nav>{items.map(id=>
        <button key={id} onClick={()=>setView(id)} className={view===id?"active":""}>
         <span className="navIcon">{icons[id]}</span><span>{t.nav[id]}</span>
