@@ -1,5 +1,5 @@
 "use client";
-import {useState} from "react";
+import {useEffect,useState} from "react";
 import {createPortal} from "react-dom";
 
 const items=["dashboard","ai","studio","runtime","memory"];
@@ -12,6 +12,8 @@ const icons={
 };
 export default function Sidebar({view,setView,t,isMaster=false,lang}){
  const [expanded,setExpanded]=useState(false);
+ const [mounted,setMounted]=useState(false);
+ useEffect(()=>{setMounted(true)},[]);
  const navItems=items.map(id=>({id,icon:icons[id],label:t.nav[id]}));
  if(isMaster)navItems.push({id:"master",icon:"◈",label:lang==="he"?"ניהול מערכת":"Master console",master:true});
  function go(id){setView(id);setExpanded(false)}
@@ -25,7 +27,7 @@ export default function Sidebar({view,setView,t,isMaster=false,lang}){
      )}{isMaster&&<button onClick={()=>setView("master")} className={"masterNav "+(view==="master"?"active":"")}><span className="navIcon" aria-hidden="true">◈</span><span>{lang==="he"?"ניהול מערכת":"Master console"}</span><small>MASTER</small></button>}</nav>
      <div className="sidebarJourney"><div className="journeyLine"></div><small>CREATE · LIVE · REMEMBER</small></div>
    </aside>
-   {typeof document!=="undefined"&&createPortal(<>
+   {mounted&&createPortal(<>
      <div className="mobileNavRail" role="navigation" aria-label={t.brandTag}>
        {navItems.map(item=><button key={item.id} type="button" className={"mobileNavIcon "+(view===item.id?"active":"")} title={item.label} aria-label={item.label} onClick={()=>go(item.id)}>
         {typeof item.icon==="string"?item.icon:<span className="navIcon">{item.icon}</span>}
