@@ -1,8 +1,10 @@
 const { onSchedule } = require("firebase-functions/v2/scheduler");
 
 // Only worth polling a flight within this window around its scheduled time - well before that
-// there's nothing useful to report yet, and well after it the trip has moved on.
-const WINDOW_MS = 36 * 60 * 60 * 1000;
+// there's nothing useful to report yet, and well after it the trip has moved on. Kept narrow
+// because every check inside the window costs an AeroDataBox API call on the free tier's
+// monthly quota (every 30 min * a wide window adds up fast across even a handful of flights).
+const WINDOW_MS = 6 * 60 * 60 * 1000;
 
 async function fetchFlightStatus(flightNumber, date, apiKey) {
   const number = String(flightNumber || "").replace(/[\s-]/g, "").toUpperCase();
