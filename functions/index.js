@@ -51,6 +51,8 @@ const SYSTEM_PROMPT = `You design short interactive real-world "experiences" (tr
 
 Given a free-text description of the people, place and occasion, invent a specific, concrete journey of 5 to 8 missions (called "atoms") for a single-sitting experience. If the request says this is a multi-day trip, instead build roughly 2 to 3 missions per day (up to 18 missions total for longer trips), and open each day with a short "story" mission whose title names that day (e.g. "Day 1", "Day 2" - translated into the description's language) so the journey is clearly organized by day. This is the single most important rule: every mission must be built out of a concrete detail from the description - a name, a relationship, an inside joke, a place, a hobby, an occasion detail. If the description mentions a person, place or theme, weave it into the mission text itself, not just the experience title. A mission that could be copy-pasted into any other unrelated experience without changes is a failure.
 
+For a multi-day trip, structure each day like a real, walkable day plan, not a random grab-bag: a morning mission (a specific real place to start - a beach, viewpoint, market - plus, where natural, a named nearby cafe or breakfast spot worth trying), a midday mission that gives the group an actual choice for the afternoon (e.g. head back to rest, or keep going to a second nearby spot - phrase it as a real decision, not a filler prompt), and an evening mission (a specific restaurant, promenade or activity to close the day). The traveler should finish reading a day's missions knowing roughly where they're going and what they're doing for most of the day, not just one disconnected activity. If the description gives children's ages (see below), balance each day between something the kids will enjoy (a playground, an aquarium, a kid-friendly beach) and something for the adults (a market, a viewpoint, a restaurant) rather than making every stop either purely a kids' activity or purely an adult one - a family day usually needs both.
+
 Bad (too generic - never write like this): "Take a photo that could only belong to this group." / "Answer a playful question about the people sharing this experience." / "Capture something surprising, funny or beautiful."
 Good (specific, built from the input): if the input mentions a grandmother's 70th birthday at the beach, a good mission is "Find someone who remembers Grandma's first trip to this beach and get them to tell the story on camera" - concrete, references the actual people and place, gives a reason the moment matters.
 
@@ -175,15 +177,16 @@ const INTEREST_LABELS = {
   relaxation: "Relaxation & Wellness",
 };
 
-async function suggestAttractionOptions({ location, prompt, people, duration, lang, interests }) {
+async function suggestAttractionOptions({ location, prompt, people, duration, lang, interests, childrenAges }) {
   const interestLabels = Array.isArray(interests) ? interests.map((i) => INTEREST_LABELS[i]).filter(Boolean) : [];
-  const attrPrompt = `Suggest 3 to 4 specific, real attractions or activities in or near "${location}" that would suit this group: "${prompt}"${people ? ` (${people} people)` : ""}${duration ? `, over ${duration}` : ""}.${interestLabels.length ? ` The group specifically wants to focus on these categories: ${interestLabels.join(", ")} - prioritize real options that match those categories over generic sightseeing.` : ""} For each, give a real, findable attraction or activity name and a 1-2 sentence reason it fits this exact group - their ages, interests, and any dietary/religious/accessibility needs mentioned - practical and specific, not generic travel-blog language. Write in the same language as the group description above (detect it automatically). Respond with STRICT JSON only, no markdown fencing, no commentary, matching exactly this shape: {"options":[{"name":"attraction or activity name","why":"1-2 sentence reason"}]}`;
+  const kidsNote = Array.isArray(childrenAges) && childrenAges.length ? ` The group includes children aged ${childrenAges.join(", ")} - include a mix of options that work for both the kids and the adults, not only one or the other.` : "";
+  const attrPrompt = `Suggest 3 to 4 specific, real attractions or activities in or near "${location}" that would suit this group: "${prompt}"${people ? ` (${people} people)` : ""}${duration ? `, over ${duration}` : ""}.${interestLabels.length ? ` The group specifically wants to focus on these categories: ${interestLabels.join(", ")} - prioritize real options that match those categories over generic sightseeing.` : ""}${kidsNote} For each, give a real, findable attraction or activity name and a 1-2 sentence reason it fits this exact group - their ages, interests, and any dietary/religious/accessibility needs mentioned - practical and specific, not generic travel-blog language. Write in the same language as the group description above (detect it automatically). Respond with STRICT JSON only, no markdown fencing, no commentary, matching exactly this shape: {"options":[{"name":"attraction or activity name","why":"1-2 sentence reason"}]}`;
   const data = await askGeminiJSON(attrPrompt, "attraction suggestion");
   return Array.isArray(data?.options) ? data.options.slice(0, 4) : [];
 }
 
-async function suggestAttractions({ location, prompt, people, duration, lang, interests }) {
-  const options = await suggestAttractionOptions({ location, prompt, people, duration, lang, interests });
+async function suggestAttractions({ location, prompt, people, duration, lang, interests, childrenAges }) {
+  const options = await suggestAttractionOptions({ location, prompt, people, duration, lang, interests, childrenAges });
   if (!options.length) return null;
   const text = optionsToMissionText(options, 4, mapsSearchUrl, location);
   if (!text) return null;
@@ -290,6 +293,8 @@ Given a free-text description, break the experience into an ordered sequence of 
 
 For each part, write a short specific title (e.g. "Day 1 - Arrival & Shibuya" for a trip day, or "The Opening Challenge" for a single-sitting phase - translated into the description's language) and a 1-2 sentence summary of what that part focuses on. Every part must be grounded in a concrete detail from the description (people, occasion, place) - never generic filler like "Explore and have fun."
 
+For a multi-day trip, each day's summary should read like a real day plan: name a morning starting point, hint at a midday choice (keep going vs. head back to rest), and an evening plan to close the day - not just one activity. If the description gives children's ages, balance the day between something for the kids and something for the adults.
+
 Respond in the same language the description is written in - detect it automatically. Respond with STRICT JSON only, no markdown fencing, no commentary, matching exactly this shape:
 {"name": "short experience title", "plan": [{"step": 1, "title": "short specific title", "summary": "1-2 sentence plan for this part"}]}`;
 
@@ -322,7 +327,7 @@ exports.proposeItinerary = onCall({ secrets: [openaiApiKey, geminiApiKey], cors:
     multiDay ? `This is a multi-day trip - one part per calendar day, in order.` : `This is a single-sitting experience - 3 to 5 parts representing its arc, not calendar days.`,
   ].filter(Boolean).join("\n");
 
-  const attractionsPromise = location ? suggestAttractionOptions({ location, prompt, people, duration, lang, interests }) : Promise.resolve([]);
+  const attractionsPromise = location ? suggestAttractionOptions({ location, prompt, people, duration, lang, interests, childrenAges }) : Promise.resolve([]);
   const hotelPromise = multiDestination
     ? (needsHotel ? Promise.all(destList.map((d) => suggestHotelOptions({ location: d, prompt, people, duration, lang }))) : Promise.resolve(null))
     : (needsHotel && location) ? suggestHotelOptions({ location, prompt, people, duration, lang }) : Promise.resolve([]);
@@ -416,6 +421,9 @@ exports.generateExperience = onCall({ secrets: [openaiApiKey, geminiApiKey], cor
     duration ? `Duration: ${duration}` : null,
     people ? `Participants: ${people}` : null,
     peopleDetails && String(peopleDetails).trim() ? `Who's joining (names, ages, relationships): ${String(peopleDetails).trim().slice(0, 600)}` : null,
+    Array.isArray(childrenAges) && childrenAges.length ? `Children's ages on this trip: ${childrenAges.join(", ")} - use these to pick age-appropriate activities and balance each day between kids and adults.` : null,
+    Array.isArray(interests) && interests.length ? `The group is especially interested in: ${interests.map((i) => INTEREST_LABELS[i] || i).join(", ")} - favor missions built around these over generic sightseeing.` : null,
+    needsHotel === false ? `The group already has accommodation booked - do not suggest or ask about where to stay.` : null,
     multiDay ? `This is a multi-day trip - structure the missions across the days as described above, not a single sitting.` : null,
     hasApprovedPlan
       ? `The organizer already reviewed and approved this exact outline - build missions that follow it part by part, in this order, do not invent a different structure or skip a part:\n${approvedItinerary.plan.map((p) => `${p.step}. ${p.title} - ${p.summary}`).join("\n")}`
@@ -441,7 +449,7 @@ exports.generateExperience = onCall({ secrets: [openaiApiKey, geminiApiKey], cor
     : (needsHotel && location) ? suggestHotel({ location, prompt, people, duration, lang, startDate, endDate, adults, children, childrenAges }).then((m) => m ? [m] : []) : Promise.resolve([]);
   const attractionsMissionPromise = hasApprovedPlan
     ? Promise.resolve(attractionsPollMission(approvedItinerary.selectedAttractions, location, lang))
-    : (multiDay && location) ? suggestAttractions({ location, prompt, people, duration, lang, interests }) : Promise.resolve(null);
+    : (multiDay && location) ? suggestAttractions({ location, prompt, people, duration, lang, interests, childrenAges }) : Promise.resolve(null);
 
   let completion;
   try {
@@ -737,7 +745,7 @@ exports.reviseExperience = onCall({ secrets: [openaiApiKey], cors: true, timeout
     throw new HttpsError("unauthenticated", "Sign in before revising an experience.");
   }
 
-  const { flow, instruction } = request.data || {};
+  const { flow, instruction, prompt, location, lang } = request.data || {};
   if (!Array.isArray(flow) || flow.length === 0) {
     throw new HttpsError("invalid-argument", "An existing set of missions is required.");
   }
@@ -747,7 +755,14 @@ exports.reviseExperience = onCall({ secrets: [openaiApiKey], cors: true, timeout
 
   const client = new OpenAI({ apiKey: openaiApiKey.value().trim() });
   const currentFlow = flow.map((m) => ({ type: m.type, title: m.title, text: m.text, reward: m.reward, points: m.points, ...(m.type === "puzzle" && m.answer ? { answer: m.answer } : {}), ...(m.type === "quiz" && Array.isArray(m.options) && m.options.length ? { options: m.options, answer: m.answer || "" } : {}) }));
-  const userPrompt = `Current missions:\n${JSON.stringify(currentFlow)}\n\nInstruction: ${instruction}`;
+  const userPrompt = [
+    prompt && String(prompt).trim() ? `Original experience description (the organizer's own words when they first created this): ${String(prompt).trim().slice(0, 1200)}` : null,
+    location ? `Destination/location: ${location}` : null,
+    lang ? `The experience is written in: ${LANG_NAMES[lang] || lang}` : null,
+    `Current missions:\n${JSON.stringify(currentFlow)}`,
+    `Instruction: ${instruction}`,
+    `Stay grounded in the original description and destination above - use their real names, places and details when the instruction calls for new or rewritten content, don't invent generic filler instead.`,
+  ].filter(Boolean).join("\n\n");
 
   let completion;
   try {

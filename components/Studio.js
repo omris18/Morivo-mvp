@@ -170,7 +170,7 @@ export default function Studio({ experience, setExperience, setView, t, lang }) 
     setRevising(true);
     try {
       const revise = httpsCallable(functions, "reviseExperience");
-      const result = await revise({ flow, instruction: revisePrompt.trim() });
+      const result = await revise({ flow, instruction: revisePrompt.trim(), prompt: experience.story, location: experience.location, lang: experience.lang });
       await persist({ ...experience, flow: result.data.flow });
       setRevisePrompt("");
     } catch (e) {
@@ -240,6 +240,23 @@ export default function Studio({ experience, setExperience, setView, t, lang }) 
     const options = (atom.options || []).filter((_, i) => i !== index);
     const answer = atom.answer !== "" && atom.answer === removed ? "" : atom.answer;
     patch({ options, answer });
+  }
+
+  function addLinkOption() {
+    if (!atom) return;
+    const options = [...(atom.options || []), { id: `opt-${Date.now()}`, name: "", why: "", url: "" }];
+    patch({ options });
+  }
+
+  function updateLinkOption(optionId, values) {
+    if (!atom) return;
+    const options = (atom.options || []).map((o) => o.id === optionId ? { ...o, ...values } : o);
+    patch({ options });
+  }
+
+  function removeLinkOption(optionId) {
+    if (!atom) return;
+    patch({ options: (atom.options || []).filter((o) => o.id !== optionId) });
   }
 
   function setQuizCorrect(index) {
@@ -571,6 +588,35 @@ export default function Studio({ experience, setExperience, setView, t, lang }) 
                   </div>
                 ))}
                 <button type="button" onClick={addBranchOption}>+ {s.branchAddOption}</button>
+              </div>
+            )}
+
+            {atom.type === "story" && Array.isArray(atom.options) && atom.options.length > 0 && (
+              <div className="linkOptionsEditor">
+                <label>{he?"אפשרויות (שם, סיבה וקישור)":"Options (name, reason & link)"}</label>
+                <p className="linkOptionsHint">{he?"אפשר לערוך את השמות, ההמלצות והקישורים האלה בכל שלב — גם אחרי הפרסום.":"You can edit these names, recommendations and links at any time — including after publishing."}</p>
+                {atom.options.map((o) => (
+                  <div className="linkOptionRow" key={o.id}>
+                    <input
+                      value={o.name || ""}
+                      placeholder={he?"שם":"Name"}
+                      onChange={(e) => updateLinkOption(o.id, { name: e.target.value })}
+                    />
+                    <input
+                      value={o.why || ""}
+                      placeholder={he?"למה זה מתאים":"Why it fits"}
+                      onChange={(e) => updateLinkOption(o.id, { why: e.target.value })}
+                    />
+                    <input
+                      dir="ltr"
+                      value={o.url || ""}
+                      placeholder={he?"קישור":"Link URL"}
+                      onChange={(e) => updateLinkOption(o.id, { url: e.target.value })}
+                    />
+                    <button type="button" className="danger" onClick={() => removeLinkOption(o.id)}>✕</button>
+                  </div>
+                ))}
+                <button type="button" onClick={addLinkOption}>+ {he?"הוספת אפשרות":"Add option"}</button>
               </div>
             )}
 
