@@ -677,7 +677,9 @@ exports.generateExperience = onCall({ secrets: [openaiApiKey, geminiApiKey], cor
       `This is one part of a longer ${approvedItinerary.plan.length}-day trip - keep most days lean (their opener plus at most one more mission) rather than several missions per day, so the whole trip's total mission count stays manageable.`,
       `Build missions for ONLY these approved day-parts, in this exact order, one per day-part - do not invent a different structure, skip a part, merge parts together, or move a day to a different destination than the one given for it:\n${planSteps.map((p) => `${p.step}. ${p.title}${p.destination ? ` [${p.destination}]` : ""} - ${p.summary}`).join("\n")}`,
       isFirst ? null : `This chunk is NOT the start of the trip - the journey already began before it, so do not write an opening "welcome"/hook mission here.`,
-      isLast ? null : `This chunk is NOT the end of the trip - more days follow after it, so do not write a closing/farewell/"the trip is over" mission here.`,
+      isLast
+        ? `This chunk IS the end of the trip - every day-part listed above must still get its own day-opener mission (never skip or shorten the last one just because it's last), and after the very last day-part's missions, add one closing/farewell mission that pays off the whole trip's theme.`
+        : `This chunk is NOT the end of the trip - more days follow after it, so do not write a closing/farewell/"the trip is over" mission here.`,
       `Write "name", and every mission's "title", "text" and "reward", in the same language the Description above is written in - detect it automatically, it can be any language (Hebrew, English, Arabic, French, Spanish, German, Russian, or any other). Use natural, native-sounding phrasing for that language and its culture, not a literal translation. Only if the Description is too short or ambiguous to confidently detect a language, default to ${lang === "he" ? "Hebrew" : "English"}.`,
     ].filter(Boolean).join("\n");
 
@@ -725,6 +727,32 @@ exports.generateExperience = onCall({ secrets: [openaiApiKey, geminiApiKey], cor
   } catch (err) {
     console.error("OpenAI request failed", err);
     throw new HttpsError("unavailable", "The AI service failed to respond. Please try again.");
+  }
+
+  // A chunk (or the whole call, on a short trip) can come back as valid JSON that simply falls
+  // short of covering every approved day - the model quietly wrote fewer missions than asked,
+  // which doesn't throw, so it would otherwise silently drop a day's content (exactly what
+  // happened to the trailing days of a chunk that ran out of room). Every day-opener mission is
+  // titled with its day number (see SYSTEM_PROMPT), so cross-check the approved plan's day
+  // numbers against what actually made it into the flow, and synthesize a plain fallback mission
+  // straight from the approved plan's own text for any day that's missing - guaranteeing every
+  // approved day has at least something, the same way generateDayChunk pads a short plan chunk.
+  if (hasApprovedPlan) {
+    const dayNumberOf = (m) => {
+      const match = String(m?.title || "").match(/(?:day|יום)\s*([0-9]+)/i);
+      return match ? Number(match[1]) : null;
+    };
+    const covered = new Set(flow.map(dayNumberOf).filter((n) => n != null));
+    const missingSteps = approvedItinerary.plan.filter((p) => Number.isFinite(Number(p.step)) && !covered.has(Number(p.step)));
+    if (missingSteps.length) {
+      console.error(`generateExperience missing day-opener missions for approved steps ${missingSteps.map((p) => p.step).join(",")} - synthesizing fallback missions from the approved plan text`);
+      const fallbackMissions = sanitizeFlow(missingSteps.map((p) => ({ type: "story", title: p.title, text: p.summary })));
+      fallbackMissions.forEach((fallback, idx) => {
+        const day = Number(missingSteps[idx].step);
+        const insertAt = flow.findIndex((m) => { const d = dayNumberOf(m); return d != null && d > day; });
+        if (insertAt === -1) flow.push(fallback); else flow.splice(insertAt, 0, fallback);
+      });
+    }
   }
 
   if (!Array.isArray(flow) || flow.length === 0) {
