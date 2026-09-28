@@ -51,7 +51,7 @@ function sanitizeFlow(rawFlow) {
 
 const SYSTEM_PROMPT = `You design short interactive real-world "experiences" (treasure-hunt-style journeys) for an app called Morivo, used for family trips, birthdays, team building, school outings and similar events. Morivo is a global product used by people writing in many different languages - always respond in the same language the user wrote their description in, never default to English just because these instructions are in English.
 
-Given a free-text description of the people, place and occasion, invent a specific, concrete journey of 5 to 8 missions (called "atoms") for a single-sitting experience. If the request says this is a multi-day trip, instead build roughly 2 to 3 missions per day (up to 18 missions total for longer trips), and open each day with a short "story" mission whose title names that day (e.g. "Day 1", "Day 2" - translated into the description's language) so the journey is clearly organized by day. This is the single most important rule: every mission must be built out of a concrete detail from the description - a name, a relationship, an inside joke, a place, a hobby, an occasion detail. If the description mentions a person, place or theme, weave it into the mission text itself, not just the experience title. A mission that could be copy-pasted into any other unrelated experience without changes is a failure.
+Given a free-text description of the people, place and occasion, invent a specific, concrete journey of 5 to 8 missions (called "atoms") for a single-sitting experience. If the request says this is a multi-day trip, instead build one mission per calendar day at minimum - every single day of the trip, however long, must open with its own short "story" mission whose title names that day (e.g. "Day 1", "Day 2" - translated into the description's language), so the journey is clearly organized by day and never skips or merges days. On top of that day-opener, add 1 to 2 more missions for most days (roughly 2 to 3 missions per day total) when the description gives you enough to build them from; for longer trips (beyond about 2 weeks) it's fine to keep most days to just their opener plus one more mission, to keep the total manageable - but every calendar day must still get at least its own opener. A 28-day trip must produce 28 day-openers, not stop partway through. This is the single most important rule: every mission must be built out of a concrete detail from the description - a name, a relationship, an inside joke, a place, a hobby, an occasion detail. If the description mentions a person, place or theme, weave it into the mission text itself, not just the experience title. A mission that could be copy-pasted into any other unrelated experience without changes is a failure.
 
 For a multi-day trip, structure each day like a real, walkable day plan, not a random grab-bag: a morning mission (a specific real place to start - a beach, viewpoint, market - plus, where natural, a named nearby cafe or breakfast spot worth trying), a midday mission that gives the group an actual choice for the afternoon (e.g. head back to rest, or keep going to a second nearby spot - phrase it as a real decision, not a filler prompt), and an evening mission (a specific restaurant, promenade or activity to close the day). The traveler should finish reading a day's missions knowing roughly where they're going and what they're doing for most of the day, not just one disconnected activity. If the description gives children's ages (see below), balance each day between something the kids will enjoy (a playground, an aquarium, a kid-friendly beach) and something for the adults (a market, a viewpoint, a restaurant) rather than making every stop either purely a kids' activity or purely an adult one - a family day usually needs both.
 
@@ -369,7 +369,7 @@ exports.proposeItinerary = onCall({ secrets: [openaiApiKey, geminiApiKey], cors:
 
   return {
     name: String(data.name || prompt).slice(0, 120),
-    plan: data.plan.slice(0, 21).map((p, i) => ({
+    plan: data.plan.slice(0, 45).map((p, i) => ({
       step: Number.isFinite(Number(p.step)) ? Number(p.step) : i + 1,
       title: String(p.title || "").slice(0, 120),
       summary: String(p.summary || "").slice(0, 400),
@@ -400,7 +400,7 @@ exports.proposeItinerary = onCall({ secrets: [openaiApiKey, geminiApiKey], cors:
   };
 });
 
-exports.generateExperience = onCall({ secrets: [openaiApiKey, geminiApiKey], cors: true, timeoutSeconds: 60 }, async (request) => {
+exports.generateExperience = onCall({ secrets: [openaiApiKey, geminiApiKey], cors: true, timeoutSeconds: 120 }, async (request) => {
   if (!request.auth) {
     throw new HttpsError("unauthenticated", "Sign in (even anonymously) before generating an experience.");
   }
