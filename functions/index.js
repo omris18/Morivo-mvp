@@ -224,7 +224,11 @@ function attractionsPollMission(selected, location, lang) {
     isAttractionsPoll: true,
     organizerDecides: true,
     options,
-    destination: location || "",
+    // location is the whole trip's combined string for a multi-destination trip (e.g.
+    // "Phuket, Khao Lak, Krabi") - tagging this trip-wide poll with that whole string as its
+    // "destination" made every downstream destination-grouping (the route map, the journey
+    // path) treat it as its own bogus extra stop. Only tag it when it's genuinely one place.
+    destination: String(location || "").includes(",") ? "" : (location || ""),
   };
 }
 
