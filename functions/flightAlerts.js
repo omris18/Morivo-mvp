@@ -1,10 +1,15 @@
 const { onSchedule } = require("firebase-functions/v2/scheduler");
 
-// Only worth polling a flight within this window around its scheduled time - well before that
-// there's nothing useful to report yet, and well after it the trip has moved on. Kept narrow
-// because every check inside the window costs an AeroDataBox API call on the free tier's
-// monthly quota (every 30 min * a wide window adds up fast across even a handful of flights).
-const WINDOW_MS = 6 * 60 * 60 * 1000;
+// Check each flight at exactly these milestones instead of continuously polling - once
+// travelers are actually at the airport (a few hours out), the airport itself is the source
+// of truth for gate/delay changes, so there's nothing to gain from checking more often. This
+// caps every flight at 3 AeroDataBox calls total for its entire lifecycle, which matters a lot
+// on the free tier's monthly quota.
+const CHECKPOINTS = [
+  { key: "h24", hoursBefore: 24 },
+  { key: "h6", hoursBefore: 6 },
+  { key: "h3", hoursBefore: 3 },
+];
 
 async function fetchFlightStatus(flightNumber, date, apiKey) {
   const number = String(flightNumber || "").replace(/[\s-]/g, "").toUpperCase();
@@ -83,16 +88,21 @@ module.exports = (admin, aerodataboxApiKey) => onSchedule(
       const nextFlights = await Promise.all(flights.map(async (f) => {
         if (!f.flightNumber || !f.date) return f;
         const scheduled = new Date(`${f.date}T${f.time || "00:00"}`).getTime();
-        if (!Number.isFinite(scheduled) || Math.abs(scheduled - now) > WINDOW_MS) return f;
+        if (!Number.isFinite(scheduled)) return f;
+
+        const checkedMilestones = f.checkedMilestones || [];
+        const due = CHECKPOINTS.find((c) => !checkedMilestones.includes(c.key) && now >= scheduled - c.hoursBefore * 60 * 60 * 1000);
+        if (!due) return f;
 
         const info = await fetchFlightStatus(f.flightNumber, f.date, apiKey);
-        if (!info) return f;
+        const nextCheckedMilestones = [...checkedMilestones, due.key];
+        dirty = true;
+        if (!info) return { ...f, checkedMilestones: nextCheckedMilestones };
 
         if (info.status !== f.lastStatus) {
-          dirty = true;
           await notifyFlightChange(admin, doc.id, exp, f.flightNumber, info);
         }
-        return { ...f, lastStatus: info.status, lastGate: info.gate || null, lastCheckedAt: now };
+        return { ...f, lastStatus: info.status, lastGate: info.gate || null, lastCheckedAt: now, checkedMilestones: nextCheckedMilestones };
       }));
 
       if (dirty) {
