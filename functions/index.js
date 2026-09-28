@@ -10,11 +10,13 @@ const db = admin.firestore();
 
 const openaiApiKey = defineSecret("OPENAI_API_KEY");
 const geminiApiKey = defineSecret("GEMINI_API_KEY");
+const aerodataboxApiKey = defineSecret("AERODATABOX_API_KEY");
 const {normalizeMission} = require("./missionAnswers");
 exports.generateExperienceArtwork = require("./experienceArtwork")(admin, openaiApiKey);
 exports.generateCelebrationCartoon = require("./celebrationCartoon")(admin, openaiApiKey);
 exports.reorderExperience = require("./reorderExperience")(admin);
 exports.resolveParticipantIdentity = require("./participantIdentity")(admin);
+exports.checkFlightStatuses = require("./flightAlerts")(admin, aerodataboxApiKey);
 
 const MISSION_TYPES = ["photo", "video", "quiz", "puzzle", "note", "map", "story", "reward"];
 

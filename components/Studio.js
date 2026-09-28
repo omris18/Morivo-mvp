@@ -11,6 +11,7 @@ import {missionLabels} from "../lib/experienceGuidance";
 import missionAnswers from "../functions/missionAnswers";
 import { getCurrentPosition, geocodeAddress } from "../lib/geo";
 import { pieceAtGridIndex } from "../lib/familyPuzzle";
+import { enableOrganizerPushNotifications, pushSupported } from "../lib/push";
 
 export default function Studio({ experience, setExperience, setView, t, lang }) {
   const he=lang==="he",labels=missionLabels[he?"he":"en"];
@@ -39,6 +40,7 @@ export default function Studio({ experience, setExperience, setView, t, lang }) 
   const [puzzleShuffling, setPuzzleShuffling] = useState(false);
   const [puzzleShuffleError, setPuzzleShuffleError] = useState("");
   const [puzzleRemoving, setPuzzleRemoving] = useState(false);
+  const [flightAlertsState, setFlightAlertsState] = useState("idle");
 
   const atom = flow.find((x) => x.id === selected) || null;
 
@@ -380,6 +382,31 @@ export default function Studio({ experience, setExperience, setView, t, lang }) 
             </div>
           ))}
           <button type="button" onClick={addFlight}>+ {s.addFlight}</button>
+          {(experience.flights || []).length > 0 && pushSupported && (
+            <button
+              type="button"
+              className="flightAlertsBtn"
+              disabled={flightAlertsState === "asking" || !!experience.organizerPushToken}
+              onClick={async () => {
+                if (!experience.id) return alert(he ? "שמרו את החוויה קודם." : "Save the experience first.");
+                setFlightAlertsState("asking");
+                try {
+                  await enableOrganizerPushNotifications(experience.id);
+                  setExperience({ ...experience, organizerPushToken: true });
+                  setFlightAlertsState("on");
+                } catch (e) {
+                  alert(e.message);
+                  setFlightAlertsState("idle");
+                }
+              }}
+            >
+              {experience.organizerPushToken
+                ? (he ? "🔔 התראות טיסה פעילות" : "🔔 Flight alerts on")
+                : flightAlertsState === "asking"
+                  ? "…"
+                  : (he ? "🔔 קבלת התראות על שינויים בטיסות" : "🔔 Get notified about flight changes")}
+            </button>
+          )}
         </div>
 
         <div className="familyPuzzleBox">

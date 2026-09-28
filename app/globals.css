@@ -167,6 +167,7 @@ body .mobileNavLegend button.active{background:rgba(139,92,246,.22)!important;co
 .linkOptionRow{display:flex;gap:6px;align-items:center;flex-wrap:wrap}
 .linkOptionRow input{flex:1;min-width:110px}
 .linkOptionRow .danger{flex:0 0 auto;padding:8px 10px}
+.flightAlertsBtn{display:block;margin-top:8px}
 @media(max-width:500px){.linkOptionRow{flex-direction:column;align-items:stretch}.linkOptionRow input{width:100%}}
 .quizNoCorrect{color:#efc186;font-size:12px;margin:0}
 .choiceGrid{display:flex;flex-direction:column;gap:7px}.choiceGrid button{padding:12px 14px;background:#0b1725;color:white;border:1px solid #27364b;border-radius:10px;text-align:start;line-height:1.35}.choiceGrid button.selected{background:#7d5cff;border-color:#7d5cff}.choiceGrid button.selected.correct{background:#1b6248;border-color:#2f9d6e}.choiceGrid button.selected.wrong{background:#6b2030;border-color:#a13a4f}.noteInput{width:100%;min-height:110px;padding:13px;border-radius:12px;border:1px solid rgba(255,255,255,.11);background:#071321;color:white;font:inherit;margin:10px 0}
