@@ -45,6 +45,10 @@ function sanitizeFlow(rawFlow) {
           atom.answer = options.includes(rawAnswer) ? rawAnswer : "";
         }
       }
+      // Carries through a destination tagged onto the mission before sanitizing (see
+      // generateMissionChunk) so the route map can group by this ground truth instead of
+      // fragile text-matching against the mission's own title/text.
+      if (m.destination) atom.destination = String(m.destination).trim().slice(0, 100);
       return atom;
     });
 }
@@ -695,7 +699,16 @@ exports.generateExperience = onCall({ secrets: [openaiApiKey, geminiApiKey], cor
       max_tokens: 16000,
     });
     const data = JSON.parse(completion.choices[0].message.content);
-    return { name: data?.name, rawFlow: Array.isArray(data?.flow) ? data.flow : [] };
+    const rawFlow = Array.isArray(data?.flow) ? data.flow : [];
+    // Every step in this chunk shares one destination (see groupPlanForMissionChunks) - tag it
+    // onto every mission this chunk writes, rather than leaving the route map to guess the
+    // destination by matching words in the mission's own title/text against the destination
+    // list. That text-matching fallback is exactly what produced the bug organizers reported: a
+    // mission whose text happened to mention the country name, not the specific city it belongs
+    // to, got grouped under the wrong (or an overly broad) stop, or fell through to day-based
+    // grouping entirely when nothing matched.
+    const chunkDestination = planSteps.find((p) => p.destination)?.destination || null;
+    return { name: data?.name, rawFlow: chunkDestination ? rawFlow.map((m) => ({ ...m, destination: chunkDestination })) : rawFlow };
   }
 
   let flow, generatedName;
@@ -746,7 +759,7 @@ exports.generateExperience = onCall({ secrets: [openaiApiKey, geminiApiKey], cor
     const missingSteps = approvedItinerary.plan.filter((p) => Number.isFinite(Number(p.step)) && !covered.has(Number(p.step)));
     if (missingSteps.length) {
       console.error(`generateExperience missing day-opener missions for approved steps ${missingSteps.map((p) => p.step).join(",")} - synthesizing fallback missions from the approved plan text`);
-      const fallbackMissions = sanitizeFlow(missingSteps.map((p) => ({ type: "story", title: p.title, text: p.summary })));
+      const fallbackMissions = sanitizeFlow(missingSteps.map((p) => ({ type: "story", title: p.title, text: p.summary, destination: p.destination })));
       fallbackMissions.forEach((fallback, idx) => {
         const day = Number(missingSteps[idx].step);
         const insertAt = flow.findIndex((m) => { const d = dayNumberOf(m); return d != null && d > day; });
