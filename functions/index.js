@@ -12,46 +12,12 @@ const openaiApiKey = defineSecret("OPENAI_API_KEY");
 const geminiApiKey = defineSecret("GEMINI_API_KEY");
 const aerodataboxApiKey = defineSecret("AERODATABOX_API_KEY");
 const {normalizeMission} = require("./missionAnswers");
+const {sanitizeFlow, MISSION_TYPES} = require("./sanitizeFlow");
 exports.generateExperienceArtwork = require("./experienceArtwork")(admin, openaiApiKey);
 exports.generateCelebrationCartoon = require("./celebrationCartoon")(admin, openaiApiKey);
 exports.reorderExperience = require("./reorderExperience")(admin);
 exports.resolveParticipantIdentity = require("./participantIdentity")(admin);
 exports.checkFlightStatuses = require("./flightAlerts")(admin, aerodataboxApiKey);
-
-const MISSION_TYPES = ["photo", "video", "quiz", "puzzle", "note", "map", "story", "reward"];
-
-function sanitizeFlow(rawFlow) {
-  return (rawFlow || [])
-    .filter((m) => m && typeof m === "object")
-    .map((m, i) => {
-      m = normalizeMission(m);
-      const type = MISSION_TYPES.includes(m.type) ? m.type : "story";
-      const atom = {
-        id: `${type}-${Date.now()}-${i}`,
-        type,
-        title: String(m.title || `Mission ${i + 1}`).slice(0, 120),
-        text: String(m.text || "").slice(0, 600),
-        reward: String(m.reward || "").slice(0, 120),
-        points: Number.isFinite(Number(m.points)) ? Math.max(50, Math.min(200, Math.round(Number(m.points)))) : 100,
-      };
-      if (type === "puzzle" && m.answer) {
-        atom.answer = String(m.answer).slice(0, 80);
-      }
-      if (type === "quiz" && Array.isArray(m.options)) {
-        const options = m.options.slice(0, 4).map((o) => String(o || "").slice(0, 120)).filter(Boolean);
-        if (options.length >= 2) {
-          const rawAnswer = String(m.answer || "").slice(0, 120);
-          atom.options = options;
-          atom.answer = options.includes(rawAnswer) ? rawAnswer : "";
-        }
-      }
-      // Carries through a destination tagged onto the mission before sanitizing (see
-      // generateMissionChunk) so the route map can group by this ground truth instead of
-      // fragile text-matching against the mission's own title/text.
-      if (m.destination) atom.destination = String(m.destination).trim().slice(0, 100);
-      return atom;
-    });
-}
 
 const SYSTEM_PROMPT = `You design short interactive real-world "experiences" (treasure-hunt-style journeys) for an app called Morivo, used for family trips, birthdays, team building, school outings and similar events. Morivo is a global product used by people writing in many different languages - always respond in the same language the user wrote their description in, never default to English just because these instructions are in English.
 
@@ -766,6 +732,21 @@ exports.generateExperience = onCall({ secrets: [openaiApiKey, geminiApiKey], cor
         if (insertAt === -1) flow.push(fallback); else flow.splice(insertAt, 0, fallback);
       });
     }
+    // The chunked path already tags every mission it writes with its real destination (see
+    // generateMissionChunk), but a short trip's single, unchunked call was never asked for that
+    // field - it only ever had the route map's fragile text-matching fallback. Since we already
+    // know exactly which destination each approved day belongs to, backfill it onto every
+    // mission whose day-opener title matches an approved step, closing the same gap here too
+    // instead of leaving multi-destination trips short of the chunking threshold exposed to it.
+    if (approvedItinerary.plan.some((p) => p.destination)) {
+      const destinationByDay = new Map(approvedItinerary.plan.filter((p) => p.destination).map((p) => [Number(p.step), p.destination]));
+      flow = flow.map((m) => {
+        if (m.destination) return m;
+        const day = dayNumberOf(m);
+        const destination = day != null ? destinationByDay.get(day) : null;
+        return destination ? { ...m, destination } : m;
+      });
+    }
   }
 
   if (!Array.isArray(flow) || flow.length === 0) {
@@ -1027,7 +1008,7 @@ ${chaptersText}`;
   return { story: finalStory };
 });
 
-const REVISE_SYSTEM_PROMPT = `You revise existing interactive "experiences" (mission journeys) for an app called Morivo, based on a specific instruction from the organizer - things like "make it funnier", "less competitive", "suitable for younger children", "add a mission about X", "shorten it". You are given the CURRENT mission list as JSON and an instruction. Apply the instruction thoughtfully across the missions where it's relevant - rewrite titles/text/rewards as needed, and only change the number or order of missions if the instruction actually implies that (like "add one more" or "cut it down"). Keep everything grounded and specific, never generic. Write in the same language the current missions are already written in (detect it automatically) unless the instruction explicitly asks to translate. A "puzzle" mission has an "answer" field (its solution) alongside "text" (its riddle) - if you keep a puzzle mission's riddle unchanged, keep its answer unchanged too; if you rewrite the riddle or add a new puzzle mission, write a matching new "answer" (single word or short phrase, lowercase, no punctuation). A "quiz" mission has an "options" array (3-4 short answer choices) alongside its "answer" (the exact text of the correct option, copied character-for-character from "options") - if you keep a quiz mission's question unchanged, keep its options and answer unchanged too; if you rewrite the question or add a new quiz mission, write matching new "options" and "answer". Respond with STRICT JSON only, no markdown fencing, no commentary, matching exactly this shape: {"flow":[{"type":"photo","title":"short title","text":"one to two sentence instruction","reward":"short reward label","points":100,"answer":"only for type puzzle or quiz","options":"only for type quiz"}]}
+const REVISE_SYSTEM_PROMPT = `You revise existing interactive "experiences" (mission journeys) for an app called Morivo, based on a specific instruction from the organizer - things like "make it funnier", "less competitive", "suitable for younger children", "add a mission about X", "shorten it". You are given the CURRENT mission list as JSON and an instruction. Apply the instruction thoughtfully across the missions where it's relevant - rewrite titles/text/rewards as needed, and only change the number or order of missions if the instruction actually implies that (like "add one more" or "cut it down"). Keep everything grounded and specific, never generic. Write in the same language the current missions are already written in (detect it automatically) unless the instruction explicitly asks to translate. A "puzzle" mission has an "answer" field (its solution) alongside "text" (its riddle) - if you keep a puzzle mission's riddle unchanged, keep its answer unchanged too; if you rewrite the riddle or add a new puzzle mission, write a matching new "answer" (single word or short phrase, lowercase, no punctuation). A "quiz" mission has an "options" array (3-4 short answer choices) alongside its "answer" (the exact text of the correct option, copied character-for-character from "options") - if you keep a quiz mission's question unchanged, keep its options and answer unchanged too; if you rewrite the question or add a new quiz mission, write matching new "options" and "answer". If a mission has a "destination" field, copy it into your response for that mission unchanged (even when you rewrite its title/text) - only leave it out for a brand-new mission you're adding whose destination isn't clear from the instruction or nearby missions. Respond with STRICT JSON only, no markdown fencing, no commentary, matching exactly this shape: {"flow":[{"type":"photo","title":"short title","text":"one to two sentence instruction","reward":"short reward label","points":100,"answer":"only for type puzzle or quiz","options":"only for type quiz","destination":"only when the current mission list has this field - copy it through unchanged"}]}
 
 "type" must be one of: ${MISSION_TYPES.join(", ")}. "points" is an integer between 50 and 200. "answer" must only be present when "type" is "puzzle" or "quiz". "options" must only be present when "type" is "quiz".`;
 
@@ -1045,7 +1026,7 @@ exports.reviseExperience = onCall({ secrets: [openaiApiKey], cors: true, timeout
   }
 
   const client = new OpenAI({ apiKey: openaiApiKey.value().trim() });
-  const currentFlow = flow.map((m) => ({ type: m.type, title: m.title, text: m.text, reward: m.reward, points: m.points, ...(m.type === "puzzle" && m.answer ? { answer: m.answer } : {}), ...(m.type === "quiz" && Array.isArray(m.options) && m.options.length ? { options: m.options, answer: m.answer || "" } : {}) }));
+  const currentFlow = flow.map((m) => ({ type: m.type, title: m.title, text: m.text, reward: m.reward, points: m.points, ...(m.type === "puzzle" && m.answer ? { answer: m.answer } : {}), ...(m.type === "quiz" && Array.isArray(m.options) && m.options.length ? { options: m.options, answer: m.answer || "" } : {}), ...(m.destination ? { destination: m.destination } : {}) }));
   const userPrompt = [
     prompt && String(prompt).trim() ? `Original experience description (the organizer's own words when they first created this): ${String(prompt).trim().slice(0, 1200)}` : null,
     location ? `Destination/location: ${location}` : null,
@@ -1083,7 +1064,16 @@ exports.reviseExperience = onCall({ secrets: [openaiApiKey], cors: true, timeout
     throw new HttpsError("internal", "The AI returned an unexpected experience shape.");
   }
 
-  return { flow: revised };
+  // The prompt asks the model to echo each mission's destination field through unchanged, but
+  // nothing here forces that - if the edit didn't add or remove missions (the common case: a
+  // tone/wording tweak, not a restructure), backfill any destination the model dropped from the
+  // original mission at that same position, rather than leaving the route map to fall back to
+  // guessing from text and reintroducing the exact grouping bug this was already fixed for once.
+  const withDestinations = revised.length === flow.length
+    ? revised.map((m, i) => (!m.destination && flow[i]?.destination ? { ...m, destination: flow[i].destination } : m))
+    : revised;
+
+  return { flow: withDestinations };
 });
 
 exports.notifyOnOrganizerMessage = onDocumentCreated(
