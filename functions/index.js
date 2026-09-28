@@ -99,6 +99,15 @@ function bookingSearchUrl(name, location, opts) {
   return `https://www.booking.com/searchresults.html?${params.toString()}`;
 }
 
+// Long trips are exactly where a model most tends to wrap up early with a natural-sounding
+// ending instead of mechanically continuing to the true length - naming the exact number
+// pushes back on that far more reliably than "however many days" phrasing.
+function dayCountInstruction(duration) {
+  const n = Number(String(duration || "").match(/\d+/)?.[0]);
+  if (!Number.isFinite(n) || n < 2) return null;
+  return `This trip is EXACTLY ${n} days long. Produce EXACTLY ${n} day-parts, numbered 1 to ${n} in order, one per calendar day. Do not stop early or wrap up the trip before day ${n} - a "flight home" or similar closing beat belongs on day ${n} itself, never before it.`;
+}
+
 function mapsSearchUrl(name, location) {
   const q = [name, location].filter(Boolean).join(" ");
   return `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(q)}`;
@@ -112,7 +121,7 @@ async function askGeminiJSON(promptText, label) {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           contents: [{ parts: [{ text: promptText }] }],
-          generationConfig: { responseMimeType: "application/json" },
+          generationConfig: { responseMimeType: "application/json", maxOutputTokens: 8192 },
         }),
       });
       if (!res.ok) {
@@ -309,7 +318,7 @@ If children's ages are given, every day must include something the kids will enj
 Respond in the same language the description is written in - detect it automatically. Respond with STRICT JSON only, no markdown fencing, no commentary, matching exactly this shape:
 {"name": "short experience title", "plan": [{"step": 1, "title": "short specific title", "summary": "a real day plan as described above, or 1-2 sentences for a single-sitting part"}]}`;
 
-exports.proposeItinerary = onCall({ secrets: [openaiApiKey, geminiApiKey], cors: true, timeoutSeconds: 60 }, async (request) => {
+exports.proposeItinerary = onCall({ secrets: [openaiApiKey, geminiApiKey], cors: true, timeoutSeconds: 90 }, async (request) => {
   if (!request.auth) {
     throw new HttpsError("unauthenticated", "Sign in (even anonymously) before planning an experience.");
   }
@@ -336,6 +345,7 @@ exports.proposeItinerary = onCall({ secrets: [openaiApiKey, geminiApiKey], cors:
     peopleDetails && String(peopleDetails).trim() ? `Who's joining (names, ages, relationships): ${String(peopleDetails).trim().slice(0, 600)}` : null,
     Array.isArray(childrenAges) && childrenAges.length ? `Children's ages on this trip: ${childrenAges.join(", ")} - every day must work for them alongside the adults, as described above.` : null,
     multiDay ? `This is a multi-day trip - one part per calendar day, in order, for every day of the trip.` : `This is a single-sitting experience - 3 to 5 parts representing its arc, not calendar days.`,
+    multiDay ? dayCountInstruction(duration) : null,
   ].filter(Boolean).join("\n");
 
   const attractionsPromise = location ? suggestAttractionOptions({ location, prompt, people, duration, lang, interests, childrenAges }) : Promise.resolve([]);
@@ -359,6 +369,7 @@ exports.proposeItinerary = onCall({ secrets: [openaiApiKey, geminiApiKey], cors:
         ],
         response_format: { type: "json_object" },
         temperature: 0.6,
+        max_tokens: 8000,
       });
       data = JSON.parse(completion.choices[0].message.content);
     } catch (err) {
@@ -437,6 +448,7 @@ exports.generateExperience = onCall({ secrets: [openaiApiKey, geminiApiKey], cor
     Array.isArray(interests) && interests.length ? `The group is especially interested in: ${interests.map((i) => INTEREST_LABELS[i] || i).join(", ")} - favor missions built around these over generic sightseeing.` : null,
     needsHotel === false ? `The group already has accommodation booked - do not suggest or ask about where to stay.` : null,
     multiDay ? `This is a multi-day trip - structure the missions across the days as described above, not a single sitting.` : null,
+    multiDay ? dayCountInstruction(duration) : null,
     hasApprovedPlan
       ? `The organizer already reviewed and approved this exact outline - build missions that follow it part by part, in this order, do not invent a different structure or skip a part:\n${approvedItinerary.plan.map((p) => `${p.step}. ${p.title} - ${p.summary}`).join("\n")}`
       : null,
@@ -474,6 +486,7 @@ exports.generateExperience = onCall({ secrets: [openaiApiKey, geminiApiKey], cor
       ],
       response_format: { type: "json_object" },
       temperature: 0.6,
+      max_tokens: 16000,
     });
   } catch (err) {
     console.error("OpenAI request failed", err);
