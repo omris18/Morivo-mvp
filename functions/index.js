@@ -155,6 +155,12 @@ async function askGeminiJSON(promptText, label, opts) {
       const generationConfig = grounded
         ? { maxOutputTokens: 16384 }
         : { responseMimeType: "application/json", maxOutputTokens: 16384 };
+      // Thinking-capable models (2.x+) spend part of that SAME token budget on an invisible
+      // reasoning pass before writing the actual answer - for a fully-specified structured task
+      // like this, that reasoning doesn't help, and eating into the budget with it is exactly
+      // what made responses shrink further once search grounding turned thinking on. Turn it off
+      // wherever the model supports the setting (older 1.5 models don't have it).
+      if (!String(model).includes("1.5")) generationConfig.thinkingConfig = { thinkingBudget: 0 };
       const body = { contents: [{ parts: [{ text: promptText }] }], generationConfig };
       if (grounded) body.tools = [groundingToolForModel(model)];
       const res = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${geminiApiKey.value().trim()}`, {
@@ -167,7 +173,11 @@ async function askGeminiJSON(promptText, label, opts) {
         continue;
       }
       const json = await res.json();
-      const raw = (json?.candidates?.[0]?.content?.parts || []).map((p) => p.text).filter(Boolean).join("\n");
+      // A thinking pass (when not disabled, or on a model where the disable isn't honored) comes
+      // back as its own part flagged "thought": true - blending that reasoning text in with the
+      // real answer before parsing corrupts the JSON boundary extractJson looks for, so only the
+      // actual answer parts are joined.
+      const raw = (json?.candidates?.[0]?.content?.parts || []).filter((p) => !p.thought).map((p) => p.text).filter(Boolean).join("\n");
       if (!raw) continue;
       const parsed = extractJson(raw);
       if (!parsed) continue;
