@@ -105,7 +105,7 @@ export default function AICreator({setExperience,setView,setActiveId,user,lang,t
   setPhase("planning");setPlanError(null);
   try{
    await ensureUser();
-   const propose=httpsCallable(functions,"proposeItinerary",{timeout:90000});
+   const propose=httpsCallable(functions,"proposeItinerary",{timeout:120000});
    const result=await propose(baseFields());
    setItinerary(result.data);
    setSelectedAttractionIds(new Set((result.data.attractions||[]).map((_,i)=>i)));

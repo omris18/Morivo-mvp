@@ -99,13 +99,28 @@ function bookingSearchUrl(name, location, opts) {
   return `https://www.booking.com/searchresults.html?${params.toString()}`;
 }
 
+function parseDayCount(duration) {
+  const n = Number(String(duration || "").match(/\d+/)?.[0]);
+  return Number.isFinite(n) && n >= 1 ? n : null;
+}
+
 // Long trips are exactly where a model most tends to wrap up early with a natural-sounding
 // ending instead of mechanically continuing to the true length - naming the exact number
 // pushes back on that far more reliably than "however many days" phrasing.
 function dayCountInstruction(duration) {
-  const n = Number(String(duration || "").match(/\d+/)?.[0]);
-  if (!Number.isFinite(n) || n < 2) return null;
+  const n = parseDayCount(duration);
+  if (!n || n < 2) return null;
   return `This trip is EXACTLY ${n} days long. Produce EXACTLY ${n} day-parts, numbered 1 to ${n} in order, one per calendar day. Do not stop early or wrap up the trip before day ${n} - a "flight home" or similar closing beat belongs on day ${n} itself, never before it.`;
+}
+
+// Distributes days as evenly as possible across `parts` buckets, remainder going to the
+// earliest ones - a plain sum, so it always adds up to exactly `totalDays` no matter what any
+// model does. Used to chunk a long trip's generation instead of asking one call to get both the
+// full day count AND full destination order right across a single huge response.
+function splitDaysEvenly(totalDays, parts) {
+  const base = Math.floor(totalDays / parts);
+  const extra = totalDays % parts;
+  return Array.from({ length: parts }, (_, i) => base + (i < extra ? 1 : 0));
 }
 
 function mapsSearchUrl(name, location) {
@@ -350,25 +365,80 @@ function hotelPollMission(candidates, location, lang, opts, destinationLabel) {
   };
 }
 
+// Shared by the single-call itinerary prompt (short/simple trips) and the per-chunk prompt
+// (long trips - see generateDayChunk) so both ask for the same quality of day plan.
+const DAY_PLAN_RULES = `Each day's summary must be a real, walkable day plan built from REAL, findable places near that day's destination. You have search available - use it for every day to find and confirm actual named neighborhoods, beaches, cafes, restaurants and attractions near that specific destination, rather than writing from memory alone. Only name a place you are confident is real and correctly spelled; if you are not sure a place is real, search for an alternative instead of guessing:
+- Morning: name a specific real place to start (an actual named beach, viewpoint, market or neighborhood - not "a nice beach" or "explore the area"), plus a specific named cafe or breakfast spot actually worth visiting there.
+- Midday: phrase an actual decision the group faces - keep going to a second nearby real place, or head back to rest - naming that second place specifically, not "continue exploring."
+- Evening: name a specific real restaurant, promenade or activity to close the day.
+A reader should finish one day's summary knowing roughly where they're physically going and what they're doing across most of the day, with real, searchable names - never a vague summary like "explore the beaches of X" with no specific place named. Write 2 to 4 sentences per day.
+If children's ages are given, every day must include something the kids will enjoy (a playground, aquarium, kid-friendly beach) alongside something for the adults (a market, viewpoint, restaurant) - never make a whole day purely one or the other.`;
+
 const ITINERARY_SYSTEM_PROMPT = `You plan the outline of an interactive real-world experience for an app called Morivo, used for family trips, birthdays, team building, school outings and similar events. This is a PLANNING step, shown to the organizer for review and approval BEFORE the app builds the actual interactive missions - so give a clear, specific outline, not finished missions.
 
-Given a free-text description, break the experience into an ordered sequence of parts. If it is a multi-day trip, each part is one calendar day (in order, starting at 1) - the number of parts must equal the number of days, however many days that is - never stop partway through and skip to the end. Never let a longer trip crowd out this rule - if a full-detail day plan for every remaining day would not fit, write shorter day summaries instead (still following the morning/midday/evening structure below, just more concisely) rather than shortening the trip itself. Otherwise (a single-sitting event), break it into 3 to 5 parts representing the natural arc of that one sitting (an opening/arrival, one or two main phases, a closing/payoff) - never label these as calendar days.
+Given a free-text description, break the experience into an ordered sequence of parts. If it is a multi-day trip, each part is one calendar day (in order, starting at 1) - the number of parts must equal the number of days, however many days that is - never stop partway through and skip to the end. Otherwise (a single-sitting event), break it into 3 to 5 parts representing the natural arc of that one sitting (an opening/arrival, one or two main phases, a closing/payoff) - never label these as calendar days.
 
 For each part, write a short specific title (e.g. "Day 1 - Arrival & Shibuya" for a trip day, or "The Opening Challenge" for a single-sitting phase - translated into the description's language).
 
 If the trip has multiple named destinations, visited in a given order: assign each day to exactly one destination, and cover the destinations as one contiguous block per destination, strictly in the order given - once the plan has moved on to a later destination, never schedule a day back at an earlier one, and never introduce a transit or layover city as its own day or as the setting for the closing day. The very last day of the trip must take place in, and depart from, the last destination in the given list - not an earlier stop the group already left.
 
-For a multi-day trip, each day's summary must be a real, walkable day plan built from REAL, findable places near that day's destination. You have search available - use it for every day to find and confirm actual named neighborhoods, beaches, cafes, restaurants and attractions near that specific destination, rather than writing from memory alone. Only name a place you are confident is real and correctly spelled; if you are not sure a place is real, search for an alternative instead of guessing:
-- Morning: name a specific real place to start (an actual named beach, viewpoint, market or neighborhood - not "a nice beach" or "explore the area"), plus a specific named cafe or breakfast spot actually worth visiting there.
-- Midday: phrase an actual decision the group faces - keep going to a second nearby real place, or head back to rest - naming that second place specifically, not "continue exploring."
-- Evening: name a specific real restaurant, promenade or activity to close the day.
-A reader should finish one day's summary knowing roughly where they're physically going and what they're doing across most of the day, with real, searchable names - never a vague summary like "explore the beaches of X" with no specific place named. Write 3 to 5 sentences per day for trips up to about 2 weeks; for longer trips, keep the same morning/midday/evening structure and real named places but write 2 to 3 tighter sentences per day instead, so every day of a long trip still gets full coverage.
-If children's ages are given, every day must include something the kids will enjoy (a playground, aquarium, kid-friendly beach) alongside something for the adults (a market, viewpoint, restaurant) - never make a whole day purely one or the other.
+For a multi-day trip, ${DAY_PLAN_RULES}
 
 Respond in the same language the description is written in - detect it automatically. Respond with STRICT JSON only, no markdown fencing, no commentary, matching exactly this shape:
 {"name": "short experience title", "plan": [{"step": 1, "title": "short specific title", "summary": "a real day plan as described above, or 1-2 sentences for a single-sitting part", "destination": "only when the trip has multiple named destinations - the exact destination name this day belongs to, copied exactly from the given destination list"}]}`;
 
-exports.proposeItinerary = onCall({ secrets: [openaiApiKey, geminiApiKey], cors: true, timeoutSeconds: 90 }, async (request) => {
+// Long, multi-day trips are exactly where a single generation call becomes unreliable - real,
+// grounded per-day detail across many days (and, for a multi-destination trip, keeping every
+// day's destination in strict order) is a lot to ask one response to get completely right, and
+// in practice models were quietly under- or over-shooting the day count and drifting destination
+// order instead. This generates ONE small, easy-to-get-right chunk of the trip (either one
+// destination's full stay, or a several-day batch of a single-destination trip) - the caller
+// stitches chunks together and renumbers steps itself, so the total day count and destination
+// order are correct by construction instead of depending on the model counting/ordering right
+// across one huge request.
+async function generateDayChunk({ prompt, type, lang, destination, dayCount, startDay, totalDays, people, peopleDetails, childrenAges, interests }) {
+  const sys = `You write one contiguous chunk of a longer real-world trip itinerary for an app called Morivo, used for family trips and similar multi-day events. This is a PLANNING step, shown to the organizer for review before the app builds interactive missions - give a clear, specific day-by-day outline, not finished missions.
+
+${DAY_PLAN_RULES}
+
+Respond in the same language the description is written in - detect it automatically. Respond with STRICT JSON only, no markdown fencing, no commentary, matching exactly this shape:
+{"plan": [{"title": "short specific title translated into the description's language, e.g. \\"Day ${startDay} - Arrival & Shibuya\\"", "summary": "the real day plan described above"}]}`;
+
+  const userPrompt = [
+    `Description: ${prompt}`,
+    `Required output language: ${LANG_NAMES[lang] || "the language of the description"}. The destination country does not determine the language.`,
+    type ? `Experience type: ${type}` : null,
+    destination ? `This chunk covers ONLY the "${destination}" leg of the trip - do not write about any other destination.` : null,
+    `This chunk is trip day ${startDay}${dayCount > 1 ? ` through day ${startDay + dayCount - 1}` : ""} of ${totalDays} total days. Produce EXACTLY ${dayCount} day-part${dayCount > 1 ? "s" : ""} for this chunk, in order - not more, not fewer.`,
+    people ? `Participants: ${people}` : null,
+    peopleDetails && String(peopleDetails).trim() ? `Who's joining (names, ages, relationships): ${String(peopleDetails).trim().slice(0, 600)}` : null,
+    Array.isArray(childrenAges) && childrenAges.length ? `Children's ages on this trip: ${childrenAges.join(", ")} - every day must work for them alongside the adults, as described above.` : null,
+    Array.isArray(interests) && interests.length ? `The group is especially interested in: ${interests.map((i) => INTEREST_LABELS[i] || i).join(", ")} - favor these over generic sightseeing.` : null,
+  ].filter(Boolean).join("\n");
+
+  const data = await askGeminiJSON(`${sys}\n\n${userPrompt}`, `itinerary chunk (${destination || `day ${startDay}`})`, { grounded: true });
+  let parts = Array.isArray(data?.plan) ? data.plan : [];
+  // Guarantee exactly the requested count no matter what the model returned - pad a short
+  // response with a plain continuation day, trim a long one - so the trip's total day count is
+  // always correct by construction, never dependent on the model counting right across a request.
+  if (parts.length > dayCount) parts = parts.slice(0, dayCount);
+  while (parts.length < dayCount) {
+    const dayNum = startDay + parts.length;
+    parts.push({
+      title: destination ? `Day ${dayNum} - ${destination}` : `Day ${dayNum}`,
+      summary: destination
+        ? (lang === "he" ? `יום נוסף ב${destination} - זמן פנוי לחקור בקצב שלכם.` : `A free day in ${destination} - explore at your own pace.`)
+        : (lang === "he" ? "יום פנוי בטיול - זמן לחקור בקצב שלכם." : "A free day on the trip - explore at your own pace."),
+    });
+  }
+  return parts.map((p, i) => ({
+    title: String(p.title || (destination ? destination : `Day ${startDay + i}`)).slice(0, 120),
+    summary: String(p.summary || "").slice(0, 400),
+    ...(destination ? { destination } : {}),
+  }));
+}
+
+exports.proposeItinerary = onCall({ secrets: [openaiApiKey, geminiApiKey], cors: true, timeoutSeconds: 120 }, async (request) => {
   if (!request.auth) {
     throw new HttpsError("unauthenticated", "Sign in (even anonymously) before planning an experience.");
   }
@@ -419,34 +489,54 @@ exports.proposeItinerary = onCall({ secrets: [openaiApiKey, geminiApiKey], cors:
     ? (needsHotel ? Promise.all(destList.map((d) => suggestHotelOptions({ location: d, prompt, people, duration, lang }))) : Promise.resolve(null))
     : (needsHotel && location) ? suggestHotelOptions({ location, prompt, people, duration, lang }) : Promise.resolve([]);
 
-  // Gemini has the real-world geographic grounding this needs (actual beaches, cafes,
-  // restaurants) - it's already relied on for that in suggestHotelOptions/suggestAttractionOptions
-  // above. Fall back to OpenAI only if Gemini comes back empty, so this stays as reliable as before.
-  let data = await askGeminiJSON(`${ITINERARY_SYSTEM_PROMPT}\n\n${userPrompt}`, "itinerary plan", {
-    grounded: true,
-    validate: multiDestination ? (d) => planRespectsDestinationOrder(d?.plan) : undefined,
-  });
-  if (!data || !Array.isArray(data.plan) || data.plan.length === 0) {
-    const client = new OpenAI({ apiKey: openaiApiKey.value().trim() });
-    let completion;
-    try {
-      completion = await client.chat.completions.create({
-        model: "gpt-4o-mini",
-        messages: [
-          { role: "system", content: ITINERARY_SYSTEM_PROMPT },
-          { role: "user", content: userPrompt },
-        ],
-        response_format: { type: "json_object" },
-        temperature: 0.6,
-        max_tokens: 16000,
-      });
-      data = JSON.parse(completion.choices[0].message.content);
-      if (multiDestination && !planRespectsDestinationOrder(data?.plan)) {
-        console.error("Itinerary fallback (OpenAI) also violated destination order - using it anyway, nothing better available");
+  const totalDays = multiDay ? parseDayCount(duration) : null;
+  // Beyond about 10 days, a single generation call is exactly where day count and destination
+  // order became unreliable in practice (see generateDayChunk above) - chunk those instead.
+  const CHUNK_THRESHOLD = 10;
+
+  let data;
+  if (multiDay && totalDays && totalDays > CHUNK_THRESHOLD) {
+    const chunkSpecs = multiDestination
+      ? destList.map((d, i, arr) => ({ destination: d, dayCount: splitDaysEvenly(totalDays, arr.length)[i] }))
+      : splitDaysEvenly(totalDays, Math.ceil(totalDays / 6)).map((dayCount) => ({ destination: null, dayCount }));
+    let nextStartDay = 1;
+    const chunkPromises = chunkSpecs.map((spec) => {
+      const startDay = nextStartDay;
+      nextStartDay += spec.dayCount;
+      return generateDayChunk({ prompt, type, lang, destination: spec.destination, dayCount: spec.dayCount, startDay, totalDays, people, peopleDetails, childrenAges, interests });
+    });
+    const chunkResults = await Promise.all(chunkPromises);
+    data = { name: null, plan: chunkResults.flat().map((p, i) => ({ step: i + 1, ...p })) };
+  } else {
+    // Gemini has the real-world geographic grounding this needs (actual beaches, cafes,
+    // restaurants) - it's already relied on for that in suggestHotelOptions/suggestAttractionOptions
+    // above. Fall back to OpenAI only if Gemini comes back empty, so this stays as reliable as before.
+    data = await askGeminiJSON(`${ITINERARY_SYSTEM_PROMPT}\n\n${userPrompt}`, "itinerary plan", {
+      grounded: true,
+      validate: multiDestination ? (d) => planRespectsDestinationOrder(d?.plan) : undefined,
+    });
+    if (!data || !Array.isArray(data.plan) || data.plan.length === 0) {
+      const client = new OpenAI({ apiKey: openaiApiKey.value().trim() });
+      let completion;
+      try {
+        completion = await client.chat.completions.create({
+          model: "gpt-4o-mini",
+          messages: [
+            { role: "system", content: ITINERARY_SYSTEM_PROMPT },
+            { role: "user", content: userPrompt },
+          ],
+          response_format: { type: "json_object" },
+          temperature: 0.6,
+          max_tokens: 16000,
+        });
+        data = JSON.parse(completion.choices[0].message.content);
+        if (multiDestination && !planRespectsDestinationOrder(data?.plan)) {
+          console.error("Itinerary fallback (OpenAI) also violated destination order - using it anyway, nothing better available");
+        }
+      } catch (err) {
+        console.error("Itinerary request failed (Gemini and OpenAI both unavailable)", err);
+        throw new HttpsError("unavailable", "The AI service failed to respond. Please try again.");
       }
-    } catch (err) {
-      console.error("Itinerary request failed (Gemini and OpenAI both unavailable)", err);
-      throw new HttpsError("unavailable", "The AI service failed to respond. Please try again.");
     }
   }
   if (!data || !Array.isArray(data.plan) || data.plan.length === 0) {
