@@ -4,6 +4,7 @@ import {createPortal} from "react-dom";
 import ExperienceRoute from "./ExperienceRoute";
 import ExperienceShare from "./ExperienceShare";
 import {journeyFinished,missionDone,missionActive} from "../lib/experienceVisuals";
+import {unlockedPieces} from "../lib/familyPuzzle";
 import {missionLabels} from "../lib/experienceGuidance";
 import {reorderExperienceRemote,updateMissionRemote} from "../lib/morivoData";
 import journeyProgress from "../functions/journeyProgress";
@@ -269,6 +270,18 @@ export default function Runtime({experience,setExperience,setView,t,user,lang,is
       return <button type="button" key={type} className={"stampTypeChip"+(allOn?" on":someOn?" partial":"")} onClick={()=>toggleStampByType(type)}>
        <span>{typeIcons[type]||"⭐"}</span> {labels[type]||type} <small>{matching.length}</small>
       </button>;
+    })}</div>
+   </div>;
+ })()}
+ {experience.familyPuzzle?.url&&merged.filter(p=>!p.pending).length>0&&(()=>{
+   const puzzleTotal=experience.familyPuzzle.totalPieces||8;
+   return <div className="panel" style={{marginTop:18}}>
+    <div className="tag">{t.participant.familyPuzzleTitle}</div>
+    <p className="rosterHint">{lang==="he"?"כל משתתף מרכיב את הפאזל המשפחתי שלו בעצמו, לפי המשימות שהשלים.":"Each participant assembles their own family puzzle as they complete missions."}</p>
+    <div className="missionPerf">{merged.filter(p=>!p.pending).map(p=>{
+      const n=unlockedPieces(flow,p.completedMissionIds,puzzleTotal).size;
+      const pct=puzzleTotal?Math.round(n/puzzleTotal*100):0;
+      return <div className="missionPerfRow" key={p.id}><b>{p.name||p.participantName}</b><div className="missionPerfBar"><span style={{width:`${pct}%`}}></span></div><small>{t.participant.puzzlePiecesCount(n,puzzleTotal)}</small></div>;
     })}</div>
    </div>;
  })()}

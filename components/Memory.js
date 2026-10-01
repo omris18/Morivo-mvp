@@ -122,6 +122,12 @@ export default function Memory({experience,setExperience,setView,t,user,publicVi
    <div className="statTileMB"><b>{flow.length}</b><small>{m2.missions}</small></div>
   </div>
 
+  {exp.familyPuzzle?.url&&<div className="mbSection mbPuzzleReveal">
+   <div className="mbHeading">{m2.puzzleRevealTitle}</div>
+   <div className="mbPuzzleImage" style={{backgroundImage:`url(${exp.familyPuzzle.url})`}}></div>
+   <p className="mbPuzzleSub">{m2.puzzleRevealSub}</p>
+  </div>}
+
   <div className={"mbSection mbStory "+(!exp.memoryStory&&!exp.story?"mbStoryEmpty":"")}>
    <div className="mbHeading">{m2.ourStory}</div>
    <p className="mbStoryText"><LinkifiedText text={exp.memoryStory||exp.story||m2.noStoryYet}/></p>

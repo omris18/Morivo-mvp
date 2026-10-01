@@ -34,6 +34,9 @@
 .statTileMB{border:1px solid rgba(120,90,40,.22);border-radius:16px;padding:18px;text-align:center;background:rgba(255,255,255,.4);box-shadow:inset 0 1px 0 rgba(255,255,255,.6)}
 .statTileMB b{display:block;font-size:28px;font-family:Georgia,serif;color:#8a5a1f}
 .statTileMB small{color:#7a6a4e;font-size:11px;letter-spacing:.06em;text-transform:uppercase}
+.mbPuzzleReveal{text-align:center}
+.mbPuzzleImage{width:min(420px,100%);aspect-ratio:1/1;margin:0 auto;border-radius:18px;background-size:cover;background-position:center;box-shadow:0 18px 40px rgba(60,40,10,.22),0 0 0 8px rgba(255,255,255,.55),0 0 0 9px rgba(120,90,40,.2)}
+.mbPuzzleSub{margin-top:16px;color:#7a6a4e;font-size:13px}
 .mbStoryText{font:400 19px/1.85 Georgia,serif;color:#2e2314;white-space:pre-wrap}
 .mbStoryText::first-letter{font-size:1.7em;color:#96692a}
 .mbWriteBtn{margin-top:18px;border:1px solid rgba(150,105,42,.4);background:rgba(150,105,42,.08);color:#7a4f1a;padding:11px 18px;border-radius:12px;font-weight:600}
