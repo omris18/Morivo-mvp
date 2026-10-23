@@ -12,7 +12,13 @@ function sanitizeFlow(rawFlow) {
         id: `${type}-${Date.now()}-${i}`,
         type,
         title: String(m.title || `Mission ${i + 1}`).slice(0, 120),
-        text: String(m.text || "").slice(0, 600),
+        // 600 cut real, grounded mission text off mid-sentence - the SYSTEM_PROMPT asks for
+        // "one to two sentences," but a grounded mission naming a specific real place, why it
+        // fits this exact group, and a concrete action easily runs longer than that estimate
+        // assumed, especially since missions started citing researched detail (see
+        // generateMissionsGrounded in index.js). Raised well past the longest mission text seen
+        // in practice rather than trim content that's already correct, just verbose.
+        text: String(m.text || "").slice(0, 1500),
         reward: String(m.reward || "").slice(0, 120),
         points: Number.isFinite(Number(m.points)) ? Math.max(50, Math.min(200, Math.round(Number(m.points)))) : 100,
       };

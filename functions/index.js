@@ -957,7 +957,7 @@ exports.translateExperience = onCall({ secrets: [openaiApiKey], cors: true, time
     return {
       ...m,
       title: t?.title ? String(t.title).slice(0, 120) : m.title,
-      text: t?.text !== undefined ? String(t.text).slice(0, 600) : m.text,
+      text: t?.text !== undefined ? String(t.text).slice(0, 1500) : m.text,
       reward: t?.reward !== undefined ? String(t.reward).slice(0, 120) : m.reward,
       ...(m.type === "puzzle" && t?.answer ? { answer: String(t.answer).slice(0, 80) } : {}),
       ...(m.type === "quiz" && Array.isArray(m.options) && m.options.length
