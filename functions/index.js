@@ -43,7 +43,7 @@ ${MISSION_TYPES.join(", ")}
 Give the whole journey a real arc: a hook that pulls people in using a specific detail from the description, rising missions that build on each other and reference earlier moments, then a closing mission that pays off the theme. Titles must be punchy and specific to this exact experience - never generic labels like "The Beginning" or "Capture the Moment".
 
 Respond with STRICT JSON only, no markdown fencing, no commentary, matching exactly this shape:
-{"name": "short experience title", "flow": [{"type": "photo", "title": "short title", "text": "one to two sentence instruction shown to the participant", "reward": "short reward label", "points": 100, "answer": "only for type puzzle or quiz", "options": "only for type quiz - array of 3-4 short answer choices, including the exact text of \"answer\""}]}
+{"name": "short experience title", "flow": [{"type": "photo", "title": "short title", "text": "one to two sentence instruction shown to the participant", "reward": "short reward label", "points": 100, "answer": "only for type puzzle or quiz", "options": "only for type quiz - array of 3-4 short answer choices, including the exact text of \"answer\"", "day": "only for a multi-day trip - the calendar day number (integer, 1 for the first day) this mission belongs to, for every mission including the day-opener, not just as text in its title"}]}
 
 "type" must be one of: ${MISSION_TYPES.join(", ")}. "points" is an integer between 50 and 200. "answer" must only be present when "type" is "puzzle" or "quiz". "options" must only be present when "type" is "quiz". Do not include an "id" field, the app assigns those.`;
 
@@ -91,6 +91,24 @@ function splitDaysEvenly(totalDays, parts) {
   const base = Math.floor(totalDays / parts);
   const extra = totalDays % parts;
   return Array.from({ length: parts }, (_, i) => base + (i < extra ? 1 : 0));
+}
+
+// The AI is asked for a structured "day" integer on every mission (see SYSTEM_PROMPT) - that
+// field, once present, is the only thing this should trust. The regex below is only a fallback
+// for missions generated before that field existed, or on the rare response that drops it
+// anyway, so it has to cover the day-word in every one of the 9 languages this app supports
+// (LANG_NAMES below), not just English "Day"/Hebrew "יום" - a trip whose AI-chosen output
+// language was, say, German or Japanese would otherwise have every one of its day-opener
+// titles silently fail to match, convincing the day-completeness safety net below that those
+// real days were missing and making it splice in a duplicate fallback mission for each one -
+// exactly the "structural problems with days" organizers reported after the destination-tag
+// version of this same bug (missing field, no reliable text fallback) was already fixed once.
+const DAY_WORD_RE = /(?:day|יום|tag|giorno|dzie[nń]|nap|ημέρα|วัน)\s*([0-9]+)|([0-9]+)\s*(?:日目|日)/i;
+function dayNumberOf(m) {
+  const explicit = Number(m?.day ?? m?.dayNumber);
+  if (Number.isFinite(explicit)) return explicit;
+  const match = String(m?.title || "").match(DAY_WORD_RE);
+  return match ? Number(match[1] || match[2]) : null;
 }
 
 function mapsSearchUrl(name, location) {
@@ -174,6 +192,21 @@ async function askGeminiJSON(promptText, label, opts) {
     }
   }
   return fallbackCandidate;
+}
+
+// The itinerary PLAN step (generateDayChunk, suggestHotelOptions, suggestAttractionOptions
+// above) already grounds its real-place detail with Gemini's Google Search tool - but the
+// MISSIONS built from that plan (the actual content participants see and do) went straight to
+// plain OpenAI with no search of its own, so a mission could only be as specific as whatever
+// place names happened to survive from the plan summary into its own retelling, rather than
+// searching for mission-specific detail (an exact opening time, a dish to try there, a second
+// nearby spot). Try a grounded Gemini pass first, the same way proposeItinerary prefers Gemini
+// over OpenAI, and only fall back to OpenAI if Gemini comes back empty - same safety net, now
+// applied to the step organizers actually complained reads shallow and ungrounded.
+async function generateMissionsGrounded(systemPrompt, userPrompt, label) {
+  const finalCheck = "Final language check: identify the language of the Description, not the destination. Write the experience name and every mission title, instruction and reward entirely in that language. A trip to Rome described in English must be written in English, never Italian or Spanish. Keep proper place names unchanged.";
+  const data = await askGeminiJSON(`${systemPrompt}\n\n${userPrompt}\n\n${finalCheck}`, label, { grounded: true });
+  return Array.isArray(data?.flow) && data.flow.length ? data : null;
 }
 
 function optionsToMissionText(options, max, urlFor, location, urlOpts) {
@@ -408,7 +441,13 @@ Respond in the same language the description is written in - detect it automatic
   }));
 }
 
-exports.proposeItinerary = onCall({ secrets: [openaiApiKey, geminiApiKey], cors: true, timeoutSeconds: 120 }, async (request) => {
+// A long, multi-destination trip chunks into several parallel grounded Gemini calls (see
+// CHUNK_THRESHOLD below), and askGeminiJSON falls back serially through up to 5 models on any
+// failure - a chunk that needs 2-3 of those tries before one succeeds easily passes a minute,
+// and the whole call is only as fast as its slowest chunk. 120s was tuned against short trips
+// and silently failed every 20+ day trip organizers tried, reading as "it just doesn't do long
+// trips" rather than a timeout. Raised with headroom; the client call below must match.
+exports.proposeItinerary = onCall({ secrets: [openaiApiKey, geminiApiKey], cors: true, timeoutSeconds: 300 }, async (request) => {
   if (!request.auth) {
     throw new HttpsError("unauthenticated", "Sign in (even anonymously) before planning an experience.");
   }
@@ -554,7 +593,10 @@ exports.proposeItinerary = onCall({ secrets: [openaiApiKey, geminiApiKey], cors:
   };
 });
 
-exports.generateExperience = onCall({ secrets: [openaiApiKey, geminiApiKey], cors: true, timeoutSeconds: 180 }, async (request) => {
+// Same reasoning as proposeItinerary above - a long trip's mission-building step chunks into
+// several parallel calls too (see MISSION_CHUNK_THRESHOLD below), each now also trying grounded
+// Gemini before falling back to OpenAI, so it needs the same kind of headroom.
+exports.generateExperience = onCall({ secrets: [openaiApiKey, geminiApiKey], cors: true, timeoutSeconds: 400 }, async (request) => {
   if (!request.auth) {
     throw new HttpsError("unauthenticated", "Sign in (even anonymously) before generating an experience.");
   }
@@ -653,18 +695,21 @@ exports.generateExperience = onCall({ secrets: [openaiApiKey, geminiApiKey], cor
       `Write "name", and every mission's "title", "text" and "reward", in the same language the Description above is written in - detect it automatically, it can be any language (Hebrew, English, Arabic, French, Spanish, German, Russian, or any other). Use natural, native-sounding phrasing for that language and its culture, not a literal translation. Only if the Description is too short or ambiguous to confidently detect a language, default to ${lang === "he" ? "Hebrew" : "English"}.`,
     ].filter(Boolean).join("\n");
 
-    const completion = await client.chat.completions.create({
-      model: "gpt-4o",
-      messages: [
-        { role: "system", content: SYSTEM_PROMPT },
-        { role: "user", content: chunkPrompt },
-        { role: "system", content: "Final language check: identify the language of the Description, not the destination. Write the experience name and every mission title, instruction and reward entirely in that language. A trip to Rome described in English must be written in English, never Italian or Spanish. Keep proper place names unchanged." },
-      ],
-      response_format: { type: "json_object" },
-      temperature: 0.6,
-      max_tokens: 16000,
-    });
-    const data = JSON.parse(completion.choices[0].message.content);
+    let data = await generateMissionsGrounded(SYSTEM_PROMPT, chunkPrompt, `mission chunk (steps ${planSteps.map((p) => p.step).join(",")})`);
+    if (!data) {
+      const completion = await client.chat.completions.create({
+        model: "gpt-4o",
+        messages: [
+          { role: "system", content: SYSTEM_PROMPT },
+          { role: "user", content: chunkPrompt },
+          { role: "system", content: "Final language check: identify the language of the Description, not the destination. Write the experience name and every mission title, instruction and reward entirely in that language. A trip to Rome described in English must be written in English, never Italian or Spanish. Keep proper place names unchanged." },
+        ],
+        response_format: { type: "json_object" },
+        temperature: 0.6,
+        max_tokens: 16000,
+      });
+      data = JSON.parse(completion.choices[0].message.content);
+    }
     const rawFlow = Array.isArray(data?.flow) ? data.flow : [];
     // Every step in this chunk shares one destination (see groupPlanForMissionChunks) - tag it
     // onto every mission this chunk writes, rather than leaving the route map to guess the
@@ -688,23 +733,26 @@ exports.generateExperience = onCall({ secrets: [openaiApiKey, geminiApiKey], cor
       flow = sanitizeFlow(chunkResults.flatMap((r) => r.rawFlow));
       generatedName = chunkResults[0]?.name;
     } else {
-      const completion = await client.chat.completions.create({
-        model: "gpt-4o",
-        messages: [
-          { role: "system", content: SYSTEM_PROMPT },
-          { role: "user", content: userPrompt },
-          { role: "system", content: "Final language check: identify the language of the Description, not the destination. Write the experience name and every mission title, instruction and reward entirely in that language. A trip to Rome described in English must be written in English, never Italian or Spanish. Keep proper place names unchanged." },
-        ],
-        response_format: { type: "json_object" },
-        temperature: 0.6,
-        max_tokens: 16000,
-      });
-      const data = JSON.parse(completion.choices[0].message.content);
+      let data = await generateMissionsGrounded(SYSTEM_PROMPT, userPrompt, "mission flow");
+      if (!data) {
+        const completion = await client.chat.completions.create({
+          model: "gpt-4o",
+          messages: [
+            { role: "system", content: SYSTEM_PROMPT },
+            { role: "user", content: userPrompt },
+            { role: "system", content: "Final language check: identify the language of the Description, not the destination. Write the experience name and every mission title, instruction and reward entirely in that language. A trip to Rome described in English must be written in English, never Italian or Spanish. Keep proper place names unchanged." },
+          ],
+          response_format: { type: "json_object" },
+          temperature: 0.6,
+          max_tokens: 16000,
+        });
+        data = JSON.parse(completion.choices[0].message.content);
+      }
       flow = Array.isArray(data?.flow) ? sanitizeFlow(data.flow) : [];
       generatedName = data?.name;
     }
   } catch (err) {
-    console.error("OpenAI request failed", err);
+    console.error("Mission generation failed (Gemini and OpenAI both unavailable)", err);
     throw new HttpsError("unavailable", "The AI service failed to respond. Please try again.");
   }
 
@@ -717,10 +765,6 @@ exports.generateExperience = onCall({ secrets: [openaiApiKey, geminiApiKey], cor
   // straight from the approved plan's own text for any day that's missing - guaranteeing every
   // approved day has at least something, the same way generateDayChunk pads a short plan chunk.
   if (hasApprovedPlan) {
-    const dayNumberOf = (m) => {
-      const match = String(m?.title || "").match(/(?:day|יום)\s*([0-9]+)/i);
-      return match ? Number(match[1]) : null;
-    };
     const covered = new Set(flow.map(dayNumberOf).filter((n) => n != null));
     const missingSteps = approvedItinerary.plan.filter((p) => Number.isFinite(Number(p.step)) && !covered.has(Number(p.step)));
     if (missingSteps.length) {

@@ -133,7 +133,7 @@ export default function AICreator({setExperience,setView,setActiveId,user,lang,t
   setPhase("planning");setPlanError(null);
   try{
    await ensureUser();
-   const propose=httpsCallable(functions,"proposeItinerary",{timeout:120000});
+   const propose=httpsCallable(functions,"proposeItinerary",{timeout:300000});
    const result=await propose(baseFields());
    setItinerary(result.data);
    setSelectedAttractionIds(new Set((result.data.attractions||[]).map((_,i)=>i)));
@@ -175,7 +175,7 @@ export default function AICreator({setExperience,setView,setActiveId,user,lang,t
   let flow,name,usedAI=false,aiError=null;
   try{
    await ensureUser();
-   const generate=httpsCallable(functions,"generateExperience",{timeout:170000});
+   const generate=httpsCallable(functions,"generateExperience",{timeout:400000});
    const result=await generate({...baseFields(),approvedItinerary});
    flow=result.data.flow;name=result.data.name;usedAI=true;
   }catch(e){

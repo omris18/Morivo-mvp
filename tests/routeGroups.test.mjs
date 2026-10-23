@@ -39,4 +39,19 @@ const bogusFlow=[
 const bogusGroups=buildRouteGroups(experience,bogusFlow,false);
 assert.ok(bogusGroups.every(g=>!g.destination.includes(",")),"a comma-joined destination string must never become its own stop");
 
-console.log("Route grouping: explicit destination tags, text-matching fallback and comma-joined-destination guard all checked");
+// A mission that belongs to neither destination (no destination field, no text match) in a
+// multi-destination trip falls back to day-number grouping - the regex behind that fallback
+// must recognize a day-word in languages other than English/Hebrew too, since the AI can write
+// a day-opener title in any of the 9 supported languages.
+const mixedExperience={destinations:["Bangkok","Phuket"]};
+const mixedFlow=[
+ {id:"1",title:"Day 1 - Arrival",text:"Explore Bangkok streets.",destination:"Bangkok"},
+ {id:"2",title:"Day 2 - Beach",text:"Relax in Phuket sun.",destination:"Phuket"},
+ {id:"3",title:"Tag 3 - Zwischenstopp",text:"Kein Ortsname hier, nur ein freier Tag."},
+];
+const mixedGroups=buildRouteGroups(mixedExperience,mixedFlow,false);
+const dayGroup=mixedGroups.find(g=>g.key==="day-3");
+assert.ok(dayGroup,"a German 'Tag 3' title must still be recognized as day 3, not fall through to a bogus 'general' group");
+assert.equal(dayGroup.label,"Day 3");
+
+console.log("Route grouping: explicit destination tags, text-matching fallback, comma-joined-destination guard and multi-language day fallback all checked");

@@ -32,6 +32,14 @@ function sanitizeFlow(rawFlow) {
       // instead of fragile text-matching against the mission's own title/text - the exact
       // regression covered by tests/sanitizeFlow.test.cjs.
       if (m.destination) atom.destination = String(m.destination).trim().slice(0, 100);
+      // Same reasoning for the day number: the AI is asked for a structured "day" integer
+      // (see SYSTEM_PROMPT in index.js) instead of making every caller parse it back out of a
+      // title that's free-text in whichever of the 9 supported languages the AI chose - without
+      // this the day-completeness safety net in generateExperience could only recognize English
+      // "Day N" / Hebrew "יום N" titles and would synthesize duplicate fallback missions for any
+      // other language, which is exactly the "structural problems with days" symptom reported.
+      const dayNum = Number(m.day ?? m.dayNumber);
+      if (Number.isFinite(dayNum)) atom.day = Math.max(1, Math.round(dayNum));
       return atom;
     });
 }
