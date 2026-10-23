@@ -12,8 +12,17 @@ export default function Dashboard({experience,experiences,setView,openExperience
  }
  const [deletingId,setDeletingId]=useState(null);
  const [stats,setStats]=useState({participants:0,missionsCompleted:0,memoriesCreated:0});
+ const [search,setSearch]=useState("");
+ const [statusFilter,setStatusFilter]=useState("all");
  const rows=experiences?.length ? experiences : experience?.id?[experience]:[];
  const d=t.dashboard;
+ function statusOf(x){return x.paused?"paused":x.status==="live"?"live":"draft"}
+ const statusLabel={all:d.filterAll,live:d.filterLive,draft:d.filterDraft,paused:d.filterPaused};
+ const q=search.trim().toLowerCase();
+ const visibleRows=rows.filter(x=>
+   (statusFilter==="all"||statusOf(x)===statusFilter)&&
+   (!q||[x.name,x.location,x.type].filter(Boolean).some(v=>v.toLowerCase().includes(q)))
+ );
 
  useEffect(()=>{
    let alive=true;
@@ -55,8 +64,14 @@ export default function Dashboard({experience,experiences,setView,openExperience
 
    <div className="panel experiencePanel" id="yourExperiencesList">
      <div className="sectionHead"><div><div className="tag">{d.yourExperiences}</div><h2>{d.yourExperiences}</h2></div><button className="roundCreate" onClick={()=>setView("ai")} aria-label={d.createWithAI}>＋</button></div>
+     {rows.length>1&&<div className="experienceFilters">
+       <input type="search" className="experienceSearch" placeholder={d.searchPlaceholder} value={search} onChange={e=>setSearch(e.target.value)} aria-label={d.searchPlaceholder}/>
+       <div className="chipRow">
+         {["all","live","draft","paused"].map(key=><button type="button" key={key} className={"chip "+(statusFilter===key?"selected":"")} onClick={()=>setStatusFilter(key)}>{statusLabel[key]}</button>)}
+       </div>
+     </div>}
      <div className="experienceGrid">
-     {rows.map(x=><article className="experienceRow experienceRowClickable" key={x.id} role="button" tabIndex={0} onClick={()=>openExperience(x)} onKeyDown={e=>{if(e.key==="Enter"||e.key===" "){e.preventDefault();openExperience(x)}}}>
+     {visibleRows.map(x=><article className="experienceRow experienceRowClickable" key={x.id} role="button" tabIndex={0} onClick={()=>openExperience(x)} onKeyDown={e=>{if(e.key==="Enter"||e.key===" "){e.preventDefault();openExperience(x)}}}>
        <ExperienceCover experience={x}><span className={"experienceStatus "+(x.paused?"paused":x.status==="live"?"live":"draft")}>{x.paused?(he?"מושהית":"Paused"):x.status==="live"?(he?"פעילה עכשיו":"Live now"):(he?"בדרך להרפתקה":"In the making")}</span><span className="experienceCoverPlace">{x.location||x.type||"MORIVO"}</span></ExperienceCover>
        <div className="experienceInfo"><h3>{x.name||d.draft}</h3><p>{x.flow?.length||0} {he?"תחנות במסע":"stops in your story"}{x.startDate&&<> <span>·</span> {x.startDate}</>}</p></div>
        <div className="rowActions">
@@ -65,6 +80,7 @@ export default function Dashboard({experience,experiences,setView,openExperience
        </div>
      </article>)}
      {!rows.length&&<div className="dashboardEmpty"><img src="/morivo-memories.svg" alt=""/><div><h3>{he?"הסיפור הבא שלכם מתחיל כאן":"Your next story starts here"}</h3><p>{he?"טיול, יום הולדת או יום מיוחד ביחד — ספרו ל־Morivo מה מתכננים.":"A trip, a birthday or a day together — tell Morivo what you have in mind."}</p><button className="primary" onClick={()=>setView("ai")}>{d.createWithAI}</button></div></div>}
+     {rows.length>0&&!visibleRows.length&&<p className="contextHint">{d.noMatches}</p>}
      </div>
    </div>
  </section>

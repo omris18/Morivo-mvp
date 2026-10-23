@@ -765,7 +765,7 @@ export default function Studio({ experience, setExperience, setView, t, lang }) 
           </div>
         )}
 
-        <div className="actions">
+        <div className="actions studioPublishBar">
           <button onClick={() => setView("dashboard")}>{s.dashboardBtn}</button>
           <button onClick={() => setView("runtime")}>{s.runtimeBtn}</button>
           <button id="publish-experience" className="primary" disabled={publishing||saving||saveError||!flow.length} onClick={()=>experience.status==="live"&&experience.joinCode?setView("runtime"):publish()}>
