@@ -23,7 +23,8 @@ service cloud.firestore {
     }
 
     match /experiences/{experienceId} {
-      allow create: if signedIn() && request.resource.data.ownerUid == request.auth.uid;
+      allow create: if signedIn() && request.resource.data.ownerUid == request.auth.uid
+        && !request.resource.data.keys().hasAny(['paid', 'paidAt', 'paidAmount', 'paymentSessionId']);
       // Participants only ever need to READ the experience (to see missions/status) - every
       // legitimate write (Studio edits, publish, pause) is organizer-only. A joined participant
       // must never be able to update or delete the experience document itself.
@@ -34,8 +35,13 @@ service cloud.firestore {
         exists(/databases/$(database)/documents/experiences/$(experienceId)/participantSessions/$(request.auth.uid)) ||
         resource.data.memoryPublic == true
       );
-      allow update: if signedIn() && (isMaster() || resource.data.ownerUid == request.auth.uid)
-        && request.resource.data.ownerUid == resource.data.ownerUid;
+      // The payment fields below are only ever meant to be set by the stripeWebhook function
+      // (functions/payments.js), which uses the admin SDK and so bypasses these rules entirely -
+      // an organizer's own client-side update must never be able to touch them, or paying for an
+      // experience would be optional for anyone who opens devtools.
+      allow update: if signedIn() && (isMaster() || (resource.data.ownerUid == request.auth.uid
+        && request.resource.data.ownerUid == resource.data.ownerUid
+        && !request.resource.data.diff(resource.data).affectedKeys().hasAny(['paid', 'paidAt', 'paidAmount', 'paymentSessionId'])));
       allow delete: if signedIn() && (isMaster() || resource.data.ownerUid == request.auth.uid);
 
       match /participantSessions/{uid} {

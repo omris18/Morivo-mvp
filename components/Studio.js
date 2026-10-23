@@ -4,7 +4,7 @@ import { useEffect, useState, useRef } from "react";
 import { httpsCallable } from "firebase/functions";
 import QRCode from "qrcode";
 import { firebaseConfigured, functions } from "../lib/firebase";
-import { publishExperienceRemote, updateExperienceRemote, reorderExperienceRemote, uploadFamilyPhoto, removeFamilyPuzzle, reshuffleFamilyPuzzleLayout } from "../lib/morivoData";
+import { publishExperienceRemote, updateExperienceRemote, reorderExperienceRemote, uploadFamilyPhoto, removeFamilyPuzzle, reshuffleFamilyPuzzleLayout, createCheckoutSessionRemote } from "../lib/morivoData";
 import LinkifiedText from "./LinkifiedText";
 import ExperienceShare from "./ExperienceShare";
 import {missionLabels} from "../lib/experienceGuidance";
@@ -41,6 +41,17 @@ export default function Studio({ experience, setExperience, setView, t, lang }) 
   const [puzzleShuffleError, setPuzzleShuffleError] = useState("");
   const [puzzleRemoving, setPuzzleRemoving] = useState(false);
   const [flightAlertsState, setFlightAlertsState] = useState("idle");
+  const [paying, setPaying] = useState(false);
+  const [payError, setPayError] = useState("");
+  // Stripe sends the organizer back here after a successful payment; the webhook that actually
+  // marks the experience paid can land a moment later than the redirect itself, so this flag
+  // covers that gap instead of the publish button briefly flashing "pay again."
+  const [justReturnedFromPayment, setJustReturnedFromPayment] = useState(() =>
+    typeof window !== "undefined" && new URLSearchParams(window.location.search).get("paid") === "1"
+  );
+  useEffect(() => {
+    if (justReturnedFromPayment && experience.paid) setJustReturnedFromPayment(false);
+  }, [justReturnedFromPayment, experience.paid]);
 
   const atom = flow.find((x) => x.id === selected) || null;
 
@@ -306,6 +317,25 @@ export default function Studio({ experience, setExperience, setView, t, lang }) 
 
     persist({ ...experience, flow: nextFlow });
     setSelected(copy.id);
+  }
+
+  // Charges before the FIRST publish only - once experience.paid is true it stays true, so
+  // re-publishing after an edit never charges again. Demo mode (no Firebase) has no real payment
+  // processor to charge, so it skips straight to publish() like every other demo-mode action here.
+  async function payAndContinue() {
+    if (paying || !firebaseConfigured) { publish(); return; }
+    setPaying(true); setPayError("");
+    try {
+      const base = window.location.origin + window.location.pathname;
+      const { url, alreadyPaid } = await createCheckoutSessionRemote(experience.id, `${base}?paid=1`, base) || {};
+      if (alreadyPaid) { setPaying(false); publish(); return; }
+      if (url) { window.location.href = url; return; }
+      setPayError(he ? "לא ניתן היה להתחיל את התשלום. נסו שוב." : "Couldn't start checkout. Please try again.");
+      setPaying(false);
+    } catch (e) {
+      setPayError(e.message);
+      setPaying(false);
+    }
   }
 
   async function publish() {
@@ -765,14 +795,40 @@ export default function Studio({ experience, setExperience, setView, t, lang }) 
           </div>
         )}
 
-        <div className="actions studioPublishBar">
-          <button onClick={() => setView("dashboard")}>{s.dashboardBtn}</button>
-          <button onClick={() => setView("runtime")}>{s.runtimeBtn}</button>
-          <button id="publish-experience" className="primary" disabled={publishing||saving||saveError||!flow.length} onClick={()=>experience.status==="live"&&experience.joinCode?setView("runtime"):publish()}>
-            {publishing ? s.publishing : experience.status==="live"&&experience.joinCode?(he?"שיתוף וניהול החוויה":"Share & manage experience"):s.publish}
-          </button>
-        </div>
-        <p className="contextHint">{saving?(he?"ממתינים לסיום השמירה לפני הפרסום.":"Wait for changes to save before publishing."):saveError?(he?"השמירה נכשלה. תקנו או שמרו שוב לפני הפרסום.":"Saving failed. Save your changes successfully before publishing."):!flow.length?(he?"הוסיפו לפחות משימה אחת כדי לפרסם.":"Add at least one mission to publish."):experience.status==="live"?(he?"החוויה פעילה. השינויים נשמרים ומתעדכנים אצל המשתתפים מיד.":"This experience is live. Saved changes update for participants immediately."):he?"הפרסום ייצור קישור וקוד הצטרפות. אפשר להמשיך לערוך גם אחרי הפרסום.":"Publishing creates a join link and code. You can keep editing after publishing."}</p>
+        {(() => {
+          const needsPayment = firebaseConfigured && experience.status !== "live" && !experience.paid;
+          const adults = Number(experience.adultsCount), children = Number(experience.childrenCount);
+          const participantCount = Number.isFinite(adults) || Number.isFinite(children)
+            ? Math.max(1, (Number.isFinite(adults) ? adults : 0) + (Number.isFinite(children) ? children : 0))
+            : Math.max(1, Number(experience.people) || 1);
+          const waitingOnWebhook = needsPayment && justReturnedFromPayment;
+          const busy = publishing || paying;
+          return <>
+            {needsPayment && <p className="contextHint">
+              {waitingOnWebhook
+                ? (he ? "מאשרים את התשלום… זה יכול לקחת כמה שניות." : "Confirming your payment… this can take a few seconds.")
+                : (he ? `הפרסום כרוך בתשלום לפי ${participantCount} ${participantCount===1?"משתתף":"משתתפים"}.` : `Publishing requires payment for ${participantCount} ${participantCount===1?"participant":"participants"}.`)}
+            </p>}
+            {payError && <p className="guidanceError" role="alert">⚠ {payError}</p>}
+            <div className="actions studioPublishBar">
+              <button onClick={() => setView("dashboard")}>{s.dashboardBtn}</button>
+              <button onClick={() => setView("runtime")}>{s.runtimeBtn}</button>
+              <button id="publish-experience" className="primary" disabled={busy||saving||saveError||!flow.length||waitingOnWebhook} onClick={()=>{
+                if (experience.status==="live"&&experience.joinCode) { setView("runtime"); return; }
+                if (needsPayment) { payAndContinue(); return; }
+                publish();
+              }}>
+                {waitingOnWebhook ? (he?"ממתינים לאישור…":"Waiting for confirmation…")
+                  : paying ? (he?"פותחים את עמוד התשלום…":"Opening checkout…")
+                  : publishing ? s.publishing
+                  : experience.status==="live"&&experience.joinCode ? (he?"שיתוף וניהול החוויה":"Share & manage experience")
+                  : needsPayment ? (he?"💳 תשלום ופרסום":"💳 Pay & publish")
+                  : s.publish}
+              </button>
+            </div>
+            <p className="contextHint">{saving?(he?"ממתינים לסיום השמירה לפני הפרסום.":"Wait for changes to save before publishing."):saveError?(he?"השמירה נכשלה. תקנו או שמרו שוב לפני הפרסום.":"Saving failed. Save your changes successfully before publishing."):!flow.length?(he?"הוסיפו לפחות משימה אחת כדי לפרסם.":"Add at least one mission to publish."):experience.status==="live"?(he?"החוויה פעילה. השינויים נשמרים ומתעדכנים אצל המשתתפים מיד.":"This experience is live. Saved changes update for participants immediately."):he?"הפרסום ייצור קישור וקוד הצטרפות. אפשר להמשיך לערוך גם אחרי הפרסום.":"Publishing creates a join link and code. You can keep editing after publishing."}</p>
+          </>;
+        })()}
       </div>
 
       <div className="panel studioPreviewPanel">

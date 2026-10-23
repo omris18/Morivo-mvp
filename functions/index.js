@@ -11,14 +11,19 @@ const db = admin.firestore();
 const openaiApiKey = defineSecret("OPENAI_API_KEY");
 const geminiApiKey = defineSecret("GEMINI_API_KEY");
 const aerodataboxApiKey = defineSecret("AERODATABOX_API_KEY");
+const stripeSecretKey = defineSecret("STRIPE_SECRET_KEY");
+const stripeWebhookSecret = defineSecret("STRIPE_WEBHOOK_SECRET");
 const {normalizeMission} = require("./missionAnswers");
 const {sanitizeFlow, MISSION_TYPES} = require("./sanitizeFlow");
 const {insertExtrasIntoFlow} = require("./routeExtras");
+const {createCheckoutSession, stripeWebhook} = require("./payments");
 exports.generateExperienceArtwork = require("./experienceArtwork")(admin, openaiApiKey);
 exports.generateCelebrationCartoon = require("./celebrationCartoon")(admin, openaiApiKey);
 exports.reorderExperience = require("./reorderExperience")(admin);
 exports.resolveParticipantIdentity = require("./participantIdentity")(admin);
 exports.checkFlightStatuses = require("./flightAlerts")(admin, aerodataboxApiKey);
+exports.createCheckoutSession = createCheckoutSession(admin, stripeSecretKey);
+exports.stripeWebhook = stripeWebhook(admin, stripeSecretKey, stripeWebhookSecret);
 
 const SYSTEM_PROMPT = `You design short interactive real-world "experiences" (treasure-hunt-style journeys) for an app called Morivo, used for family trips, birthdays, team building, school outings and similar events. Morivo is a global product used by people writing in many different languages - always respond in the same language the user wrote their description in, never default to English just because these instructions are in English.
 
