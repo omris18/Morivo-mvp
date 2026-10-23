@@ -128,6 +128,17 @@ function groundingToolForModel(model) {
     : { google_search: {} };
 }
 
+// The organizer-facing message intentionally stayed generic ("The AI service failed to respond")
+// so it never leaked a raw API error - but that also meant the only way to tell an invalid/expired
+// key apart from a rate limit or a genuine outage was reading Firebase's own function logs, which
+// isn't available outside the Firebase console. Folding a short, truncated version of the real
+// error into the message (never the full object, which could carry request internals) keeps that
+// diagnosis possible from the error the organizer already sees and can copy/paste back to us.
+function aiUnavailableMessage(err) {
+  const detail = err?.message ? String(err.message).slice(0, 200) : String(err || "unknown error").slice(0, 200);
+  return `The AI service failed to respond (${detail}). Please try again.`;
+}
+
 function extractJson(raw) {
   const cleaned = String(raw).replace(/```json|```/gi, "").trim();
   try {
@@ -530,8 +541,17 @@ exports.proposeItinerary = onCall({ secrets: [openaiApiKey, geminiApiKey], cors:
       nextStartDay += spec.dayCount;
       return generateDayChunk({ prompt, type, lang, destination: spec.destination, dayCount: spec.dayCount, startDay, totalDays, people, peopleDetails, childrenAges, interests });
     });
-    const chunkResults = await Promise.all(chunkPromises);
-    data = { name: null, plan: chunkResults.flat().map((p, i) => ({ step: i + 1, ...p })) };
+    // Unlike the short-trip branch below, generateDayChunk has no OpenAI fallback of its own
+    // (askGeminiJSON never throws, but a chunk can still reject the function's own promise on a
+    // genuine bug) - without this try/catch, a rejection here skipped our own HttpsError entirely
+    // and surfaced as Firebase's generic "internal" error with no detail at all.
+    try {
+      const chunkResults = await Promise.all(chunkPromises);
+      data = { name: null, plan: chunkResults.flat().map((p, i) => ({ step: i + 1, ...p })) };
+    } catch (err) {
+      console.error("Itinerary chunk generation failed", err);
+      throw new HttpsError("unavailable", aiUnavailableMessage(err));
+    }
   } else {
     // Gemini has the real-world geographic grounding this needs (actual beaches, cafes,
     // restaurants) - it's already relied on for that in suggestHotelOptions/suggestAttractionOptions
@@ -560,7 +580,7 @@ exports.proposeItinerary = onCall({ secrets: [openaiApiKey, geminiApiKey], cors:
         }
       } catch (err) {
         console.error("Itinerary request failed (Gemini and OpenAI both unavailable)", err);
-        throw new HttpsError("unavailable", "The AI service failed to respond. Please try again.");
+        throw new HttpsError("unavailable", aiUnavailableMessage(err));
       }
     }
   }
@@ -769,7 +789,7 @@ exports.generateExperience = onCall({ secrets: [openaiApiKey, geminiApiKey], cor
     }
   } catch (err) {
     console.error("Mission generation failed (Gemini and OpenAI both unavailable)", err);
-    throw new HttpsError("unavailable", "The AI service failed to respond. Please try again.");
+    throw new HttpsError("unavailable", aiUnavailableMessage(err));
   }
 
   // A chunk (or the whole call, on a short trip) can come back as valid JSON that simply falls
