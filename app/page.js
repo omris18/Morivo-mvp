@@ -120,10 +120,21 @@ export default function Home(){
    if(firebaseConfigured && exp.id && exp.id!=="thailand-demo") setActiveId(exp.id);
    setView(target);
  }
+ // Every "create a new experience" entry point must start from a clean slate - without this,
+ // the AI creator would pick up whatever experience/activeId were last active (e.g. a wizard
+ // draft resumed earlier, or any other previously opened experience) and wrongly treat a brand
+ // new creation as a continuation of it, since AICreator hydrates its form from those props.
+ function startAICreate(){
+   // `experience` is never null elsewhere in this file (app/page.js:170 and others read
+   // experience.id directly) - reset to the same blank shape used on sign-out, not null.
+   setExperience({id:null,name:"",type:"",location:"",people:0,story:"",flow:[],status:"draft",joinCode:""});
+   setActiveId(null);
+   setView("ai");
+ }
 
  const t=STRINGS[lang];
  const dir=getDir(lang);
- const props={experience,setExperience,setView,user,isMaster,experiences,setExperiences,activeId,setActiveId,openExperience,deepLinkCode,lang,setLang,country,selectLang,t,dir};
+ const props={experience,setExperience,setView,user,isMaster,experiences,setExperiences,activeId,setActiveId,openExperience,startAICreate,deepLinkCode,lang,setLang,country,selectLang,t,dir};
 
  const Screen=useMemo(()=>({
    dashboard:<Dashboard {...props}/>,

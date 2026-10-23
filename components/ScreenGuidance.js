@@ -1,6 +1,6 @@
 "use client";
 import {guidanceState} from "../lib/experienceGuidance";
-export default function ScreenGuidance({view,experience,setView,lang,experiences=[]}){
+export default function ScreenGuidance({view,experience,setView,startAICreate,lang,experiences=[]}){
  const he=lang==="he",state=guidanceState(experience);
  const requiresExperience=["studio","runtime","memory"].includes(view);
  const steps=he?[["ai","יוצרים חוויה"],["studio","עורכים ומפרסמים"],["runtime","מזמינים ומנהלים"],["memory","שומרים זיכרונות"]]:[["ai","Create"],["studio","Edit & publish"],["runtime","Invite & manage"],["memory","Keep memories"]];
@@ -19,8 +19,8 @@ export default function ScreenGuidance({view,experience,setView,lang,experiences
  return <section className={"screenGuidance "+(missing?"guidanceEmpty":"")} aria-label={he?"הכוונה למסך":"Screen guidance"}>
   {view!=="master"&&<nav className="experienceSteps" aria-label={he?"שלבי העבודה":"Experience workflow"}>{steps.map(([id,label],i)=><button key={id} aria-current={view===id?"step":undefined} onClick={()=>setView(id)}><span>{i+1}</span>{label}</button>)}</nav>}
   <div className="guidanceBody"><div><span className="guidanceEyebrow">{he?"מה עושים עכשיו?":"WHAT'S NEXT?"}</span><h2 id="screen-guide-title" tabIndex={-1}>{title}</h2><p>{body}</p></div><div className="guidanceActions">
-  {missing?<><button className="guidePrimary" onClick={()=>setView(experiences.length?"dashboard":"ai")}>{experiences.length?(he?"בחירת חוויה":"Choose experience"):(he?"יצירת חוויה":"Create experience")}</button>{!!experiences.length&&<button onClick={()=>setView("ai")}>{he?"יצירת חוויה חדשה":"Create a new experience"}</button>}</>:
-   view==="dashboard"?<button className="guidePrimary" onClick={()=>setView("ai")}>{he?"מתחילים ליצור":"Start creating"}</button>:
+  {missing?<><button className="guidePrimary" onClick={()=>experiences.length?setView("dashboard"):startAICreate()}>{experiences.length?(he?"בחירת חוויה":"Choose experience"):(he?"יצירת חוויה":"Create experience")}</button>{!!experiences.length&&<button onClick={startAICreate}>{he?"יצירת חוויה חדשה":"Create a new experience"}</button>}</>:
+   view==="dashboard"?<button className="guidePrimary" onClick={startAICreate}>{he?"מתחילים ליצור":"Start creating"}</button>:
    view==="studio"?<button className="guidePrimary" onClick={()=>state.published?setView("runtime"):jump("publish-experience")}>{state.published?(he?"לשיתוף וניהול חי":"Invite & manage"):(he?"לפרסום החוויה":"Go to publishing")}</button>:
    view==="runtime"?<button className="guidePrimary" onClick={()=>state.published?jump("experience-share"):setView("studio")}>{state.published?(he?"לקישור ההצטרפות":"Get join link"):(he?"לבדיקה ופרסום בסטודיו":"Review & publish in studio")}</button>:
    view==="memory"?<button onClick={()=>setView("runtime")}>{he?"חזרה לניהול החוויה":"Back to live management"}</button>:null}

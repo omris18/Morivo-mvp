@@ -5,7 +5,7 @@ import CalendarField from "./CalendarField";
 import {useEffect,useRef,useState} from "react";
 import {httpsCallable} from "firebase/functions";
 import {firebaseConfigured,functions} from "../lib/firebase";
-import {createExperienceRemote,ensureUser,subscribeSiteAsset,generateBrandImageRemote} from "../lib/morivoData";
+import {createExperienceRemote,ensureUser,subscribeSiteAsset,generateBrandImageRemote,saveWizardDraftRemote,finalizeWizardDraftRemote} from "../lib/morivoData";
 
 function CircularProgress({pct}){
  const clamped=Math.max(0,Math.min(100,pct)),r=42,c=2*Math.PI*r;
@@ -32,6 +32,9 @@ function daysBetween(start,end){
  const diff=Math.round((new Date(end+"T00:00:00")-new Date(start+"T00:00:00"))/86400000)+1;
  return diff>0?diff:0;
 }
+function defaultForm(){
+ return {prompt:"",type:"",location:"",duration:"",startDate:"",endDate:"",people:"",peopleDetails:"",hotelBooked:false,interests:[],adults:"2",children:"0",childrenAges:[],destinations:[]};
+}
 function generateDraft(f){
  const subject=f.prompt.trim()||"your experience";
  const loc=f.location.trim();
@@ -46,24 +49,35 @@ function generateDraft(f){
  ];
 }
 
-export default function AICreator({setExperience,setView,setActiveId,user,lang,t,dir}){
+export default function AICreator({setExperience,setView,setActiveId,user,lang,t,dir,experience,activeId}){
  const a=t.aiCreator;
+ // A "Save as draft" click on an earlier visit persists the in-progress wizard state onto the
+ // experience doc (see saveWizardDraftRemote) - openExperience(x,"ai") from the dashboard sets
+ // both `experience` and `activeId` to that same draft before mounting this component, so only
+ // that exact combination (never a stale leftover from something else that was open before)
+ // counts as resuming. Captured once on mount: this component doesn't re-hydrate mid-session if
+ // the props change later (e.g. after this very save), since that would stomp on live edits.
+ const [resumedDraft]=useState(()=>(experience?.wizardDraft&&experience?.id&&experience.id===activeId)?experience:null);
+ const [draftId,setDraftId]=useState(()=>resumedDraft?.id||null);
+ const [savingDraft,setSavingDraft]=useState(false);
+ const [draftSavedAt,setDraftSavedAt]=useState(null);
  const [portraitFile,setPortraitFile]=useState(null);
- const [form,setForm]=useState({prompt:"",type:"",location:"",duration:"",startDate:"",endDate:"",people:"",peopleDetails:"",hotelBooked:false,interests:[],adults:"2",children:"0",childrenAges:[],destinations:[]}),[building,setBuilding]=useState(false),[step,setStep]=useState(0);
+ const [form,setForm]=useState(()=>resumedDraft?.wizardForm?{...defaultForm(),...resumedDraft.wizardForm}:defaultForm());
+ const [building,setBuilding]=useState(false),[step,setStep]=useState(0);
  const [destinationInput,setDestinationInput]=useState("");
  const dragFromIndexRef=useRef(null);
  const [dragOverIndex,setDragOverIndex]=useState(null);
  const TOTAL_STEPS=3;
- const [formStep,setFormStep]=useState(1);
+ const [formStep,setFormStep]=useState(()=>typeof resumedDraft?.wizardStep==="number"?resumedDraft.wizardStep:1);
  const [stepError,setStepError]=useState("");
  const stepTitles=lang==="he"?["מה החוויה שלכם?","מתי ומי מגיעים?","מה יהפוך אותה למיוחדת?"]:["What's the experience?","When, and who's coming?","What makes it special?"];
  useEffect(()=>{if(formStep>1){const el=document.getElementById("ai-step-heading");el?.scrollIntoView({behavior:"smooth",block:"start"});el?.focus({preventScroll:true})}},[formStep]);
- const [phase,setPhase]=useState("form");
- const [itinerary,setItinerary]=useState(null);
+ const [phase,setPhase]=useState(()=>resumedDraft?.wizardPhase==="review"&&resumedDraft?.wizardItinerary?"review":"form");
+ const [itinerary,setItinerary]=useState(()=>resumedDraft?.wizardItinerary||null);
  const [planError,setPlanError]=useState(null);
- const [selectedAttractionIds,setSelectedAttractionIds]=useState(new Set());
- const [selectedHotelIndex,setSelectedHotelIndex]=useState(-1);
- const [selectedHotelByDestination,setSelectedHotelByDestination]=useState({});
+ const [selectedAttractionIds,setSelectedAttractionIds]=useState(()=>new Set(resumedDraft?.wizardSelectedAttractionIds||[]));
+ const [selectedHotelIndex,setSelectedHotelIndex]=useState(()=>Number.isFinite(resumedDraft?.wizardSelectedHotelIndex)?resumedDraft.wizardSelectedHotelIndex:-1);
+ const [selectedHotelByDestination,setSelectedHotelByDestination]=useState(()=>resumedDraft?.wizardSelectedHotelByDestination||{});
  function addDestination(){
   const v=destinationInput.trim();
   if(!v||form.destinations.includes(v))return;
@@ -156,6 +170,32 @@ export default function AICreator({setExperience,setView,setActiveId,user,lang,t
  function setDestinationHotelIndex(destination,idx){
   setSelectedHotelByDestination(prev=>({...prev,[destination]:idx}));
  }
+ // Persists the in-progress wizard - whatever's been filled in so far, and the approved
+ // itinerary/selections too once past planning - as an ordinary (draft-status) experience doc,
+ // so it shows up on the dashboard and can be resumed later exactly where it was left off.
+ async function saveDraft(){
+  if(!firebaseConfigured)return alert(a.needsFirebase);
+  setSavingDraft(true);
+  try{
+   const u=user||await ensureUser();
+   const payload={
+    name:form.prompt.trim().split(/[.!?\n]/)[0].slice(0,60)||(lang==="he"?"טיוטת חוויה":"Experience draft"),
+    type:form.type,location:form.location,lang,
+    wizardPhase:phase==="review"?"review":"form",
+    wizardStep:formStep,
+    wizardForm:form,
+    ...(phase==="review"?{
+     wizardItinerary:itinerary,
+     wizardSelectedAttractionIds:[...selectedAttractionIds],
+     wizardSelectedHotelIndex:selectedHotelIndex,
+     wizardSelectedHotelByDestination:selectedHotelByDestination,
+    }:{}),
+   };
+   const id=await saveWizardDraftRemote(u.uid,draftId,payload);
+   if(!draftId){setDraftId(id);setActiveId(id);}
+   setDraftSavedAt(Date.now());
+  }catch(e){alert(e.message)}finally{setSavingDraft(false)}
+ }
  async function build(){
   const hasDestinations=(itinerary?.hotelsByDestination||[]).length>0;
   const approvedItinerary=itinerary?{
@@ -190,7 +230,11 @@ export default function AICreator({setExperience,setView,setActiveId,user,lang,t
   await minWait;
   const data={name,type:form.type,location:form.location,people:isFamilyTrip?Number(form.adults||0)+Number(form.children||0):Number(form.people||0),story:form.prompt,flow,status:"draft",aiGenerated:usedAI,lang,...(isFamilyTrip?{adultsCount:Number(form.adults||0),childrenCount:Number(form.children||0),childrenAges:form.childrenAges.map(Number)}:{}),...(isFamilyTrip&&form.startDate?{startDate:form.startDate}:{}),...(isFamilyTrip&&form.endDate?{endDate:form.endDate}:{})};
   try{
-   const u=user||await ensureUser(),id=await createExperienceRemote(u.uid,data,/birthday|יום הולדת/i.test(form.type)?portraitFile:null);
+   const u=user||await ensureUser();
+   const portrait=/birthday|יום הולדת/i.test(form.type)?portraitFile:null;
+   // A resumed/saved draft becomes the real experience in place (same doc id) instead of
+   // leaving the wizard-in-progress draft behind as a stale duplicate alongside a new doc.
+   const id=draftId?await finalizeWizardDraftRemote(draftId,u.uid,data,portrait):await createExperienceRemote(u.uid,data,portrait);
    setExperience({...data,id,ownerUid:u.uid});setActiveId(id);
    setView("studio");
    if(aiError)alert(a.aiFailedNote+aiError);
@@ -245,6 +289,7 @@ export default function AICreator({setExperience,setView,setActiveId,user,lang,t
    </div>}
    <div className="actions">
     <button onClick={()=>setPhase("form")}>{a.backToDetails}</button>
+    <button type="button" onClick={saveDraft} disabled={savingDraft}>{savingDraft?(lang==="he"?"שומר…":"Saving…"):draftSavedAt?(lang==="he"?"✓ נשמר":"✓ Saved"):(lang==="he"?"💾 שמירה כטיוטה":"💾 Save draft")}</button>
     <button onClick={goPlan}>🔄 {a.regeneratePlan}</button>
     <button className="primary" onClick={build}>✦ {a.approveAndBuild}</button>
    </div>
@@ -305,6 +350,7 @@ export default function AICreator({setExperience,setView,setActiveId,user,lang,t
     <span className="stepIndicator">{lang==="he"?`שלב ${formStep} מתוך ${TOTAL_STEPS}`:`Step ${formStep} of ${TOTAL_STEPS}`}</span>
     <div className="stepNavBtns">
      {formStep>1&&<button type="button" onClick={goBack}>{lang==="he"?"→ הקודם":"← Back"}</button>}
+     <button type="button" className="saveDraftBtn" onClick={saveDraft} disabled={savingDraft}>{savingDraft?(lang==="he"?"שומר…":"Saving…"):draftSavedAt?(lang==="he"?"✓ נשמר":"✓ Saved"):(lang==="he"?"💾 שמירה כטיוטה":"💾 Save draft")}</button>
      {formStep<TOTAL_STEPS&&<button type="button" className="primary" onClick={goNext}>{lang==="he"?(formStep===1?"המשך לזמן ולמשתתפים ←":"המשך להעדפות ←"):(formStep===1?"Next: timing & people →":"Next: preferences →")}</button>}
     </div>
    </div>

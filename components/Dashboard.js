@@ -4,7 +4,7 @@ import {useEffect,useState} from "react";
 import {firebaseConfigured} from "../lib/firebase";
 import {computeOwnerStats,deleteExperienceRemote} from "../lib/morivoData";
 
-export default function Dashboard({experience,experiences,setView,openExperience,activeId,setActiveId,t,lang,isMaster=false}){
+export default function Dashboard({experience,experiences,setView,openExperience,startAICreate,activeId,setActiveId,t,lang,isMaster=false}){
  const he=lang==="he";
  function goToCategory(view){
    if(activeId) setView(view);
@@ -48,7 +48,7 @@ export default function Dashboard({experience,experiences,setView,openExperience
        <h1>{d.heroTitle1}<span>{d.heroTitleHighlight}</span></h1>
        <p>{d.heroSub}</p>
        <div className="actions heroActions">
-         <button className="aiCta" onClick={()=>setView("ai")}><span className="spark">✦</span>{d.createWithAI}</button>
+         <button className="aiCta" onClick={startAICreate}><span className="spark">✦</span>{d.createWithAI}</button>
        </div>
      </div>
      <PhotoJourney/>
@@ -63,7 +63,7 @@ export default function Dashboard({experience,experiences,setView,openExperience
    </div>
 
    <div className="panel experiencePanel" id="yourExperiencesList">
-     <div className="sectionHead"><div><div className="tag">{d.yourExperiences}</div><h2>{d.yourExperiences}</h2></div><button className="roundCreate" onClick={()=>setView("ai")} aria-label={d.createWithAI}>＋</button></div>
+     <div className="sectionHead"><div><div className="tag">{d.yourExperiences}</div><h2>{d.yourExperiences}</h2></div><button className="roundCreate" onClick={startAICreate} aria-label={d.createWithAI}>＋</button></div>
      {rows.length>1&&<div className="experienceFilters">
        <input type="search" className="experienceSearch" placeholder={d.searchPlaceholder} value={search} onChange={e=>setSearch(e.target.value)} aria-label={d.searchPlaceholder}/>
        <div className="chipRow">
@@ -71,15 +71,15 @@ export default function Dashboard({experience,experiences,setView,openExperience
        </div>
      </div>}
      <div className="experienceGrid">
-     {visibleRows.map(x=><article className="experienceRow experienceRowClickable" key={x.id} role="button" tabIndex={0} onClick={()=>openExperience(x)} onKeyDown={e=>{if(e.key==="Enter"||e.key===" "){e.preventDefault();openExperience(x)}}}>
-       <ExperienceCover experience={x}><span className={"experienceStatus "+(x.paused?"paused":x.status==="live"?"live":"draft")}>{x.paused?(he?"מושהית":"Paused"):x.status==="live"?(he?"פעילה עכשיו":"Live now"):(he?"בדרך להרפתקה":"In the making")}</span><span className="experienceCoverPlace">{x.location||x.type||"MORIVO"}</span></ExperienceCover>
-       <div className="experienceInfo"><h3>{x.name||d.draft}</h3><p>{x.flow?.length||0} {he?"תחנות במסע":"stops in your story"}{x.startDate&&<> <span>·</span> {x.startDate}</>}</p></div>
+     {visibleRows.map(x=><article className="experienceRow experienceRowClickable" key={x.id} role="button" tabIndex={0} onClick={()=>openExperience(x,x.wizardDraft?"ai":"studio")} onKeyDown={e=>{if(e.key==="Enter"||e.key===" "){e.preventDefault();openExperience(x,x.wizardDraft?"ai":"studio")}}}>
+       <ExperienceCover experience={x}><span className={"experienceStatus "+(x.paused?"paused":x.status==="live"?"live":"draft")}>{x.paused?(he?"מושהית":"Paused"):x.status==="live"?(he?"פעילה עכשיו":"Live now"):x.wizardDraft?(he?"טיוטה לא גמורה":"Unfinished draft"):(he?"בדרך להרפתקה":"In the making")}</span><span className="experienceCoverPlace">{x.location||x.type||"MORIVO"}</span></ExperienceCover>
+       <div className="experienceInfo"><h3>{x.name||d.draft}</h3><p>{x.wizardDraft?(he?"להמשיך מאיפה שעצרתם":"Continue where you left off"):`${x.flow?.length||0} ${he?"תחנות במסע":"stops in your story"}`}{x.startDate&&<> <span>·</span> {x.startDate}</>}</p></div>
        <div className="rowActions">
-         <button className="openExperience" onClick={e=>{e.stopPropagation();openExperience(x)}}>{d.open}<span>→</span></button>
+         <button className="openExperience" onClick={e=>{e.stopPropagation();openExperience(x,x.wizardDraft?"ai":"studio")}}>{x.wizardDraft?(he?"להמשיך":"Resume"):d.open}<span>→</span></button>
          {firebaseConfigured && x.id && <button className="danger" disabled={deletingId===x.id} onClick={e=>remove(x,e)}>{deletingId===x.id?d.deleting:d.delete}</button>}
        </div>
      </article>)}
-     {!rows.length&&<div className="dashboardEmpty"><img src="/morivo-memories.svg" alt=""/><div><h3>{he?"הסיפור הבא שלכם מתחיל כאן":"Your next story starts here"}</h3><p>{he?"טיול, יום הולדת או יום מיוחד ביחד — ספרו ל־Morivo מה מתכננים.":"A trip, a birthday or a day together — tell Morivo what you have in mind."}</p><button className="primary" onClick={()=>setView("ai")}>{d.createWithAI}</button></div></div>}
+     {!rows.length&&<div className="dashboardEmpty"><img src="/morivo-memories.svg" alt=""/><div><h3>{he?"הסיפור הבא שלכם מתחיל כאן":"Your next story starts here"}</h3><p>{he?"טיול, יום הולדת או יום מיוחד ביחד — ספרו ל־Morivo מה מתכננים.":"A trip, a birthday or a day together — tell Morivo what you have in mind."}</p><button className="primary" onClick={startAICreate}>{d.createWithAI}</button></div></div>}
      {rows.length>0&&!visibleRows.length&&<p className="contextHint">{d.noMatches}</p>}
      </div>
    </div>
