@@ -54,4 +54,33 @@ const dayGroup=mixedGroups.find(g=>g.key==="day-3");
 assert.ok(dayGroup,"a German 'Tag 3' title must still be recognized as day 3, not fall through to a bogus 'general' group");
 assert.equal(dayGroup.label,"Day 3");
 
-console.log("Route grouping: explicit destination tags, text-matching fallback, comma-joined-destination guard and multi-language day fallback all checked");
+// Hotel/attraction choice missions (tagged isCoordination - see routeExtras.js) must form their
+// own "Coordination" group, placed first, and must never be counted toward or merged into the
+// destination/day grouping below them - a single-destination trip with a coordination section
+// is still "single destination" for everything except that dedicated group.
+const coordFlow=[
+ {id:"hotel-1",title:"Where to Stay",text:"...",isCoordination:true},
+ {id:"poll-1",title:"What should we do?",text:"...",isCoordination:true},
+ {id:"1",title:"Day 1 - Arrival",text:"Explore Bangkok streets.",destination:"Bangkok",day:1},
+ {id:"2",title:"Day 2 - Beach",text:"Relax in Phuket sun.",destination:"Phuket",day:2},
+];
+const coordGroups=buildRouteGroups({destinations:["Bangkok","Phuket"]},coordFlow,false);
+assert.equal(coordGroups[0].key,"coordination","the coordination group must come first");
+assert.deepEqual(coordGroups[0].missions.map(({m})=>m.id),["hotel-1","poll-1"]);
+assert.equal(coordGroups.length,3,"coordination group plus the two real destination groups, not merged together");
+assert.ok(!coordGroups[0].destination,"the coordination group must never be treated as a destination stop");
+
+// Same guarantee for a single-destination trip: the coordination group splits off cleanly
+// instead of forcing the whole flow into one combined "single" group.
+const singleDestFlow=[
+ {id:"hotel-1",title:"Where to Stay",text:"...",isCoordination:true},
+ {id:"1",title:"Day 1",text:"Arrival.",destination:"Bangkok",day:1},
+ {id:"2",title:"Day 2",text:"More Bangkok.",destination:"Bangkok",day:2},
+];
+const singleDestGroups=buildRouteGroups({destinations:["Bangkok"]},singleDestFlow,false);
+assert.equal(singleDestGroups.length,2);
+assert.equal(singleDestGroups[0].key,"coordination");
+assert.equal(singleDestGroups[1].key,"single");
+assert.deepEqual(singleDestGroups[1].missions.map(({m})=>m.id),["1","2"]);
+
+console.log("Route grouping: explicit destination tags, text-matching fallback, comma-joined-destination guard, multi-language day fallback and coordination-section split all checked");

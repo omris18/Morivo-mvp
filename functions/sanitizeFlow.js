@@ -46,6 +46,13 @@ function sanitizeFlow(rawFlow) {
       // other language, which is exactly the "structural problems with days" symptom reported.
       const dayNum = Number(m.day ?? m.dayNumber);
       if (Number.isFinite(dayNum)) atom.day = Math.max(1, Math.round(dayNum));
+      // A hotel/attraction choice mission (see insertExtrasIntoFlow in routeExtras.js) belongs to
+      // its own "Coordination" section, not the day-by-day journey - this mission never actually
+      // reaches sanitizeFlow today (those are built directly, not AI-generated), but reviseExperience
+      // round-trips every mission through here after an AI edit, and would otherwise silently drop
+      // this flag exactly like destination and day already were once each - see reviseExperience's
+      // own position-based backfill in index.js for the other half of that guarantee.
+      if (m.isCoordination) atom.isCoordination = true;
       return atom;
     });
 }

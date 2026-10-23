@@ -31,6 +31,15 @@ assert.equal(stringDay.day,3);
 const [floatDay]=sanitizeFlow([{type:'story',title:'Day 2',text:'Arrival',day:2.7}]);
 assert.equal(floatDay.day,3);
 
+// Same reasoning again for isCoordination: a hotel/attraction mission doesn't normally pass
+// through sanitizeFlow (it's built directly, not AI-generated - see routeExtras.js), but
+// reviseExperience round-trips every mission through here after an AI edit and must not silently
+// drop the flag, or an edited coordination mission would fall back into the day-by-day grouping.
+const [coordination]=sanitizeFlow([{type:'story',title:'Where to Stay',text:'...',isCoordination:true}]);
+assert.equal(coordination.isCoordination,true);
+const [notCoordination]=sanitizeFlow([{type:'story',title:'Day 1',text:'Arrival'}]);
+assert.equal('isCoordination' in notCoordination,false);
+
 // Untouched core behavior: id/type/title/text/reward/points still come out as before.
 const [basic]=sanitizeFlow([{type:'photo',title:'Take a photo',text:'Capture the moment',reward:'Badge',points:150}]);
 assert.equal(basic.type,'photo');
@@ -38,4 +47,4 @@ assert.equal(basic.title,'Take a photo');
 assert.equal(basic.points,150);
 assert.ok(basic.id.startsWith('photo-'));
 
-console.log('sanitizeFlow: destination and day tags preserved, trimmed/capped, and core mission fields unaffected');
+console.log('sanitizeFlow: destination, day and coordination tags preserved, trimmed/capped, and core mission fields unaffected');

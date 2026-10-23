@@ -18,14 +18,22 @@ export default function ParticipantJourneyMap({experience,flow,prog,idx,finished
  const mapRef=useRef(null);
  const [popup,setPopup]=useState(null);
  const rawGroups=buildRouteGroups(experience,flow,he);
- const singleDestination=rawGroups.length<=1&&rawGroups[0];
+ // The coordination group (hotel/attraction choice missions - see buildRouteGroups) isn't a
+ // physical place, so it's kept out of the single/multi-destination counting below (a trip with
+ // one real destination plus a coordination section is still a "single destination" trip for
+ // this map), then placed back as its own first stop so those missions stay reachable here -
+ // this map is the only way participants open a mission at all (see Participant.js).
+ const coordinationGroup=rawGroups.find(g=>g.key==="coordination");
+ const destinationGroups=rawGroups.filter(g=>g.key!=="coordination");
+ const singleDestination=destinationGroups.length<=1&&destinationGroups[0];
  // A trip with only one real destination shouldn't merge every mission into a single card -
  // it still gets the same curved multi-stop map, just with each mission as its own stop along
  // the route and the shared destination named once, at the top, instead of on every cube.
- const groups=singleDestination
-  ? rawGroups[0].missions.map(({m,i})=>({key:m.id,label:m.title,destination:rawGroups[0].destination,missions:[{m,i}]}))
-  : rawGroups;
- const destinationLabel=singleDestination?(rawGroups[0].label||experience.location||experience.name||""):"";
+ const expandedGroups=singleDestination
+  ? destinationGroups[0].missions.map(({m,i})=>({key:m.id,label:m.title,destination:destinationGroups[0].destination,missions:[{m,i}]}))
+  : destinationGroups;
+ const groups=coordinationGroup?[coordinationGroup,...expandedGroups]:expandedGroups;
+ const destinationLabel=singleDestination?(destinationGroups[0].label||experience.location||experience.name||""):"";
  // Stops are placed at evenly spaced heights (never following the curve's raw y), so two
  // stops can never land close enough to overlap regardless of how the decorative path winds.
  // X alternates left/right for the same "winding road" look without any collision risk.
@@ -75,8 +83,8 @@ export default function ParticipantJourneyMap({experience,flow,prog,idx,finished
      <div className="mapStopCard" role="button" tabIndex={0} onClick={openDefault} onKeyDown={e=>{if(e.key==="Enter"||e.key===" "){e.preventDefault();openDefault(e)}}}>
       {rangeText&&<span className="mapDayBadge">{rangeText}</span>}
       <div className="mapStopHead">
-       <span className="mapStopIcon">{g.missions.length===1?(typeIcons[g.missions[0].m.type]||"📍"):"📍"}</span>
-       <div className="mapStopCopy"><strong>{g.label}</strong><small>{hotel||(he?"תחנה במסע":"A stop on the journey")}</small></div>
+       <span className="mapStopIcon">{g.key==="coordination"?"🧭":g.missions.length===1?(typeIcons[g.missions[0].m.type]||"📍"):"📍"}</span>
+       <div className="mapStopCopy"><strong>{g.label}</strong><small>{hotel||(g.key==="coordination"?(he?"בחירות לפני היציאה לדרך":"Choices before you set off"):(he?"תחנה במסע":"A stop on the journey"))}</small></div>
       </div>
       <div className="mapStopActions">
        {navHref&&<a className="mapMiniBtn" href={navHref} target="_blank" rel="noopener noreferrer" onClick={e=>e.stopPropagation()}>📍 {p.navigate}</a>}
