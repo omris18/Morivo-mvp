@@ -286,7 +286,7 @@ export default function AICreator({setExperience,setView,setActiveId,user,lang,t
 
    <div className={"aiFormStep "+(formStep===2?"active":"")} data-step="2">
     {isMultiDayFamilyTrip?
-     <div className="fieldRow"><div><label>{a.startDate}</label><input type="date" value={form.startDate} onChange={e=>setForm({...form,startDate:e.target.value,endDate:form.endDate&&form.endDate<e.target.value?"":form.endDate})}/></div><div><label>{a.endDate}</label><input type="date" min={form.startDate||undefined} value={form.endDate} onChange={e=>setForm({...form,endDate:e.target.value})}/></div></div>
+     <div className="fieldRow"><div><label>{a.startDate}</label><input type="date" value={form.startDate} onChange={e=>{const v=e.target.value;setForm(f=>({...f,startDate:v,endDate:(!f.endDate||f.endDate<v)?v:f.endDate}))}}/></div><div><label>{a.endDate}</label><input type="date" min={form.startDate||undefined} value={form.endDate} onChange={e=>setForm({...form,endDate:e.target.value})}/></div></div>
      :isSingleDayFamilyTrip?
      <div className="fieldRow"><div><label>{a.duration}</label><select value={form.duration} onChange={e=>setForm({...form,duration:e.target.value})}><option value=""></option>{DURATION_OPTIONS[lang].map(x=><option key={x} value={x}>{x}</option>)}</select></div></div>
      :<div className="fieldRow"><div><label>{a.duration}</label><select value={form.duration} onChange={e=>setForm({...form,duration:e.target.value})}><option value=""></option>{DURATION_OPTIONS[lang].map(x=><option key={x} value={x}>{x}</option>)}</select></div><div><label>{a.people}</label><input type="number" value={form.people} onChange={e=>setForm({...form,people:e.target.value})}/></div></div>}

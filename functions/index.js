@@ -146,11 +146,16 @@ function extractJson(raw) {
 async function askGeminiJSON(promptText, label, opts) {
   const grounded = !!opts?.grounded;
   const validate = opts?.validate;
+  // A caller that's only using this as a best-effort enrichment on top of an already-reliable
+  // OpenAI fallback (see generateMissionsGrounded) can cap how many models deep it's worth
+  // trying - every extra model here is another full grounded-search round trip serially added
+  // to that chunk's total latency, directly eating into the one shared request timeout.
+  const models = Number.isFinite(opts?.maxModels) ? GEMINI_MODELS.slice(0, opts.maxModels) : GEMINI_MODELS;
   // A response that parses but fails the caller's own sanity check (e.g. a multi-destination
   // itinerary that revisits an earlier stop) is still better than nothing - keep the first one
   // that parses as a fallback while we keep trying the rest of the model chain for a clean one.
   let fallbackCandidate = null;
-  for (const model of GEMINI_MODELS) {
+  for (const model of models) {
     try {
       // Some models (esp. older ones) can't hold a full long trip's worth of real, named-place
       // detail in 8k tokens without the model itself truncating the day count to fit - give it
@@ -205,8 +210,19 @@ async function askGeminiJSON(promptText, label, opts) {
 // applied to the step organizers actually complained reads shallow and ungrounded.
 async function generateMissionsGrounded(systemPrompt, userPrompt, label) {
   const finalCheck = "Final language check: identify the language of the Description, not the destination. Write the experience name and every mission title, instruction and reward entirely in that language. A trip to Rome described in English must be written in English, never Italian or Spanish. Keep proper place names unchanged.";
-  const data = await askGeminiJSON(`${systemPrompt}\n\n${userPrompt}\n\n${finalCheck}`, label, { grounded: true });
-  return Array.isArray(data?.flow) && data.flow.length ? data : null;
+  try {
+    // Capped at 2 models (not the full GEMINI_MODELS chain) - this is a best-effort enrichment
+    // on top of the OpenAI call that already reliably built missions before this existed, so it
+    // must fail fast rather than spend most of the chunk's time budget on search-grounded
+    // retries before ever giving OpenAI a turn. askGeminiJSON itself never throws, but this is
+    // wrapped anyway so a bug here can never take down mission generation - only skip the
+    // enrichment and fall through to the proven OpenAI path below.
+    const data = await askGeminiJSON(`${systemPrompt}\n\n${userPrompt}\n\n${finalCheck}`, label, { grounded: true, maxModels: 2 });
+    return Array.isArray(data?.flow) && data.flow.length ? data : null;
+  } catch (err) {
+    console.error(`Gemini mission grounding failed unexpectedly (${label}), falling back to OpenAI`, err);
+    return null;
+  }
 }
 
 function optionsToMissionText(options, max, urlFor, location, urlOpts) {
