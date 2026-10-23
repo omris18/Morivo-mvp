@@ -1,6 +1,13 @@
 # Payments — what's done and what you still need to do
 
-Publishing a draft experience in Studio now requires payment first, priced per participant
+**Current status: built, but not yet switched on.** The two new functions
+(`createCheckoutSession`, `stripeWebhook`) are written but commented out in `functions/index.js`
+- the first deploy attempt with them active failed the *entire* deploy (not just these two
+functions), because they reference secrets that didn't exist yet. Once you've done steps 1–4
+below, ask Claude to uncomment those lines in `functions/index.js` and push - that's a one-line
+follow-up, not a rebuild.
+
+Publishing a draft experience in Studio will require payment first, priced per participant
 (adults + children for a family trip, or the participant count for any other experience type).
 The organizer pays once through a secure page Stripe hosts itself — nothing here ever touches a
 card number — and the publish button unlocks automatically once the payment confirms.
