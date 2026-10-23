@@ -83,4 +83,30 @@ assert.equal(singleDestGroups[0].key,"coordination");
 assert.equal(singleDestGroups[1].key,"single");
 assert.deepEqual(singleDestGroups[1].missions.map(({m})=>m.id),["1","2"]);
 
-console.log("Route grouping: explicit destination tags, text-matching fallback, comma-joined-destination guard, multi-language day fallback and coordination-section split all checked");
+// Existing experiences generated before isCoordination existed still have the three builder
+// functions' own old markers (functions/index.js: attractionsPollMission/hotelPollMission/
+// hotelMissionFromSelection) - the grouping must recognize those too, with no data migration,
+// so the new Coordination section applies retroactively to every already-generated experience.
+const legacyFlow=[
+ {id:"poll-1",type:"story",title:"What should we do?",text:"...",points:0,organizerDecides:true,isAttractionsPoll:true},
+ {id:"hotelpoll-1",type:"story",title:"Where should we stay?",text:"...",points:0,organizerDecides:true,isLocationPoll:true,isDestinationPoll:true},
+ {id:"hotel-1",type:"story",title:"Where to Stay",text:"...",points:0,organizerDecides:true},
+ {id:"1",title:"Day 1 - Arrival",text:"Explore Bangkok streets.",destination:"Bangkok",day:1},
+ {id:"2",title:"Day 2 - Beach",text:"Relax in Phuket sun.",destination:"Phuket",day:2},
+];
+const legacyGroups=buildRouteGroups({destinations:["Bangkok","Phuket"]},legacyFlow,false);
+assert.equal(legacyGroups[0].key,"coordination");
+assert.deepEqual(legacyGroups[0].missions.map(({m})=>m.id),["poll-1","hotelpoll-1","hotel-1"],"all three legacy marker shapes must be recognized, with no isCoordination flag at all");
+
+// A custom organizer-made mission that also happens to use organizerDecides (Studio lets an
+// organizer flag any story/branch mission that way for an unrelated group-decision moment) must
+// NOT be swept into Coordination just for that - only the exact auto-generated shape (points 0)
+// counts, and Studio's own default template starts new missions at 100 points.
+const customFlow=[
+ {id:"custom-1",type:"story",title:"Where should the group eat tonight?",text:"...",points:100,organizerDecides:true,destination:"Bangkok",day:3},
+ {id:"1",title:"Day 1 - Arrival",text:"Explore Bangkok streets.",destination:"Bangkok",day:1},
+];
+const customGroups=buildRouteGroups({destinations:["Bangkok"]},customFlow,false);
+assert.ok(!customGroups.some(g=>g.key==="coordination"),"a custom organizer mission with real points must stay in its own day/destination group, not get swept into Coordination");
+
+console.log("Route grouping: explicit destination tags, text-matching fallback, comma-joined-destination guard, multi-language day fallback, coordination-section split and legacy-marker/custom-mission guards all checked");
