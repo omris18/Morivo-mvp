@@ -49,8 +49,16 @@ jobs:
           node tests/reorderExperience.test.cjs
           node tests/experienceArtwork.test.cjs
 
+      # Every function added here used to also need adding, by name, to an explicit --only list
+      # below - and proposeItinerary never was. It silently never deployed through this workflow
+      # since the day it was written: every fix pushed to it this session (timeout increases,
+      # the day/destination-order chunking rework, the diagnostic error message) sat in git while
+      # production kept running whatever was last deployed manually, which is exactly why
+      # organizers kept hitting the same failure on the planning step after fixes that should
+      # have resolved it. Deploying the whole functions codebase removes this entire class of
+      # "forgot to add the new function to the list" bug instead of just patching this one gap.
       - name: Deploy experience generator
-        run: npx --yes firebase-tools@14 deploy --only functions:resolveParticipantIdentity,functions:generateExperience,functions:generateExperienceArtwork,functions:generateCelebrationCartoon,functions:reviseExperience,functions:translateExperience,functions:reorderExperience,functions:generateMemoryStory,functions:checkFlightStatuses --project morivo-mvp --non-interactive --force
+        run: npx --yes firebase-tools@14 deploy --only functions --project morivo-mvp --non-interactive --force
 
       - name: Deploy access rules
         run: npx --yes firebase-tools@14 deploy --only firestore:rules,storage --project morivo-mvp --non-interactive
