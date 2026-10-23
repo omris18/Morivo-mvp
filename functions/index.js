@@ -13,6 +13,7 @@ const geminiApiKey = defineSecret("GEMINI_API_KEY");
 const aerodataboxApiKey = defineSecret("AERODATABOX_API_KEY");
 const {normalizeMission} = require("./missionAnswers");
 const {sanitizeFlow, MISSION_TYPES} = require("./sanitizeFlow");
+const {insertExtrasIntoFlow} = require("./routeExtras");
 exports.generateExperienceArtwork = require("./experienceArtwork")(admin, openaiApiKey);
 exports.generateCelebrationCartoon = require("./celebrationCartoon")(admin, openaiApiKey);
 exports.reorderExperience = require("./reorderExperience")(admin);
@@ -835,21 +836,7 @@ exports.generateExperience = onCall({ secrets: [openaiApiKey, geminiApiKey], cor
 
   const [hotelMissions, attractionsMission] = await Promise.all([hotelMissionsPromise, attractionsMissionPromise]);
   const extras = [...hotelMissions, attractionsMission].filter(Boolean);
-  // Keep destination-specific approvals inside the matching part of a multi-day route.
-  // They must not become a global first step before the trip starts.
-  const routeFlow = [...flow];
-  for (const extra of extras) {
-    const destination = String(extra.destination || "").trim().toLowerCase();
-    if (!destination) { routeFlow.push(extra); continue; }
-    const words = destination.split(/[,/\s]+/).filter(Boolean);
-    const at = routeFlow.findIndex(m => {
-      const title = String(m.title || "").toLowerCase();
-      const text = String(m.text || "").toLowerCase();
-      return words.some(word => word.length > 2 && (title.includes(word) || text.includes(word)));
-    });
-    if (at >= 0) routeFlow.splice(at, 0, extra);
-    else routeFlow.push(extra);
-  }
+  const routeFlow = insertExtrasIntoFlow(flow, extras);
 
   return {
     name: String(generatedName || prompt).slice(0, 120),
