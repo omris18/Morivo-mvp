@@ -18,6 +18,18 @@
 #publish-experience{scroll-margin-block:90px}#screen-guide-title:focus,#ai-step-heading:focus{outline:none}
 @media(max-width:800px){.guidanceBody{align-items:flex-start;flex-direction:column;gap:15px}.guidanceActions{max-width:none}.experienceSteps{gap:5px}.experienceSteps button{font-size:11px;padding:7px;gap:6px}.screenGuidance{padding:18px}.guidanceBody h2{font-size:20px}}
 @media(max-width:500px){.experienceSteps{grid-template-columns:repeat(2,1fr)}.experienceSteps button{font-size:12px}.guidanceBody p{font-size:13px}.guidanceActions{width:100%}.guidanceActions button{flex:1}.shareLinkRow{align-items:stretch;flex-direction:column}.shareLinkRow input{font-size:16px}.experienceShare{padding:19px}.shareNextActions{gap:10px;align-items:flex-start;flex-direction:column}.shareNextActions button{width:100%}.screenGuidance{border-radius:19px}.experienceShare h3{font-size:19px}}
+/* Booking-style persistent bottom action bar: the primary "Next"/"Plan trip" button stays
+   reachable without scrolling the form, instead of trailing off after the last field.
+   position:sticky, not fixed - app/page.js wraps every screen in .viewFade, whose fade-in
+   animation ends on a non-"none" transform (translateY(0), kept by animation-fill-mode:both),
+   and any transform on an ancestor makes IT the containing block for position:fixed - the bar
+   would "stick" to .viewFade's own box and scroll away with it instead of the viewport. sticky
+   isn't affected by that (it resolves against the nearest scrolling ancestor, not a transformed
+   containing block), so it stays correctly pinned without needing to portal the bar out. */
+@media(max-width:700px){
+ .aiCreate .stepNav,.aiCreate .finalActions{position:sticky;bottom:0;z-index:40;margin:18px 0 0;padding:12px 16px calc(12px + env(safe-area-inset-bottom,0px));background:rgba(7,17,29,.95);backdrop-filter:blur(14px);border-top:1px solid rgba(255,255,255,.12);box-shadow:0 -8px 24px rgba(0,0,0,.3)}
+ .aiCreate .finalActions{justify-content:center}
+}
 @media print{.screenGuidance,.experienceShare,.contextHint{display:none!important}}
 
 .participantPersonalLink{margin:12px 0 20px;padding:14px;border:1px solid rgba(255,255,255,.1);border-radius:16px;background:#161c30;text-align:start;font-size:13px;color:#e5e7f0}.participantPersonalLink p{margin:0 0 10px;line-height:1.6}.participantPersonalLink code{display:block;direction:ltr;overflow-wrap:anywhere;margin-bottom:10px;font-size:12px}.participantPersonalLink button{padding:8px 14px;border:1px solid rgba(255,255,255,.14);border-radius:20px;background:#1a2036;color:#e5e7f0;cursor:pointer}
