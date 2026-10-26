@@ -806,9 +806,7 @@ export default function Studio({ experience, setExperience, setView, t, lang }) 
           const busy = publishing || paying;
           return <>
             {needsPayment && <p className="contextHint">
-              {waitingOnWebhook
-                ? (he ? "מאשרים את התשלום… זה יכול לקחת כמה שניות." : "Confirming your payment… this can take a few seconds.")
-                : (he ? `הפרסום כרוך בתשלום לפי ${participantCount} ${participantCount===1?"משתתף":"משתתפים"}.` : `Publishing requires payment for ${participantCount} ${participantCount===1?"participant":"participants"}.`)}
+              {waitingOnWebhook ? s.confirmingPayment : s.paymentRequiredFor(participantCount)}
             </p>}
             {payError && <p className="guidanceError" role="alert">⚠ {payError}</p>}
             <div className="actions studioPublishBar">
@@ -819,11 +817,11 @@ export default function Studio({ experience, setExperience, setView, t, lang }) 
                 if (needsPayment) { payAndContinue(); return; }
                 publish();
               }}>
-                {waitingOnWebhook ? (he?"ממתינים לאישור…":"Waiting for confirmation…")
-                  : paying ? (he?"פותחים את עמוד התשלום…":"Opening checkout…")
+                {waitingOnWebhook ? s.waitingConfirmation
+                  : paying ? s.openingCheckout
                   : publishing ? s.publishing
                   : experience.status==="live"&&experience.joinCode ? (he?"שיתוף וניהול החוויה":"Share & manage experience")
-                  : needsPayment ? (he?"💳 תשלום ופרסום":"💳 Pay & publish")
+                  : needsPayment ? s.payAndPublish
                   : s.publish}
               </button>
             </div>

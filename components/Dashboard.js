@@ -73,10 +73,10 @@ export default function Dashboard({experience,experiences,setView,openExperience
      </div>}
      <div className="experienceGrid">
      {visibleRows.map(x=><article className="experienceRow experienceRowClickable" key={x.id} role="button" tabIndex={0} onClick={()=>openExperience(x,x.wizardDraft?"ai":"studio")} onKeyDown={e=>{if(e.key==="Enter"||e.key===" "){e.preventDefault();openExperience(x,x.wizardDraft?"ai":"studio")}}}>
-       <ExperienceCover experience={x}><span className={"experienceStatus "+(x.paused?"paused":x.status==="live"?"live":"draft")}>{x.paused?(he?"מושהית":"Paused"):x.status==="live"?(he?"פעילה עכשיו":"Live now"):x.wizardDraft?(he?"טיוטה לא גמורה":"Unfinished draft"):(he?"בדרך להרפתקה":"In the making")}</span><span className="experienceCoverPlace">{x.location||x.type||"MORIVO"}</span></ExperienceCover>
-       <div className="experienceInfo"><h3>{x.name||d.draft}</h3><p>{x.wizardDraft?(he?"להמשיך מאיפה שעצרתם":"Continue where you left off"):`${x.flow?.length||0} ${he?"תחנות במסע":"stops in your story"}`}{x.startDate&&<> <span>·</span> {x.startDate}</>}</p></div>
+       <ExperienceCover experience={x}><span className={"experienceStatus "+(x.paused?"paused":x.status==="live"?"live":"draft")}>{x.paused?(he?"מושהית":"Paused"):x.status==="live"?(he?"פעילה עכשיו":"Live now"):x.wizardDraft?d.unfinishedDraft:(he?"בדרך להרפתקה":"In the making")}</span><span className="experienceCoverPlace">{x.location||x.type||"MORIVO"}</span></ExperienceCover>
+       <div className="experienceInfo"><h3>{x.name||d.draft}</h3><p>{x.wizardDraft?d.continueDraft:`${x.flow?.length||0} ${he?"תחנות במסע":"stops in your story"}`}{x.startDate&&<> <span>·</span> {x.startDate}</>}</p></div>
        <div className="rowActions">
-         <button className="openExperience" onClick={e=>{e.stopPropagation();openExperience(x,x.wizardDraft?"ai":"studio")}}>{x.wizardDraft?(he?"להמשיך":"Resume"):d.open}<span>→</span></button>
+         <button className="openExperience" onClick={e=>{e.stopPropagation();openExperience(x,x.wizardDraft?"ai":"studio")}}>{x.wizardDraft?d.resumeDraft:d.open}<span>→</span></button>
          {firebaseConfigured && x.id && <button className="danger" disabled={deletingId===x.id} onClick={e=>remove(x,e)}>{deletingId===x.id?d.deleting:d.delete}</button>}
        </div>
      </article>)}

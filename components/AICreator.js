@@ -7,6 +7,7 @@ import {httpsCallable} from "firebase/functions";
 import {firebaseConfigured,functions} from "../lib/firebase";
 import {createExperienceRemote,ensureUser,subscribeSiteAsset,generateBrandImageRemote,saveWizardDraftRemote,finalizeWizardDraftRemote} from "../lib/morivoData";
 import {showToast} from "../lib/toast";
+import {LANGS} from "../lib/i18n";
 
 function CircularProgress({pct}){
  const clamped=Math.max(0,Math.min(100,pct)),r=42,c=2*Math.PI*r;
@@ -21,11 +22,25 @@ function CircularProgress({pct}){
 }
 const TYPE_OPTIONS={
  en:["Family Trip","Family Day Trip","Birthday","Team Building","School","Museum"],
- he:["טיול משפחתי","טיול משפחתי חד יומי","יום הולדת","גיבוש צוות","בית ספר","מוזיאון"]
+ he:["טיול משפחתי","טיול משפחתי חד יומי","יום הולדת","גיבוש צוות","בית ספר","מוזיאון"],
+ de:["Familienreise","Familientagesausflug","Geburtstag","Teambuilding","Schule","Museum"],
+ pl:["Podróż rodzinna","Rodzinna wycieczka jednodniowa","Urodziny","Budowanie zespołu","Szkoła","Muzeum"],
+ el:["Οικογενειακό ταξίδι","Μονοήμερη οικογενειακή εκδρομή","Γενέθλια","Ομαδική συνεργασία","Σχολείο","Μουσείο"],
+ hu:["Családi utazás","Egynapos családi kirándulás","Születésnap","Csapatépítés","Iskola","Múzeum"],
+ ja:["家族旅行","家族日帰り旅行","誕生日","チームビルディング","学校","博物館"],
+ it:["Viaggio in famiglia","Gita di un giorno in famiglia","Compleanno","Team building","Scuola","Museo"],
+ th:["ทริปครอบครัว","ทริปครอบครัวแบบไปเช้าเย็นกลับ","วันเกิด","กิจกรรมสร้างทีม","โรงเรียน","พิพิธภัณฑ์"]
 };
 const DURATION_OPTIONS={
  en:["30 minutes","1 hour","2-3 hours","Half day (4-5 hours)","Full day"],
- he:["30 דקות","שעה","2-3 שעות","חצי יום (4-5 שעות)","יום שלם"]
+ he:["30 דקות","שעה","2-3 שעות","חצי יום (4-5 שעות)","יום שלם"],
+ de:["30 Minuten","1 Stunde","2-3 Stunden","Halbtags (4-5 Stunden)","Ganztags"],
+ pl:["30 minut","1 godzina","2-3 godziny","Pół dnia (4-5 godzin)","Cały dzień"],
+ el:["30 λεπτά","1 ώρα","2-3 ώρες","Μισή μέρα (4-5 ώρες)","Ολόκληρη μέρα"],
+ hu:["30 perc","1 óra","2-3 óra","Fél nap (4-5 óra)","Egész nap"],
+ ja:["30分","1時間","2〜3時間","半日(4〜5時間)","1日"],
+ it:["30 minuti","1 ora","2-3 ore","Mezza giornata (4-5 ore)","Giornata intera"],
+ th:["30 นาที","1 ชั่วโมง","2-3 ชั่วโมง","ครึ่งวัน (4-5 ชั่วโมง)","เต็มวัน"]
 };
 
 function daysBetween(start,end){
@@ -112,8 +127,8 @@ export default function AICreator({setExperience,setView,setActiveId,user,lang,t
   setFormStep(s=>Math.min(TOTAL_STEPS,s+1));
  }
  function goBack(){setStepError("");setFormStep(s=>Math.max(1,s-1))}
- const isMultiDayFamilyTrip=form.type===TYPE_OPTIONS.en[0]||form.type===TYPE_OPTIONS.he[0];
- const isSingleDayFamilyTrip=form.type===TYPE_OPTIONS.en[1]||form.type===TYPE_OPTIONS.he[1];
+ const isMultiDayFamilyTrip=LANGS.some(l=>form.type===TYPE_OPTIONS[l][0]);
+ const isSingleDayFamilyTrip=LANGS.some(l=>form.type===TYPE_OPTIONS[l][1]);
  const isFamilyTrip=isMultiDayFamilyTrip||isSingleDayFamilyTrip;
  const tripDays=isMultiDayFamilyTrip?daysBetween(form.startDate,form.endDate):0;
  const [heroArt,setHeroArt]=useState(null),[loadingArt,setLoadingArt]=useState(null),[generatingKey,setGeneratingKey]=useState(null);
@@ -295,7 +310,7 @@ export default function AICreator({setExperience,setView,setActiveId,user,lang,t
    </div>}
    <div className="actions">
     <button onClick={()=>setPhase("form")}>{a.backToDetails}</button>
-    <button type="button" onClick={saveDraft} disabled={savingDraft}>{savingDraft?(lang==="he"?"שומר…":"Saving…"):draftSavedAt?(lang==="he"?"✓ נשמר":"✓ Saved"):(lang==="he"?"💾 שמירה כטיוטה":"💾 Save draft")}</button>
+    <button type="button" onClick={saveDraft} disabled={savingDraft}>{savingDraft?a.savingDraft:draftSavedAt?a.savedDraft:a.saveDraft}</button>
     <button onClick={goPlan}>🔄 {a.regeneratePlan}</button>
     <button className="primary" onClick={build}>✦ {a.approveAndBuild}</button>
    </div>
@@ -356,7 +371,7 @@ export default function AICreator({setExperience,setView,setActiveId,user,lang,t
     <span className="stepIndicator">{lang==="he"?`שלב ${formStep} מתוך ${TOTAL_STEPS}`:`Step ${formStep} of ${TOTAL_STEPS}`}</span>
     <div className="stepNavBtns">
      {formStep>1&&<button type="button" onClick={goBack}>{lang==="he"?"→ הקודם":"← Back"}</button>}
-     <button type="button" className="saveDraftBtn" onClick={saveDraft} disabled={savingDraft}>{savingDraft?(lang==="he"?"שומר…":"Saving…"):draftSavedAt?(lang==="he"?"✓ נשמר":"✓ Saved"):(lang==="he"?"💾 שמירה כטיוטה":"💾 Save draft")}</button>
+     <button type="button" className="saveDraftBtn" onClick={saveDraft} disabled={savingDraft}>{savingDraft?a.savingDraft:draftSavedAt?a.savedDraft:a.saveDraft}</button>
      {formStep<TOTAL_STEPS&&<button type="button" className="primary" onClick={goNext}>{lang==="he"?(formStep===1?"המשך לזמן ולמשתתפים ←":"המשך להעדפות ←"):(formStep===1?"Next: timing & people →":"Next: preferences →")}</button>}
     </div>
    </div>

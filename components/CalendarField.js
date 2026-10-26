@@ -1,5 +1,6 @@
 "use client";
 import {useEffect,useRef,useState} from "react";
+import {STRINGS} from "../lib/i18n";
 
 function pad2(n){return String(n).padStart(2,"0")}
 function toISO(d){return `${d.getFullYear()}-${pad2(d.getMonth()+1)}-${pad2(d.getDate())}`}
@@ -16,6 +17,7 @@ function sameDay(a,b){return !!a&&!!b&&a.getFullYear()===b.getFullYear()&&a.getM
 // the `min` prop (the trip's start date) instead of always defaulting to today.
 export default function CalendarField({value,onChange,min,lang,dir,label,placeholder}){
  const locale=lang==="he"?"he-IL":(lang||"en-US");
+ const a=(STRINGS[lang]||STRINGS.en).aiCreator;
  const [open,setOpen]=useState(false);
  const minDate=parseISO(min);
  const valueDate=parseISO(value);
@@ -64,9 +66,9 @@ export default function CalendarField({value,onChange,min,lang,dir,label,placeho
   </button>
   {open&&<div className="calendarPopover" role="dialog" aria-label={label}>
    <div className="calendarPopoverHead">
-    <button type="button" onClick={()=>setViewDate(v=>addMonths(v,-1))} aria-label={lang==="he"?"חודש קודם":"Previous month"}>‹</button>
+    <button type="button" onClick={()=>setViewDate(v=>addMonths(v,-1))} aria-label={a.calendarPrevMonth}>‹</button>
     <strong>{monthLabel}</strong>
-    <button type="button" onClick={()=>setViewDate(v=>addMonths(v,1))} aria-label={lang==="he"?"חודש הבא":"Next month"}>›</button>
+    <button type="button" onClick={()=>setViewDate(v=>addMonths(v,1))} aria-label={a.calendarNextMonth}>›</button>
    </div>
    <div className="calendarWeekdays">{weekdayLabels.map((w,i)=><span key={i}>{w}</span>)}</div>
    <div className="calendarGrid">

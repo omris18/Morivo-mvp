@@ -28,7 +28,7 @@ export default function ExperienceRoute({experience,people=[],media=[],answers=[
  useEffect(()=>{const key=experience.id+context;if(automatic&&canGenerate&&!artReady&&(experience.name||experience.location)&&attempted.current!==key){attempted.current=key;generateBackground()}},[automatic,canGenerate,context,artReady,experience.id]);
  const index=Math.max(0,flow.findIndex(m=>m.id===selected)),mission=flow[index];
  const finished=people.filter(p=>!p.pending&&journeyFinished(p,flow)).length;
- const groups=buildRouteGroups(experience,flow,he);
+ const groups=buildRouteGroups(experience,flow,lang);
  const nextIndex=flow.findIndex((m,i)=>people.some(p=>!p.pending&&missionActive(p,m,flow)));
  const cartoonBg=theme.key==="celebration"&&experience.celebrationPortrait?.useAsBackground&&experience.celebrationPortrait?.cartoonUrl;
  const mapBackdrop=cartoonBg||(/(תאילנד|thailand|פוקט|phuket)/i.test(String(`${experience.name||""} ${experience.location||""} ${experience.story||""}`))?"/route-thailand.svg":"/route-journey.svg");
@@ -56,7 +56,7 @@ export default function ExperienceRoute({experience,people=[],media=[],answers=[
     return <button key={g.key} type="button" className={"journeyPathStop "+(allDone?"isDone ":"")+(isCurrent?"isCurrent ":"")} onClick={()=>document.getElementById("route-group-"+g.key)?.scrollIntoView({behavior:"smooth",block:"start"})}>
      <span className="journeyPathDot">{allDone?"✓":gi+1}</span>
      <span className="journeyPathLabel">{g.label}</span>
-     {dayRangeText(g.missions,he)&&<small>{dayRangeText(g.missions,he)}</small>}
+     {dayRangeText(g.missions,lang)&&<small>{dayRangeText(g.missions,lang)}</small>}
     </button>;
    })}
    <span className="journeyPathEdge" aria-hidden="true">🏁</span>
@@ -64,7 +64,7 @@ export default function ExperienceRoute({experience,people=[],media=[],answers=[
   {flow.length?<div className="routeLayout">
    <div className="routeJourneyMap" style={cartoonBg?{backgroundImage:`linear-gradient(rgba(255,255,255,.84),rgba(255,255,255,.84)),url(${mapBackdrop})`,backgroundSize:"cover",backgroundPosition:"center",backgroundRepeat:"no-repeat"}:{backgroundImage:`url(${mapBackdrop})`}} aria-label={he?"מפת המסע לפי ימים ויעדים":"Journey map by days and destinations"}>
     <div className="routeMapLegend"><span><i className="legendDone">✓</i>{he?"הושלם":"Completed"}</span><span><i className="legendCurrent">●</i>{he?"מתבצע עכשיו":"In progress"}</span><span><i className="legendNext">→</i>{he?"המשימה הבאה":"Next"}</span></div>
-    {groups.map(g=><section className="routeDayGroup" id={"route-group-"+g.key} key={g.key}><header><span className="routeDayBadge">{g.label}</span>{dayRangeText(g.missions,he)&&<small>{dayRangeText(g.missions,he)}</small>}</header><div className="routeMissionCircles">{g.missions.map(({m,i},stopIndex)=><Fragment key={m.id}><button className={"routeMissionCircle "+(people.length>0&&people.every(p=>p.pending||missionDone(p,m,i)?true:false)?"isDone ":"")+(people.some(p=>!p.pending&&missionActive(p,m,flow))?"isCurrent ":"")+(!people.some(p=>!p.pending&&missionActive(p,m,flow))&&i===nextIndex?"isNext ":"")} onClick={()=>setPopupMission(m)} aria-pressed={i===index} title={m.title}><span className="circleNumber">{people.length>0&&people.every(p=>p.pending||missionDone(p,m,i))?"✓":i+1}</span><span className="circleIcon">{icons[m.type]||theme.motif}</span><b>{m.title}</b><small>{people.length>0&&people.every(p=>p.pending||missionDone(p,m,i))?(he?"הושלם":"Done"):people.some(p=>!p.pending&&missionActive(p,m,flow))?(he?"עכשיו":"Now"):i===nextIndex?(he?"הבא":"Next"):(he?"ממתינה":"Upcoming")}</small></button></Fragment>)}</div></section>)}
+    {groups.map(g=><section className="routeDayGroup" id={"route-group-"+g.key} key={g.key}><header><span className="routeDayBadge">{g.label}</span>{dayRangeText(g.missions,lang)&&<small>{dayRangeText(g.missions,lang)}</small>}</header><div className="routeMissionCircles">{g.missions.map(({m,i},stopIndex)=><Fragment key={m.id}><button className={"routeMissionCircle "+(people.length>0&&people.every(p=>p.pending||missionDone(p,m,i)?true:false)?"isDone ":"")+(people.some(p=>!p.pending&&missionActive(p,m,flow))?"isCurrent ":"")+(!people.some(p=>!p.pending&&missionActive(p,m,flow))&&i===nextIndex?"isNext ":"")} onClick={()=>setPopupMission(m)} aria-pressed={i===index} title={m.title}><span className="circleNumber">{people.length>0&&people.every(p=>p.pending||missionDone(p,m,i))?"✓":i+1}</span><span className="circleIcon">{icons[m.type]||theme.motif}</span><b>{m.title}</b><small>{people.length>0&&people.every(p=>p.pending||missionDone(p,m,i))?(he?"הושלם":"Done"):people.some(p=>!p.pending&&missionActive(p,m,flow))?(he?"עכשיו":"Now"):i===nextIndex?(he?"הבא":"Next"):(he?"ממתינה":"Upcoming")}</small></button></Fragment>)}</div></section>)}
    </div>
    <div className="routeDetail">
     <RouteMissionPanel key={mission.id} mission={mission} index={index} flow={flow} people={people} media={media} answers={answers} onSave={onSaveMission} onSwap={onSwap?swap:undefined} onDirtyChange={setDirty} lang={lang}/>
