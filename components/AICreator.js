@@ -103,6 +103,10 @@ export default function AICreator({setExperience,setView,setActiveId,user,lang,t
  function goNext(){
   if(formStep===1&&!form.prompt.trim()){setStepError(a.describeFirst);document.querySelector('.aiPrompt')?.focus();return}
   if(formStep===1&&isMultiDayFamilyTrip&&!form.destinations.length){setStepError(a.addDestinationFirst);document.querySelector('.destinationInputRow input')?.focus();return}
+  // Duration/day count is derived from these dates server-side - leaving them blank (nothing in
+  // the UI visually flagged them as required) let a multi-day trip reach planning with no real
+  // day count to build from, producing a malformed or single-day plan with no indication why.
+  if(formStep===2&&isMultiDayFamilyTrip&&(!form.startDate||!form.endDate)){setStepError(a.addDatesFirst);document.querySelector('.calendarTrigger')?.focus();return}
   setStepError("");
   setFormStep(s=>Math.min(TOTAL_STEPS,s+1));
  }
@@ -144,6 +148,7 @@ export default function AICreator({setExperience,setView,setActiveId,user,lang,t
  async function goPlan(){
   if(!form.prompt.trim())return alert(a.describeFirst);
   if(isMultiDayFamilyTrip&&!form.destinations.length)return alert(a.addDestinationFirst);
+  if(isMultiDayFamilyTrip&&(!form.startDate||!form.endDate))return alert(a.addDatesFirst);
   if(!firebaseConfigured)return alert(a.needsFirebase);
   setPhase("planning");setPlanError(null);
   try{

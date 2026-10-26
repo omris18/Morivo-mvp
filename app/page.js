@@ -59,12 +59,26 @@ export default function Home(){
 
  useEffect(()=>{
    const saved=window.localStorage?.getItem("morivo_lang");
-   if(saved && STRINGS[saved]) setLang(saved);
    const savedCountry=window.localStorage?.getItem("morivo_country");
-   if(savedCountry && COUNTRY_FLAGS.some(f=>f.country===savedCountry)) setCountry(savedCountry);
-   else if(saved && STRINGS[saved]){
-     const match=COUNTRY_FLAGS.find(f=>f.lang===saved);
-     if(match) setCountry(match.country);
+   if(saved && STRINGS[saved]){
+     setLang(saved);
+     if(savedCountry && COUNTRY_FLAGS.some(f=>f.country===savedCountry)) setCountry(savedCountry);
+     else{ const match=COUNTRY_FLAGS.find(f=>f.lang===saved); if(match) setCountry(match.country); }
+     return;
+   }
+   // No saved preference yet - this is a Hebrew-first product, but every visitor otherwise
+   // landed in English (the useState default above) until they noticed the small flag switcher
+   // and changed it themselves. Match the browser's own language instead, same as the flag
+   // switcher itself would pick for that language.
+   const browserLangs=(navigator.languages?.length?navigator.languages:[navigator.language]).filter(Boolean);
+   for(const bl of browserLangs){
+     const code=String(bl).toLowerCase().split("-")[0];
+     if(STRINGS[code]){
+       setLang(code);
+       const match=COUNTRY_FLAGS.find(f=>f.lang===code);
+       if(match) setCountry(match.country);
+       break;
+     }
    }
  },[]);
  useEffect(()=>{

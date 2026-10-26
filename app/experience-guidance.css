@@ -17,7 +17,12 @@
 .screenGuidance button:focus-visible,.screenGuidance summary:focus-visible,.experienceShare button:focus-visible,.experienceShare input:focus-visible,.shareNextActions a:focus-visible{outline:3px solid #8b5cf6;outline-offset:3px}
 #publish-experience{scroll-margin-block:90px}#screen-guide-title:focus,#ai-step-heading:focus{outline:none}
 @media(max-width:800px){.guidanceBody{align-items:flex-start;flex-direction:column;gap:15px}.guidanceActions{max-width:none}.experienceSteps{gap:5px}.experienceSteps button{font-size:11px;padding:7px;gap:6px}.screenGuidance{padding:18px}.guidanceBody h2{font-size:20px}}
-@media(max-width:500px){.experienceSteps{grid-template-columns:repeat(2,1fr)}.experienceSteps button{font-size:12px}.guidanceBody p{font-size:13px}.guidanceActions{width:100%}.guidanceActions button{flex:1}.shareLinkRow{align-items:stretch;flex-direction:column}.shareLinkRow input{font-size:16px}.experienceShare{padding:19px}.shareNextActions{gap:10px;align-items:flex-start;flex-direction:column}.shareNextActions button{width:100%}.screenGuidance{border-radius:19px}.experienceShare h3{font-size:19px}}
+@media(max-width:500px){.experienceSteps{grid-template-columns:repeat(2,1fr)}.experienceSteps button{font-size:12px}.guidanceBody p{font-size:13px}.guidanceActions{width:100%}.guidanceActions button{flex:1}.shareLinkRow{align-items:stretch;flex-direction:column}.shareLinkRow input{font-size:16px}.experienceShare{padding:19px}.shareNextActions{gap:10px;align-items:flex-start;flex-direction:column}.shareNextActions button{width:100%}.screenGuidance{border-radius:19px}.experienceShare h3{font-size:19px}
+/* The step indicator ("Step 2 of 3") sharing a row with 3 buttons (Back/Save draft/Next) left
+   too little width for the buttons on a narrow phone, so they wrapped across 2-3 stacked rows -
+   stacking the indicator above instead gives the button row the full viewport width, which fits
+   all three on one row at this size. */
+.aiCreate .stepNav{flex-direction:column;align-items:stretch;gap:8px}.aiCreate .stepNavBtns{flex-wrap:nowrap}.aiCreate .stepNavBtns button{flex:1;padding:12px 8px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}}
 /* Booking-style persistent bottom action bar: the primary "Next"/"Plan trip" button stays
    reachable without scrolling the form, instead of trailing off after the last field.
    position:sticky, not fixed - app/page.js wraps every screen in .viewFade, whose fade-in
