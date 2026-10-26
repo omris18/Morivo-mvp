@@ -10,6 +10,7 @@ import {reorderExperienceRemote,updateMissionRemote} from "../lib/morivoData";
 import journeyProgress from "../functions/journeyProgress";
 import QRCode from "qrcode";
 import {firebaseConfigured} from "../lib/firebase";
+import {showToast} from "../lib/toast";
 import {subscribeEvents,subscribeParticipants,subscribeAllProgress,subscribeAnswers,sendOrganizerMessage,skipMissionForParticipant,awardBonusPoints,resetMissionForParticipant,updateExperienceRemote,addParticipantCode,subscribeParticipantCodes,removeParticipantCode,subscribeLocationVotes} from "../lib/morivoData";
 import {subscribeMedia} from "../lib/mediaData";
 import {writeNfcTag,nfcWriteSupported} from "../lib/nfc";
@@ -31,13 +32,13 @@ export default function Runtime({experience,setExperience,setView,t,user,lang,is
    const url=personalLink(code);
    try{
      await navigator.clipboard.writeText(url);
-     alert(r.personalLinkCopied(name));
+     showToast(r.personalLinkCopied(name), "success");
    }catch{
      window.prompt(r.personalLinkPrompt(name), url);
    }
  }
  async function addRoster(){
-   if(!firebaseConfigured)return alert(r.connectFirebaseCtrl);
+   if(!firebaseConfigured)return showToast(r.connectFirebaseCtrl);
    if(!rosterName.trim())return;
    setAddingRoster(true);
    try{
@@ -46,71 +47,71 @@ export default function Runtime({experience,setExperience,setView,t,user,lang,is
      setRosterName("");
      await copyPersonalLink(code,name);
    }
-   catch(e){ alert(e.message); }
+   catch(e){ showToast(e.message); }
    finally{ setAddingRoster(false); }
  }
  async function removeRoster(entry){
    if(!window.confirm(r.confirmRemoveRoster(entry.name)))return;
-   removeParticipantCode(entry.code).catch(e=>alert(e.message));
+   removeParticipantCode(entry.code).catch(e=>showToast(e.message));
  }
  async function writeTag(entry){
-   if(!nfcWriteSupported())return alert(r.nfcNotSupported);
+   if(!nfcWriteSupported())return showToast(r.nfcNotSupported);
    setWritingCode(entry.code);setWriteStatus(r.nfcWaiting);
    const url=`${window.location.origin}${window.location.pathname}?pcode=${entry.code}`;
    try{
      await writeNfcTag(url,{onStatus:(s)=>setWriteStatus(s==="writing"?r.nfcWriting:r.nfcWaiting)});
-     alert(r.nfcWriteSuccess(entry.name));
-   }catch(e){ alert(e.message); }
+     showToast(r.nfcWriteSuccess(entry.name), "success");
+   }catch(e){ showToast(e.message); }
    finally{ setWritingCode(null);setWriteStatus(""); }
  }
  function messageEveryone(){
-   if(!firebaseConfigured)return alert(r.connectFirebaseMsg);
+   if(!firebaseConfigured)return showToast(r.connectFirebaseMsg);
    const text=window.prompt(r.sendMessagePrompt);
-   if(text&&text.trim())sendOrganizerMessage(experience.id,text).catch(e=>alert(e.message));
+   if(text&&text.trim())sendOrganizerMessage(experience.id,text).catch(e=>showToast(e.message));
  }
  function skip(p){
-   if(!firebaseConfigured)return alert(r.connectFirebaseCtrl);
-   if(window.confirm(r.confirmSkip(p.name||p.participantName||"")))skipMissionForParticipant(experience.id,p.id,flow.length).catch(e=>alert(e.message));
+   if(!firebaseConfigured)return showToast(r.connectFirebaseCtrl);
+   if(window.confirm(r.confirmSkip(p.name||p.participantName||"")))skipMissionForParticipant(experience.id,p.id,flow.length).catch(e=>showToast(e.message));
  }
  function bonus(p){
-   if(!firebaseConfigured)return alert(r.connectFirebaseCtrl);
-   awardBonusPoints(experience.id,p.id,50).catch(e=>alert(e.message));
+   if(!firebaseConfigured)return showToast(r.connectFirebaseCtrl);
+   awardBonusPoints(experience.id,p.id,50).catch(e=>showToast(e.message));
  }
  function resetCell(p,m){
-   if(!firebaseConfigured)return alert(r.connectFirebaseCtrl);
+   if(!firebaseConfigured)return showToast(r.connectFirebaseCtrl);
    if(window.confirm(r.confirmResetMission(p.name||p.participantName||"",m.title)))
-     resetMissionForParticipant(experience.id,p.id,m.id).catch(e=>alert(e.message));
+     resetMissionForParticipant(experience.id,p.id,m.id).catch(e=>showToast(e.message));
  }
  async function generateNfcForParticipant(p){
-   if(!firebaseConfigured)return alert(r.connectFirebaseCtrl);
+   if(!firebaseConfigured)return showToast(r.connectFirebaseCtrl);
    const name=p.name||p.participantName||"";
    if(!name.trim())return;
    setGeneratingFor(p.id);
    try{
      const code=await addParticipantCode(experience.id, experience.ownerUid||user?.uid, name, p.id);
      await copyPersonalLink(code,name);
-   }catch(e){ alert(e.message); }
+   }catch(e){ showToast(e.message); }
    finally{ setGeneratingFor(null); }
  }
  async function copyJoinLink(){
    const url=`${window.location.origin}${window.location.pathname}?join=${experience.joinCode}`;
    try{
      await navigator.clipboard.writeText(url);
-     alert(r.joinLinkCopied);
+     showToast(r.joinLinkCopied, "success");
    }catch{
      window.prompt(r.joinLinkPrompt, url);
    }
  }
  function togglePause(){
-   if(!firebaseConfigured)return alert(r.connectFirebaseCtrl);
-   updateExperienceRemote(experience.id,{paused:!experience.paused}).catch(e=>alert(e.message));
+   if(!firebaseConfigured)return showToast(r.connectFirebaseCtrl);
+   updateExperienceRemote(experience.id,{paused:!experience.paused}).catch(e=>showToast(e.message));
  }
  function decideBranch(missionId,optionId){
-   if(!firebaseConfigured)return alert(r.connectFirebaseCtrl);
-   updateExperienceRemote(experience.id,{[`branchDecisions.${missionId}`]:optionId}).catch(e=>alert(e.message));
+   if(!firebaseConfigured)return showToast(r.connectFirebaseCtrl);
+   updateExperienceRemote(experience.id,{[`branchDecisions.${missionId}`]:optionId}).catch(e=>showToast(e.message));
  }
  function decideLocation(missionId,optionIds){
-   if(!firebaseConfigured)return alert(r.connectFirebaseCtrl);
+   if(!firebaseConfigured)return showToast(r.connectFirebaseCtrl);
    const patch={[`locationDecisions.${missionId}`]:optionIds};
    const mission=flow.find(m=>m.id===missionId);
    // A hotel-type decision (not an attractions multi-pick) names the winning option directly
@@ -121,7 +122,7 @@ export default function Runtime({experience,setExperience,setView,t,user,lang,is
      const chosen=allOptions.find(o=>o.id===optionIds[0]);
      if(chosen?.name)patch.flow=flow.map(m=>m.id===missionId?{...m,hotel:chosen.name}:m);
    }
-   updateExperienceRemote(experience.id,patch).catch(e=>alert(e.message));
+   updateExperienceRemote(experience.id,patch).catch(e=>showToast(e.message));
    setPendingAttractionPicks(prev=>{const next={...prev};delete next[missionId];return next});
  }
  function votersFor(missionId,optionId){
@@ -139,7 +140,7 @@ export default function Runtime({experience,setExperience,setView,t,user,lang,is
  useEffect(()=>{if(!firebaseConfigured||!experience.id||experience.id==="thailand-demo"){setPeople([]);setProgress([]);setFeed([]);setMedia([]);setAnswers([]);setLocationVotes([]);return}
  const a=subscribeParticipants(experience.id,setPeople),b=subscribeEvents(experience.id,evs=>setFeed(evs.map(x=>x.text))),c=subscribeMedia(experience.id,setMedia),d=subscribeAllProgress(experience.id,setProgress),e=subscribeAnswers(experience.id,setAnswers),f=subscribeLocationVotes(experience.id,setLocationVotes);return()=>{a();b();c();d();e();f()}},[experience.id]);
  useEffect(()=>{if(!experience.joinCode){setQrDataUrl(null);return}const link=`${window.location.origin}${window.location.pathname}?join=${experience.joinCode}`;QRCode.toDataURL(link,{margin:1,width:160,color:{dark:"#050b13",light:"#ffffff"}}).then(setQrDataUrl).catch(()=>setQrDataUrl(null))},[experience.joinCode]);
- useEffect(()=>{if(!firebaseConfigured||!experience.id||experience.id==="thailand-demo")return;return subscribeParticipantCodes(experience.id,setRoster,e=>alert(r.rosterLoadError(e.message)))},[experience.id]);
+ useEffect(()=>{if(!firebaseConfigured||!experience.id||experience.id==="thailand-demo")return;return subscribeParticipantCodes(experience.id,setRoster,e=>showToast(r.rosterLoadError(e.message)))},[experience.id]);
  const flow=experience.flow||[];
  const canManage=!experience.id||user?.uid===experience.ownerUid||isMaster;
  async function swapMissions(firstId,secondId){const order=flow.map(m=>m.id),a=order.indexOf(firstId),b=order.indexOf(secondId);if(a<0||b<0)return;[order[a],order[b]]=[order[b],order[a]];if(firebaseConfigured&&experience.id)await reorderExperienceRemote(experience.id,order,flow.map(m=>m.id));else setExperience(prev=>({...prev,flow:order.map(id=>prev.flow.find(m=>m.id===id))}));}
@@ -148,7 +149,7 @@ export default function Runtime({experience,setExperience,setView,t,user,lang,is
   const matching=flow.filter(m=>m.type===type);
   const allOn=matching.length>0&&matching.every(m=>m.stamp);
   const nextFlow=flow.map(m=>m.type===type?{...m,stamp:!allOn}:m);
-  if(firebaseConfigured&&experience.id)await updateExperienceRemote(experience.id,{flow:nextFlow}).catch(e=>alert(e.message));
+  if(firebaseConfigured&&experience.id)await updateExperienceRemote(experience.id,{flow:nextFlow}).catch(e=>showToast(e.message));
   else setExperience(prev=>({...prev,flow:nextFlow}));
  }
  const merged=useMemo(()=>{

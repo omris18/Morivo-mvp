@@ -13,6 +13,7 @@ import {uploadMissionPhoto,subscribeMedia} from "../lib/mediaData";
 import {computeBadges} from "../lib/badges";
 import LinkifiedText from "./LinkifiedText";
 import {distanceMeters,getCurrentPosition} from "../lib/geo";
+import {showToast} from "../lib/toast";
 import {enablePushNotifications,pushSupported} from "../lib/push";
 import {experienceGradient} from "../lib/theme";
 import LangSwitcher from "./LangSwitcher";
@@ -164,7 +165,7 @@ export default function Participant({experience,setExperience,setView,setActiveI
  useEffect(()=>()=>stopScan(),[]);
  const hasGpsCheckpoint=mission&&Number.isFinite(mission.lat)&&Number.isFinite(mission.lng);
  const hasQrCheckpoint=mission&&!!mission.qrCode;
- async function checkLocation(){setLocStatus("checking");try{const {lat,lng}=await getCurrentPosition();const d=distanceMeters(lat,lng,mission.lat,mission.lng);setLocStatus({distance:d,within:d<=(mission.radius||150)})}catch(e){alert(e.message);setLocStatus(null)}}
+ async function checkLocation(){setLocStatus("checking");try{const {lat,lng}=await getCurrentPosition();const d=distanceMeters(lat,lng,mission.lat,mission.lng);setLocStatus({distance:d,within:d<=(mission.radius||150)})}catch(e){showToast(e.message);setLocStatus(null)}}
  function stopScan(){scanningRef.current=false;setScanning(false);streamRef.current?.getTracks().forEach(track=>track.stop());streamRef.current=null}
  function tick(){
   if(!scanningRef.current)return;
@@ -187,13 +188,13 @@ export default function Participant({experience,setExperience,setView,setActiveI
    await videoRef.current.play();
    scanningRef.current=true;setScanning(true);
    requestAnimationFrame(tick);
-  }catch(e){alert(e.message)}
+  }catch(e){showToast(e.message)}
  }
  useEffect(()=>{if(!prog.points)return;setBump(true);const timer=setTimeout(()=>setBump(false),450);return()=>clearTimeout(timer)},[prog.points]);
  async function join(){
   if(joining)return;
-  if(!name.trim())return alert(p.enterNameFirst);
-  if(!code.trim())return alert(p.enterCodeFirst);
+  if(!name.trim())return showToast(p.enterNameFirst);
+  if(!code.trim())return showToast(p.enterCodeFirst);
   setJoining(true);
   try{
    if(firebaseConfigured){
@@ -202,9 +203,9 @@ export default function Participant({experience,setExperience,setView,setActiveI
     acceptIdentity(result);
    }else setUid("demo");
    setJoined(true);
-  }catch(e){alert(e.message)}finally{setJoining(false)}
+  }catch(e){showToast(e.message)}finally{setJoining(false)}
  }
- async function enableNotifications(){setPushState("asking");try{await enablePushNotifications(eid,uid);setPushState("on")}catch(e){alert(e.message);setPushState("idle")}}
+ async function enableNotifications(){setPushState("asking");try{await enablePushNotifications(eid,uid);setPushState("on")}catch(e){showToast(e.message);setPushState("idle")}}
  // Shared by the active mission's uploader and the revisit popup: caps a batch at 15 files
  // and silently drops (with a notice) anything whose sanitized name matches a photo this
  // participant already uploaded for this mission, so the same shot never lands twice.
@@ -231,31 +232,31 @@ export default function Participant({experience,setExperience,setView,setActiveI
    await uploadMissionPhoto({experienceId:eid,mission:targetMission,file:batch[i],participantName:name,onProgress:filePct=>onOverallProgress(Math.round(((i+filePct/100)/batch.length)*100))});
   }
  }
- async function complete(){if(!mission)return;if(missionDayLocked)return alert(p.missionDayLockedHint(missionUnlocksOn?formatStopDate(missionUnlocksOn.toISOString().slice(0,10),lang):""));if(experience.paused)return alert(p.pausedByOrganizer);const isMedia=mission.type==="photo"||mission.type==="video";if(isMedia&&!files.length)return alert(p.chooseFirst(mission.type));if(mission.type==="note"&&!noteText.trim())return alert(p.writeSomethingFirst);if(mission.type==="puzzle"&&!puzzleAnswer.trim())return alert(p.writeSomethingFirst);if(mission.type==="puzzle"&&mission.answer&&!missionAnswers.answerMatches(puzzleAnswer,mission.answer))return alert(p.wrongAnswer);if(mission.type==="map"&&(hasGpsCheckpoint||hasQrCheckpoint)&&!((hasGpsCheckpoint&&locStatus&&locStatus.within)||(hasQrCheckpoint&&qrVerified)))return alert(p.getCloserFirst);setBusy(true);try{
+ async function complete(){if(!mission)return;if(missionDayLocked)return showToast(p.missionDayLockedHint(missionUnlocksOn?formatStopDate(missionUnlocksOn.toISOString().slice(0,10),lang):""));if(experience.paused)return showToast(p.pausedByOrganizer);const isMedia=mission.type==="photo"||mission.type==="video";if(isMedia&&!files.length)return showToast(p.chooseFirst(mission.type));if(mission.type==="note"&&!noteText.trim())return showToast(p.writeSomethingFirst);if(mission.type==="puzzle"&&!puzzleAnswer.trim())return showToast(p.writeSomethingFirst);if(mission.type==="puzzle"&&mission.answer&&!missionAnswers.answerMatches(puzzleAnswer,mission.answer))return showToast(p.wrongAnswer);if(mission.type==="map"&&(hasGpsCheckpoint||hasQrCheckpoint)&&!((hasGpsCheckpoint&&locStatus&&locStatus.within)||(hasQrCheckpoint&&qrVerified)))return showToast(p.getCloserFirst);setBusy(true);try{
    if(isMedia&&firebaseConfigured)await uploadBatch(mission,files,setPct);
    if(["note","puzzle"].includes(mission.type)&&firebaseConfigured)await saveMissionAnswer(eid,mission,mission.type==="note"?noteText.trim():puzzleAnswer.trim(),name);
    if(firebaseConfigured)await completeJourneyMission(eid,mission,idx,name);else setProg(pr=>({completedMissionIds:[...pr.completedMissionIds,mission.id],currentMissionIndex:idx+1,points:pr.points+(mission.points||100)}));
    setConfettiKey(k=>k+1);
    setFiles([]);setPct(0);setNoteText("");setUploadNotice("");
- }catch(e){alert(e.message)}finally{setBusy(false)}}
+ }catch(e){showToast(e.message)}finally{setBusy(false)}}
  async function uploadMoreForRevisit(){
   if(!revisitMission||!revisitFiles.length||revisitBusy)return;
   setRevisitBusy(true);
   try{
    await uploadBatch(revisitMission,revisitFiles,setRevisitPct);
    setRevisitFiles([]);setRevisitPct(0);setRevisitNotice(p.morePhotosUploaded);
-  }catch(e){alert(e.message)}finally{setRevisitBusy(false)}
+  }catch(e){showToast(e.message)}finally{setRevisitBusy(false)}
  }
  async function chooseBranch(option){
   if(!mission||busy)return;
-  if(experience.paused)return alert(p.pausedByOrganizer);
+  if(experience.paused)return showToast(p.pausedByOrganizer);
   const target=option.next?flow.findIndex(m=>m.id===option.next):flow.length;
   const nextIndex=target<0?flow.length:target;
   setBusy(true);
   try{
    if(firebaseConfigured)await completeJourneyMission(eid,mission,idx,name,{nextMissionId:option.next||null});
    else setProg(pr=>({completedMissionIds:[...pr.completedMissionIds,mission.id],currentMissionIndex:nextIndex,points:pr.points+(mission.points||0)}));
-  }catch(e){alert(e.message)}finally{setBusy(false)}
+  }catch(e){showToast(e.message)}finally{setBusy(false)}
  }
  async function completeLocationPoll(){
   if(!mission||busy)return;
@@ -263,7 +264,7 @@ export default function Participant({experience,setExperience,setView,setActiveI
   try{
    if(firebaseConfigured)await completeJourneyMission(eid,mission,idx,name);
    else setProg(pr=>({completedMissionIds:[...pr.completedMissionIds,mission.id],currentMissionIndex:idx+1,points:pr.points+(mission.points||0)}));
-  }catch(e){alert(e.message)}finally{setBusy(false)}
+  }catch(e){showToast(e.message)}finally{setBusy(false)}
  }
  async function voteLocation(optionId,customOption){
   if(!mission||!firebaseConfigured)return;
@@ -272,7 +273,7 @@ export default function Participant({experience,setExperience,setView,setActiveI
   const next=mission.isAttractionsPoll
    ?(current.includes(optionId)?current.filter(id=>id!==optionId):[...current,optionId])
    :[optionId];
-  try{await castLocationVote(eid,mission.id,next,name,customOption||null)}catch(e){alert(e.message)}
+  try{await castLocationVote(eid,mission.id,next,name,customOption||null)}catch(e){showToast(e.message)}
  }
  function customOptionsFor(missionId){
   const seen=new Map();
@@ -288,7 +289,7 @@ export default function Participant({experience,setExperience,setView,setActiveI
  }
  async function evaluateQuiz(opt){
   if(!mission||busy||quizFeedback)return;
-  if(experience.paused)return alert(p.pausedByOrganizer);
+  if(experience.paused)return showToast(p.pausedByOrganizer);
   setQuizAnswer(opt);
   const isCorrect=!mission.answer||missionAnswers.answerMatches(opt,mission.answer);
   if(!isCorrect){
@@ -308,7 +309,7 @@ export default function Participant({experience,setExperience,setView,setActiveI
      await saveMissionAnswer(eid,mission,opt,name);
      await completeJourneyMission(eid,{...mission,points:effectivePoints},idx,name);
     }else setProg(pr=>({completedMissionIds:[...pr.completedMissionIds,mission.id],currentMissionIndex:idx+1,points:pr.points+effectivePoints}));
-   }catch(e){alert(e.message)}finally{setBusy(false);setQuizFeedback(null);setQuizAnswer(null)}
+   }catch(e){showToast(e.message)}finally{setBusy(false);setQuizFeedback(null);setQuizAnswer(null)}
   },650);
  }
  if(portalResolving){

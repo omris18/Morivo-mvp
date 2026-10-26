@@ -3,6 +3,7 @@ import ExperienceCover from "./ExperienceCover";
 import {useEffect,useState} from "react";
 import {firebaseConfigured} from "../lib/firebase";
 import {computeOwnerStats,deleteExperienceRemote} from "../lib/morivoData";
+import {showToast} from "../lib/toast";
 
 export default function Dashboard({experience,experiences,setView,openExperience,startAICreate,activeId,setActiveId,t,lang,isMaster=false}){
  const he=lang==="he";
@@ -37,7 +38,7 @@ export default function Dashboard({experience,experiences,setView,openExperience
    if(!window.confirm(d.confirmDelete(x.name||"")))return;
    setDeletingId(x.id);
    try{await deleteExperienceRemote(x);if(activeId===x.id)setActiveId(null)}
-   catch(err){alert(err.message)}finally{setDeletingId(null)}
+   catch(err){showToast(err.message)}finally{setDeletingId(null)}
  }
 
  return <section className="dashboardPage dashboardWarm">

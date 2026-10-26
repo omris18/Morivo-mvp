@@ -8,6 +8,7 @@ import MemoryAlbum from "./MemoryAlbum";
 import DestinationBackdrop from "./DestinationBackdrop";
 import {getExperienceTheme,buildMemoryChapters,journeyFinished} from "../lib/experienceVisuals";
 import LinkifiedText from "./LinkifiedText";
+import {showToast} from "../lib/toast";
 
 function MediaThumb({m}){
  return m.contentType?.startsWith("video/")
@@ -59,7 +60,7 @@ export default function Memory({experience,setExperience,setView,t,user,publicVi
      const fn=httpsCallable(functions,"generateMemoryStory");
      const result=await fn({experienceId:exp.id});
      setExperience?.({...exp,memoryStory:result.data.story});
-   }catch(e){alert(e.message)}finally{setWriting(false)}
+   }catch(e){showToast(e.message)}finally{setWriting(false)}
  }
 
  async function setShared(value){
@@ -67,11 +68,11 @@ export default function Memory({experience,setExperience,setView,t,user,publicVi
    try{
      await updateExperienceRemote(exp.id,{memoryPublic:value});
      setExperience?.({...exp,memoryPublic:value});
-     if(value){try{await navigator.clipboard.writeText(shareUrl);alert(m2.shareLinkCopied)}catch{window.prompt(m2.shareLinkPrompt,shareUrl)}}
-   }catch(e){alert(e.message)}finally{setSharing(false)}
+     if(value){try{await navigator.clipboard.writeText(shareUrl);showToast(m2.shareLinkCopied,"success")}catch{window.prompt(m2.shareLinkPrompt,shareUrl)}}
+   }catch(e){showToast(e.message)}finally{setSharing(false)}
  }
  async function copyShareLink(){
-   try{await navigator.clipboard.writeText(shareUrl);alert(m2.shareLinkCopied)}
+   try{await navigator.clipboard.writeText(shareUrl);showToast(m2.shareLinkCopied,"success")}
    catch{window.prompt(m2.shareLinkPrompt,shareUrl)}
  }
 

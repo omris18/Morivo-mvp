@@ -6,6 +6,7 @@ import {useEffect,useRef,useState} from "react";
 import {httpsCallable} from "firebase/functions";
 import {firebaseConfigured,functions} from "../lib/firebase";
 import {createExperienceRemote,ensureUser,subscribeSiteAsset,generateBrandImageRemote,saveWizardDraftRemote,finalizeWizardDraftRemote} from "../lib/morivoData";
+import {showToast} from "../lib/toast";
 
 function CircularProgress({pct}){
  const clamped=Math.max(0,Math.min(100,pct)),r=42,c=2*Math.PI*r;
@@ -123,7 +124,7 @@ export default function AICreator({setExperience,setView,setActiveId,user,lang,t
  async function generateArt(key,setCustom){
   if(!canGenerateArt)return;
   setGeneratingKey(key);
-  try{const url=await generateBrandImageRemote(key,artContext);if(url)setCustom(url)}catch(e){alert(e.message)}finally{setGeneratingKey(null)}
+  try{const url=await generateBrandImageRemote(key,artContext);if(url)setCustom(url)}catch(e){showToast(e.message)}finally{setGeneratingKey(null)}
  }
  const shownHeroArt=customHeroArt,shownLoadingArt=customLoadingArt;
  function setChildrenCount(value){
@@ -146,10 +147,10 @@ export default function AICreator({setExperience,setView,setActiveId,user,lang,t
   return {prompt:form.prompt,type:form.type,location:form.location,duration:isMultiDayFamilyTrip?(tripDays?`${tripDays} days`:""):form.duration,startDate:isMultiDayFamilyTrip?form.startDate:null,endDate:isMultiDayFamilyTrip?form.endDate:null,people:isFamilyTrip?String(Number(form.adults||0)+Number(form.children||0)):form.people,peopleDetails:form.peopleDetails,adults:isFamilyTrip?Number(form.adults||0):null,children:isFamilyTrip?Number(form.children||0):null,childrenAges:isFamilyTrip?form.childrenAges.map(Number).filter(Number.isFinite):[],lang,multiDay:isMultiDayFamilyTrip,needsHotel,interests:isFamilyTrip?form.interests:[],destinations:isMultiDayFamilyTrip?form.destinations:[]};
  }
  async function goPlan(){
-  if(!form.prompt.trim())return alert(a.describeFirst);
-  if(isMultiDayFamilyTrip&&!form.destinations.length)return alert(a.addDestinationFirst);
-  if(isMultiDayFamilyTrip&&(!form.startDate||!form.endDate))return alert(a.addDatesFirst);
-  if(!firebaseConfigured)return alert(a.needsFirebase);
+  if(!form.prompt.trim())return showToast(a.describeFirst);
+  if(isMultiDayFamilyTrip&&!form.destinations.length)return showToast(a.addDestinationFirst);
+  if(isMultiDayFamilyTrip&&(!form.startDate||!form.endDate))return showToast(a.addDatesFirst);
+  if(!firebaseConfigured)return showToast(a.needsFirebase);
   setPhase("planning");setPlanError(null);
   try{
    await ensureUser();
@@ -179,7 +180,7 @@ export default function AICreator({setExperience,setView,setActiveId,user,lang,t
  // itinerary/selections too once past planning - as an ordinary (draft-status) experience doc,
  // so it shows up on the dashboard and can be resumed later exactly where it was left off.
  async function saveDraft(){
-  if(!firebaseConfigured)return alert(a.needsFirebase);
+  if(!firebaseConfigured)return showToast(a.needsFirebase);
   setSavingDraft(true);
   try{
    const u=user||await ensureUser();
@@ -199,7 +200,7 @@ export default function AICreator({setExperience,setView,setActiveId,user,lang,t
    const id=await saveWizardDraftRemote(u.uid,draftId,payload);
    if(!draftId){setDraftId(id);setActiveId(id);}
    setDraftSavedAt(Date.now());
-  }catch(e){alert(e.message)}finally{setSavingDraft(false)}
+  }catch(e){showToast(e.message)}finally{setSavingDraft(false)}
  }
  async function build(){
   const hasDestinations=(itinerary?.hotelsByDestination||[]).length>0;
@@ -242,8 +243,8 @@ export default function AICreator({setExperience,setView,setActiveId,user,lang,t
    const id=draftId?await finalizeWizardDraftRemote(draftId,u.uid,data,portrait):await createExperienceRemote(u.uid,data,portrait);
    setExperience({...data,id,ownerUid:u.uid});setActiveId(id);
    setView("studio");
-   if(aiError)alert(a.aiFailedNote+aiError);
-  }catch(e){alert(e.message);setBuilding(false)}
+   if(aiError)showToast(a.aiFailedNote+aiError);
+  }catch(e){showToast(e.message);setBuilding(false)}
  }
  if(building)return <section className="aiThinking" dir={dir}>
    <PhotoJourney building image={shownLoadingArt||undefined}/>

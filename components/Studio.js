@@ -7,6 +7,7 @@ import { firebaseConfigured, functions } from "../lib/firebase";
 import { publishExperienceRemote, updateExperienceRemote, reorderExperienceRemote, uploadFamilyPhoto, removeFamilyPuzzle, reshuffleFamilyPuzzleLayout, createCheckoutSessionRemote } from "../lib/morivoData";
 import LinkifiedText from "./LinkifiedText";
 import ExperienceShare from "./ExperienceShare";
+import {showToast} from "../lib/toast";
 import {missionLabels} from "../lib/experienceGuidance";
 import missionAnswers from "../functions/missionAnswers";
 import { getCurrentPosition, geocodeAddress } from "../lib/geo";
@@ -119,7 +120,7 @@ export default function Studio({ experience, setExperience, setView, t, lang }) 
       } catch (e) {
         setExperience(experience);
         setSaveError(true);
-        alert(s.saveFailed(e.message));
+        showToast(s.saveFailed(e.message));
       } finally {
         setSaving(false);
       }
@@ -157,7 +158,7 @@ export default function Studio({ experience, setExperience, setView, t, lang }) 
       const { lat, lng } = await getCurrentPosition();
       patch({ lat, lng });
     } catch (e) {
-      alert(e.message);
+      showToast(e.message);
     } finally {
       setLocating(false);
     }
@@ -179,7 +180,7 @@ export default function Studio({ experience, setExperience, setView, t, lang }) 
 
   async function reviseWithAI() {
     if (!revisePrompt.trim()) return;
-    if (!flow.length) return alert(s.addAtLeastOneMission);
+    if (!flow.length) return showToast(s.addAtLeastOneMission);
     setRevising(true);
     try {
       const revise = httpsCallable(functions, "reviseExperience");
@@ -187,7 +188,7 @@ export default function Studio({ experience, setExperience, setView, t, lang }) 
       await persist({ ...experience, flow: result.data.flow });
       setRevisePrompt("");
     } catch (e) {
-      alert(e.message);
+      showToast(e.message);
     } finally {
       setRevising(false);
     }
@@ -342,7 +343,7 @@ export default function Studio({ experience, setExperience, setView, t, lang }) 
     if (publishing) return;
 
     if (!flow.length) {
-      alert(s.addAtLeastOneMission);
+      showToast(s.addAtLeastOneMission);
       return;
     }
 
@@ -353,7 +354,7 @@ export default function Studio({ experience, setExperience, setView, t, lang }) 
         joinCode: "MORIVO26",
       });
 
-      alert(s.publishedDemo("MORIVO26"));
+      showToast(s.publishedDemo("MORIVO26"), "success");
       return;
     }
 
@@ -369,7 +370,7 @@ export default function Studio({ experience, setExperience, setView, t, lang }) 
 
       setJustPublished(true);
     } catch (e) {
-      alert(e.message);
+      showToast(e.message);
     } finally {
       setPublishing(false);
     }
@@ -418,14 +419,14 @@ export default function Studio({ experience, setExperience, setView, t, lang }) 
               className="flightAlertsBtn"
               disabled={flightAlertsState === "asking" || !!experience.organizerPushToken}
               onClick={async () => {
-                if (!experience.id) return alert(he ? "שמרו את החוויה קודם." : "Save the experience first.");
+                if (!experience.id) return showToast(he ? "שמרו את החוויה קודם." : "Save the experience first.");
                 setFlightAlertsState("asking");
                 try {
                   await enableOrganizerPushNotifications(experience.id);
                   setExperience({ ...experience, organizerPushToken: true });
                   setFlightAlertsState("on");
                 } catch (e) {
-                  alert(e.message);
+                  showToast(e.message);
                   setFlightAlertsState("idle");
                 }
               }}

@@ -13,6 +13,7 @@ import Memory from "../components/Memory";
 import FirebaseStatus from "../components/FirebaseStatus";
 import Account from "../components/Account";
 import LangSwitcher from "../components/LangSwitcher";
+import ToastContainer from "../components/ToastContainer";
 import { firebaseConfigured, auth } from "../lib/firebase";
 import { onIdTokenChanged } from "firebase/auth";
 import { ensureUser, subscribeExperiences, subscribeExperience, completeGoogleRedirect } from "../lib/morivoData";
@@ -161,15 +162,15 @@ export default function Home(){
  })[view],[view,experience,experiences,user,isMaster,activeId,lang]);
 
  if(view==="portal"){
-   return <Participant {...props} portal chromeless portalCode={portalCode}/>;
+   return <><Participant {...props} portal chromeless portalCode={portalCode}/><ToastContainer dir={dir}/></>;
  }
 
  if(view==="participant" && deepLinkCode){
-   return <Participant {...props} chromeless/>;
+   return <><Participant {...props} chromeless/><ToastContainer dir={dir}/></>;
  }
 
  if(view==="memoryPublic"){
-   return <div className="memoryPublicShell" dir={dir}><Memory {...props} publicView memoryId={memoryId}/></div>;
+   return <div className="memoryPublicShell" dir={dir}><Memory {...props} publicView memoryId={memoryId}/><ToastContainer dir={dir}/></div>;
  }
 
  return <div className="appShell" dir={dir}>
@@ -184,6 +185,7 @@ export default function Home(){
      </div>
      {isMaster&&activeId&&experience.ownerUid!==user?.uid&&["studio","runtime","memory"].includes(view)&&<div className="masterContext"><span>{lang==="he"?"מצב מאסטר · ניהול חוויה של משתמש אחר":"Master mode · managing another user's experience"}</span><button onClick={()=>setView("master")}>{lang==="he"?"כל החוויות":"All experiences"}</button></div>}
      <div className="viewFade" key={view}><ScreenGuidance {...props} view={view}/>{(!["studio","runtime","memory"].includes(view)||experience.id)&&Screen}</div>
+     <ToastContainer dir={dir}/>
    </main>
  </div>;
 }
