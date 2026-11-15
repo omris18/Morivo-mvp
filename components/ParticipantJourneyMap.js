@@ -1,4 +1,5 @@
 "use client";
+import missionPresentation from "../functions/missionPresentation";
 import {useRef,useState} from "react";
 import {buildRouteGroups,dayRangeText} from "../lib/routeGroups";
 import {routeLabels} from "../lib/i18n";
@@ -105,7 +106,7 @@ export default function ParticipantJourneyMap({experience,flow,prog,idx,finished
    <button type="button" className="participantMapMissionClose" onClick={()=>setPopup(null)} aria-label={tx(lang,"סגירה","Close")}>×</button>
    <div className="participantMapMissionMeta"><span>{typeIcons[popup.m.type]||"✨"}</span><small>{txf(lang,"משימה {0}","Mission {0}",popup.i+1)}</small></div>
    <strong>{popup.m.title}</strong>
-   <p>{popup.m.text||popup.m.description||""}</p>
+   <p>{missionPresentation.missionSummary(popup.m,lang)}</p>
    <div className={`participantMapMissionStatus ${completedIds.includes(popup.m.id)?"done":popup.isActive?"current":"locked"}`}>{completedIds.includes(popup.m.id)?`✓ ${p.missionDoneHint}`:popup.isActive?(tx(lang,"המשימה הנוכחית","Current mission")):`🔒 ${p.missionLockedHint}`}</div>
    <button type="button" className="participantMapMissionOpen" onClick={()=>{setPopup(null);onOpenMission(popup.m,popup.isActive)}}>{popup.isActive?p.openMission:(tx(lang,"הצגת פרטי המשימה","View mission details"))}</button>
   </div>}
