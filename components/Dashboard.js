@@ -1,3 +1,4 @@
+import coordination from "../functions/coordination";
 import PhotoJourney from "./PhotoJourney";
 import ExperienceCover from "./ExperienceCover";
 import {useEffect,useState} from "react";
@@ -75,7 +76,7 @@ export default function Dashboard({experience,experiences,setView,openExperience
      <div className="experienceGrid">
      {visibleRows.map(x=><article className="experienceRow experienceRowClickable" key={x.id} role="button" tabIndex={0} onClick={()=>openExperience(x,x.wizardDraft?"ai":"studio")} onKeyDown={e=>{if(e.key==="Enter"||e.key===" "){e.preventDefault();openExperience(x,x.wizardDraft?"ai":"studio")}}}>
        <ExperienceCover experience={x}><span className={"experienceStatus "+(x.paused?"paused":x.status==="live"?"live":"draft")}>{x.paused?(tx(lang,"מושהית","Paused")):x.status==="live"?(tx(lang,"פעילה עכשיו","Live now")):x.wizardDraft?d.unfinishedDraft:(tx(lang,"בדרך להרפתקה","In the making"))}</span><span className="experienceCoverPlace">{x.location||x.type||"MORIVO"}</span></ExperienceCover>
-       <div className="experienceInfo"><h3>{x.name||d.draft}</h3><p>{x.wizardDraft?d.continueDraft:`${x.flow?.length||0} ${tx(lang,"תחנות במסע","stops in your story")}`}{x.startDate&&<> <span>·</span> {x.startDate}</>}</p></div>
+       <div className="experienceInfo"><h3>{x.name||d.draft}</h3><p>{x.wizardDraft?d.continueDraft:`${coordination.journeyFlow(x.flow||[]).length} ${tx(lang,"תחנות במסע","stops in your story")}`}{x.startDate&&<> <span>·</span> {x.startDate}</>}</p></div>
        <div className="rowActions">
          <button className="openExperience" onClick={e=>{e.stopPropagation();openExperience(x,x.wizardDraft?"ai":"studio")}}>{x.wizardDraft?d.resumeDraft:d.open}<span>→</span></button>
          {firebaseConfigured && x.id && <button className="danger" disabled={deletingId===x.id} onClick={e=>remove(x,e)}>{deletingId===x.id?d.deleting:d.delete}</button>}

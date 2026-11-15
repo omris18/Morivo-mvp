@@ -9,7 +9,7 @@ export default function CoordinationPanel({experience,uid,name,votes,lang}){
  const [open,setOpen]=useState(false),[index,setIndex]=useState(0),[busy,setBusy]=useState(false),[error,setError]=useState(""),[suggestion,setSuggestion]=useState("");
  const opened=useRef(null),L=(he,en)=>tx(lang,he,en);
  const pending=polls.filter(m=>!experience.locationDecisions?.[m.id]?.length);
- useEffect(()=>{if(uid&&polls.length&&opened.current!==experience.id){opened.current=experience.id;if(pending.length)setOpen(true)}},[uid,experience.id,polls.length,pending.length]);
+ useEffect(()=>{if(uid&&polls.length&&opened.current!==experience.id){opened.current=experience.id;if(pending.length){setIndex(polls.findIndex(m=>m.id===pending[0].id));setOpen(true)}}},[uid,experience.id,polls.length,pending.length]);
  useEffect(()=>{if(!open)return;const key=e=>{if(e.key==='Escape')setOpen(false)};window.addEventListener('keydown',key);return()=>window.removeEventListener('keydown',key)},[open]);
  if(!polls.length)return null;
  const poll=polls[Math.min(index,polls.length-1)];

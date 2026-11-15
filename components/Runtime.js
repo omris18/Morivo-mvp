@@ -180,14 +180,14 @@ export default function Runtime({experience,setExperience,setView,t,user,lang,is
    return <>
     <div className="panel routeDecisionsPanel">
      <div className="tag">{r.locationPollsTitle}</div>
-     <p className="rosterHint">{pendingCount>0?r.pendingDecisionsCount(pendingCount):r.locationPollsHint}</p>
+     <p className="rosterHint">{pendingCount>0?r.pendingDecisionsCount(pendingCount):tx(lang,"המשתתפים שולחים העדפות; בחרו את ההחלטה הסופית שתוצג לכולם. ההצבעות נפרדות ממשימות המסע.","Participants share preferences; approve the final choices for everyone. Polls are separate from journey missions.")}</p>
      <button type="button" className="primary" onClick={()=>setDecisionsModalOpen(true)}>{r.pollResultsButton}</button>
     </div>
     {decisionsModalOpen&&typeof document!=="undefined"&&createPortal(<div className="orgDecisionsOverlay" role="presentation" onClick={()=>setDecisionsModalOpen(false)}>
      <div className="orgDecisionsModal" role="dialog" aria-modal="true" aria-label={r.locationPollsTitle} onClick={e=>e.stopPropagation()}>
       <button type="button" className="orgDecisionsClose" aria-label={r.closeModal} onClick={()=>setDecisionsModalOpen(false)}>×</button>
       <div className="tag">{r.locationPollsTitle}</div>
-      <p className="rosterHint">{r.locationPollsHint}</p>
+      <p className="rosterHint">{tx(lang,"המשתתפים שולחים העדפות; בחרו את ההחלטה הסופית שתוצג לכולם. ההצבעות נפרדות ממשימות המסע.","Participants share preferences; approve the final choices for everyone. Polls are separate from journey missions.")}</p>
       {locationPolls.map(m=>{
         const decided=experience.locationDecisions?.[m.id];
         const isDecided=!!(decided&&decided.length);
