@@ -1,6 +1,6 @@
 "use client";
 import Memory from "./Memory";
-import {missionLabels,participantHint} from "../lib/experienceGuidance";
+import {participantHint} from "../lib/experienceGuidance";
 import missionAnswers from "../functions/missionAnswers";
 import journeyProgress from "../functions/journeyProgress";
 import {useEffect,useMemo,useRef,useState} from "react";
@@ -20,6 +20,7 @@ import LangSwitcher from "./LangSwitcher";
 import {isStampMission} from "../lib/stampMissions";
 import {unlockedPieces,gridIndexForPiece,pieceAtGridIndex} from "../lib/familyPuzzle";
 import {isMissionDayLocked,missionUnlockDate} from "../lib/experienceVisuals";
+import {tx,routeLabels,missionLabelsFor} from "../lib/i18n";
 function formatStopDate(dateStr,lang){
  try{ return new Intl.DateTimeFormat(lang==="he"?"he-IL":lang,{day:"numeric",month:"short"}).format(new Date(dateStr+"T00:00:00")); }
  catch{ return dateStr; }
@@ -92,7 +93,7 @@ export default function Participant({experience,setExperience,setView,setActiveI
  },[portalCode,deepLinkCode,resolveAttempt]);
  async function copyMyLink(){
   try{await navigator.clipboard.writeText(window.location.href);setLinkCopied(true)}
-  catch{window.prompt(lang==="he"?"הקישור האישי שלכם":"Your personal link",window.location.href)}
+  catch{window.prompt(tx(lang,"הקישור האישי שלכם","Your personal link"),window.location.href)}
  }
  useEffect(()=>{if(firebaseConfigured&&joined&&eid&&eid!=="thailand-demo")return subscribeExperience(eid,x=>x&&setExperience(x))},[eid,joined]);
  useEffect(()=>{if(firebaseConfigured&&joined&&eid&&eid!=="thailand-demo")return subscribeMedia(eid,setCoverMedia)},[joined,eid]);
@@ -316,7 +317,7 @@ export default function Participant({experience,setExperience,setView,setActiveI
   return <div className="portalShell" dir={dir} style={{backgroundImage:experienceGradient(portalCode)}}><div className="portalLoading">⏳ {p.portalResolving}</div></div>;
  }
  if(portalError){
-  return <div className="portalShell" dir={dir} style={{backgroundImage:experienceGradient(portalCode)}}><div className="portalLoading">⚠ {portalError}<div><button onClick={()=>setResolveAttempt(x=>x+1)}>{lang==="he"?"ניסיון נוסף":"Try again"}</button></div></div></div>;
+  return <div className="portalShell" dir={dir} style={{backgroundImage:experienceGradient(portalCode)}}><div className="portalLoading">⚠ {portalError}<div><button onClick={()=>setResolveAttempt(x=>x+1)}>{tx(lang,"ניסיון נוסף","Try again")}</button></div></div></div>;
  }
  const coverPhoto=coverMedia.find(m=>!m.contentType?.startsWith("video/"));
  const cartoonBg=experience.celebrationPortrait?.useAsBackground&&experience.celebrationPortrait?.cartoonUrl;
@@ -324,7 +325,7 @@ export default function Participant({experience,setExperience,setView,setActiveI
  const completedCount=(prog.completedMissionIds||[]).length;
  const progressPct=flow.length?Math.round((completedCount/flow.length)*100):0;
  const joinedContent=<>
- {personalCode&&<div className="participantPersonalLink"><p>{lang==="he"?"זה הקישור האישי שלכם — רענון או פתיחה מחדש מחזירים לאותה התקדמות. הקישור זמין גם אצל המארגן לתג NFC. שמרו אותו לעצמכם.":"This is your personal link. Refresh or reopen it to resume your progress. Your organizer has the same link for your NFC tag. Keep it private."}</p><code>{personalCode}</code><button onClick={copyMyLink}>{linkCopied?(lang==="he"?"הקישור הועתק":"Link copied"):(lang==="he"?"העתקת הקישור האישי":"Copy my personal link")}</button></div>}
+ {personalCode&&<div className="participantPersonalLink"><p>{tx(lang,"זה הקישור האישי שלכם — רענון או פתיחה מחדש מחזירים לאותה התקדמות. הקישור זמין גם אצל המארגן לתג NFC. שמרו אותו לעצמכם.","This is your personal link. Refresh or reopen it to resume your progress. Your organizer has the same link for your NFC tag. Keep it private.")}</p><code>{personalCode}</code><button onClick={copyMyLink}>{linkCopied?(tx(lang,"הקישור הועתק","Link copied")):(tx(lang,"העתקת הקישור האישי","Copy my personal link"))}</button></div>}
 
  {chromeless&&<div className="journeyGreeting"><h2>{p.welcomeGreeting(name)}</h2><p>{experienceName}</p></div>}
  <div className="participantHeader"><div><small>{experienceName}</small><h2>{finished?p.journeyComplete:p.missionOf(idx+1,flow.length)}</h2></div><div className={"pointsBadge "+(bump?"bump":"")}>{prog.points||0}<small>PTS</small></div></div>
@@ -364,14 +365,14 @@ export default function Participant({experience,setExperience,setView,setActiveI
   <button type="button" className="navBtn" onClick={()=>setAlbumOpen(true)}>🖼️<span>{p.navPhotos}</span></button>
   <button type="button" className="navBtn" onClick={()=>setHelpOpen(true)}>❓<span>{p.navHelp}</span></button>
  </nav>,document.body)}
- {passportOpen&&typeof document!=="undefined"&&createPortal(<div className="missionPopupOverlay" role="presentation" onClick={()=>setPassportOpen(false)}><div className="missionPopupCard passportCard" role="dialog" aria-modal="true" onClick={e=>e.stopPropagation()}><button type="button" className="missionPopupClose" aria-label={lang==="he"?"סגירה":"Close"} onClick={()=>setPassportOpen(false)}>×</button>
+ {passportOpen&&typeof document!=="undefined"&&createPortal(<div className="missionPopupOverlay" role="presentation" onClick={()=>setPassportOpen(false)}><div className="missionPopupCard passportCard" role="dialog" aria-modal="true" onClick={e=>e.stopPropagation()}><button type="button" className="missionPopupClose" aria-label={tx(lang,"סגירה","Close")} onClick={()=>setPassportOpen(false)}>×</button>
   <div className="passportCrest">🛂</div>
   <div className="missionPopupMeta">{p.passportKicker}</div>
   <h3>{experienceName}</h3>
   <div className="passportStampsHead"><span>{p.passportStampsTitle}</span><small>{p.stampsCount(earnedStamps.length)}</small></div>
   {earnedStamps.length===0
    ? <p className="passportEmpty">{p.passportEmptyHint}</p>
-   : <div className="passportStampGrid">{earnedStamps.map(m=><div className="passportStamp" key={m.id}><span className="passportStampIcon">{stampIcons[m.type]||"⭐"}</span><b>{m.day?(lang==="he"?`יום ${m.day}`:`Day ${m.day}`):m.title}</b></div>)}</div>}
+   : <div className="passportStampGrid">{earnedStamps.map(m=><div className="passportStamp" key={m.id}><span className="passportStampIcon">{stampIcons[m.type]||"⭐"}</span><b>{m.day?routeLabels(lang).day(m.day):m.title}</b></div>)}</div>}
   {badges.length>0&&<div className="badgeRow">{badges.map(b=><div className="badge" key={b.id} title={b.label}><span>{b.icon}</span><small>{b.label}</small></div>)}</div>}
   {experience.familyPuzzle?.url&&(()=>{
     const cols=4,rows=Math.ceil(puzzleTotal/cols);
@@ -399,13 +400,13 @@ export default function Participant({experience,setExperience,setView,setActiveI
    return <div className="puzzleFlyPiece" style={{backgroundImage:`url(${experience.familyPuzzle.url})`,backgroundSize:`${cols*100}% ${rows*100}%`,backgroundPosition:`${cols>1?col/(cols-1)*100:0}% ${rows>1?row/(rows-1)*100:0}%`}}/>;
  })(),document.body)}
  {confettiKey>0&&<Confetti key={confettiKey}/>}
- {albumOpen&&typeof document!=="undefined"&&createPortal(<div className="missionPopupOverlay" role="presentation" onClick={()=>setAlbumOpen(false)}><div className="missionPopupCard albumCard" role="dialog" aria-modal="true" onClick={e=>e.stopPropagation()}><button type="button" className="missionPopupClose" aria-label={lang==="he"?"סגירה":"Close"} onClick={()=>setAlbumOpen(false)}>×</button>
+ {albumOpen&&typeof document!=="undefined"&&createPortal(<div className="missionPopupOverlay" role="presentation" onClick={()=>setAlbumOpen(false)}><div className="missionPopupCard albumCard" role="dialog" aria-modal="true" onClick={e=>e.stopPropagation()}><button type="button" className="missionPopupClose" aria-label={tx(lang,"סגירה","Close")} onClick={()=>setAlbumOpen(false)}>×</button>
   <h3>{p.albumTitle}</h3>
   {(()=>{const mine=coverMedia.filter(m=>m.uid===uid);return mine.length===0
    ? <p className="passportEmpty">{p.albumEmpty}</p>
    : <div className="albumGrid">{mine.map(m=><a key={m.id} href={m.downloadURL} target="_blank" rel="noopener noreferrer" className="albumThumb">{m.contentType?.startsWith("video/")?<video src={m.downloadURL} muted/>:<img src={m.downloadURL} alt={m.missionTitle||""}/>}</a>)}</div>;})()}
  </div></div>,document.body)}
- {helpOpen&&typeof document!=="undefined"&&createPortal(<div className="missionPopupOverlay" role="presentation" onClick={()=>setHelpOpen(false)}><div className="missionPopupCard" role="dialog" aria-modal="true" onClick={e=>e.stopPropagation()}><button type="button" className="missionPopupClose" aria-label={lang==="he"?"סגירה":"Close"} onClick={()=>setHelpOpen(false)}>×</button>
+ {helpOpen&&typeof document!=="undefined"&&createPortal(<div className="missionPopupOverlay" role="presentation" onClick={()=>setHelpOpen(false)}><div className="missionPopupCard" role="dialog" aria-modal="true" onClick={e=>e.stopPropagation()}><button type="button" className="missionPopupClose" aria-label={tx(lang,"סגירה","Close")} onClick={()=>setHelpOpen(false)}>×</button>
   <div className="passportCrest">❓</div>
   <h3>{p.helpTitle}</h3>
   <p className="participantInstruction">{p.helpText1}</p>
@@ -413,14 +414,14 @@ export default function Participant({experience,setExperience,setView,setActiveI
   <p className="participantInstruction">{p.helpText3}</p>
   <button className="primary" onClick={()=>setHelpOpen(false)}>{p.helpGotIt}</button>
  </div></div>,document.body)}
- {missionPopupOpen&&mission&&!finished&&typeof document!=="undefined"&&createPortal(<div className="missionPopupOverlay" role="presentation" onClick={()=>setMissionPopupOpen(false)}><div className="missionPopupCard" role="dialog" aria-modal="true" onClick={e=>e.stopPropagation()}><button type="button" className="missionPopupClose" aria-label={lang==="he"?"סגירה":"Close"} onClick={()=>setMissionPopupOpen(false)}>×</button>{mission.day?<div className="missionPopupBadge">{mission.day}</div>:null}{popupMeta(mission,lang)&&<div className="missionPopupMeta">{popupMeta(mission,lang)}</div>}<div className="missionType">{missionLabels[lang==="he"?"he":"en"][mission.type]||mission.type}</div><h3>{mission.title}</h3><p className="participantInstruction">{participantHint(mission,lang)}</p><p><LinkifiedText text={mission.text}/></p>{mission.hotel&&<div className="journeyStopHotel">🏨 {mission.hotel}</div>}{navUrl(mission)&&<a className="journeyNavigateBtn" href={navUrl(mission)} target="_blank" rel="noopener noreferrer">🧭 {p.navigate}</a>}
+ {missionPopupOpen&&mission&&!finished&&typeof document!=="undefined"&&createPortal(<div className="missionPopupOverlay" role="presentation" onClick={()=>setMissionPopupOpen(false)}><div className="missionPopupCard" role="dialog" aria-modal="true" onClick={e=>e.stopPropagation()}><button type="button" className="missionPopupClose" aria-label={tx(lang,"סגירה","Close")} onClick={()=>setMissionPopupOpen(false)}>×</button>{mission.day?<div className="missionPopupBadge">{mission.day}</div>:null}{popupMeta(mission,lang)&&<div className="missionPopupMeta">{popupMeta(mission,lang)}</div>}<div className="missionType">{missionLabelsFor(lang)[mission.type]||mission.type}</div><h3>{mission.title}</h3><p className="participantInstruction">{participantHint(mission,lang,tx)}</p><p><LinkifiedText text={mission.text}/></p>{mission.hotel&&<div className="journeyStopHotel">🏨 {mission.hotel}</div>}{navUrl(mission)&&<a className="journeyNavigateBtn" href={navUrl(mission)} target="_blank" rel="noopener noreferrer">🧭 {p.navigate}</a>}
  {missionDayLocked&&<div className="dayLockedNotice">🔒 {p.missionDayLockedHint(missionUnlocksOn?formatStopDate(missionUnlocksOn.toISOString().slice(0,10),lang):"")}</div>}
  {!missionDayLocked&&<>
  {(mission.type==="photo"||mission.type==="video")&&<div className="uploadChoiceGrid">
   <label className="uploadChoiceCard"><input type="file" accept={mission.type==="photo"?"image/*":"video/*"} multiple onChange={e=>{stageFiles([...e.target.files],mission,files,setFiles,setUploadNotice);e.target.value=""}}/><span className="uploadChoiceIcon">🖼️</span><b>{p.chooseFromGallery}</b><small>{p.chooseFromGalleryHint}</small></label>
   <label className="uploadChoiceCard"><input type="file" accept={mission.type==="photo"?"image/*":"video/*"} capture="environment" onChange={e=>{stageFiles([...e.target.files],mission,files,setFiles,setUploadNotice);e.target.value=""}}/><span className="uploadChoiceIcon">📷</span><b>{p.takeNewMedia}</b><small>{p.takeNewMediaHint}</small></label>
  </div>}
- {(mission.type==="photo"||mission.type==="video")&&files.length>0&&<ul className="uploadStagedList">{files.map((f,i)=><li key={f.name+i}><span>✓ {f.name}</span><button type="button" onClick={()=>setFiles(files.filter((_,x)=>x!==i))} aria-label={lang==="he"?"הסרה":"Remove"}>×</button></li>)}</ul>}
+ {(mission.type==="photo"||mission.type==="video")&&files.length>0&&<ul className="uploadStagedList">{files.map((f,i)=><li key={f.name+i}><span>✓ {f.name}</span><button type="button" onClick={()=>setFiles(files.filter((_,x)=>x!==i))} aria-label={tx(lang,"הסרה","Remove")}>×</button></li>)}</ul>}
  {(mission.type==="photo"||mission.type==="video")&&uploadNotice&&<div className="uploadNotice">{uploadNotice}</div>}
  {(mission.type==="photo"||mission.type==="video")&&<small className="uploadLimitNote">{p.uploadLimitNote}</small>}
  {mission.type==="quiz"&&<>
@@ -485,23 +486,23 @@ export default function Participant({experience,setExperience,setView,setActiveI
  {mission.type!=="branch"&&!(mission.type==="story"&&mission.organizerDecides)&&<div className="mission">{p.reward}: {mission.reward||`${mission.points||100} pts`}</div>}
  {mission.type!=="branch"&&mission.type!=="quiz"&&!(mission.type==="story"&&mission.organizerDecides)&&<>{busy&&(mission.type==="photo"||mission.type==="video")&&<div className="uploadProgress"><div style={{width:`${pct}%`}}></div><span>{pct}%</span></div>}<button className="primary" disabled={busy||experience.paused} onClick={complete}>{busy?p.saving:p.completeContinue}</button></>}
  </>}</div></div>,document.body)}
- {revisitMission&&typeof document!=="undefined"&&createPortal(<div className="missionPopupOverlay" role="presentation" onClick={()=>setRevisitMission(null)}><div className="missionPopupCard" role="dialog" aria-modal="true" onClick={e=>e.stopPropagation()}><button type="button" className="missionPopupClose" aria-label={lang==="he"?"סגירה":"Close"} onClick={()=>setRevisitMission(null)}>×</button>{revisitMission.day?<div className="missionPopupBadge">{revisitMission.day}</div>:null}{popupMeta(revisitMission,lang)&&<div className="missionPopupMeta">{popupMeta(revisitMission,lang)}</div>}<div className="missionType">{missionLabels[lang==="he"?"he":"en"][revisitMission.type]||revisitMission.type}</div><h3>{revisitMission.title}</h3><div className="missionPopupStatus done">✓ {p.missionDoneHint}</div><p className="participantInstruction">{p.revisitUploadHint}</p>{revisitMission.hotel&&<div className="journeyStopHotel">🏨 {revisitMission.hotel}</div>}{navUrl(revisitMission)&&<a className="journeyNavigateBtn" href={navUrl(revisitMission)} target="_blank" rel="noopener noreferrer">🧭 {p.navigate}</a>}
+ {revisitMission&&typeof document!=="undefined"&&createPortal(<div className="missionPopupOverlay" role="presentation" onClick={()=>setRevisitMission(null)}><div className="missionPopupCard" role="dialog" aria-modal="true" onClick={e=>e.stopPropagation()}><button type="button" className="missionPopupClose" aria-label={tx(lang,"סגירה","Close")} onClick={()=>setRevisitMission(null)}>×</button>{revisitMission.day?<div className="missionPopupBadge">{revisitMission.day}</div>:null}{popupMeta(revisitMission,lang)&&<div className="missionPopupMeta">{popupMeta(revisitMission,lang)}</div>}<div className="missionType">{missionLabelsFor(lang)[revisitMission.type]||revisitMission.type}</div><h3>{revisitMission.title}</h3><div className="missionPopupStatus done">✓ {p.missionDoneHint}</div><p className="participantInstruction">{p.revisitUploadHint}</p>{revisitMission.hotel&&<div className="journeyStopHotel">🏨 {revisitMission.hotel}</div>}{navUrl(revisitMission)&&<a className="journeyNavigateBtn" href={navUrl(revisitMission)} target="_blank" rel="noopener noreferrer">🧭 {p.navigate}</a>}
   <div className="uploadChoiceGrid">
    <label className="uploadChoiceCard"><input type="file" accept={revisitMission.type==="photo"?"image/*":"video/*"} multiple onChange={e=>{stageFiles([...e.target.files],revisitMission,revisitFiles,setRevisitFiles,setRevisitNotice);e.target.value=""}}/><span className="uploadChoiceIcon">🖼️</span><b>{p.chooseFromGallery}</b><small>{p.chooseFromGalleryHint}</small></label>
    <label className="uploadChoiceCard"><input type="file" accept={revisitMission.type==="photo"?"image/*":"video/*"} capture="environment" onChange={e=>{stageFiles([...e.target.files],revisitMission,revisitFiles,setRevisitFiles,setRevisitNotice);e.target.value=""}}/><span className="uploadChoiceIcon">📷</span><b>{p.takeNewMedia}</b><small>{p.takeNewMediaHint}</small></label>
   </div>
-  {revisitFiles.length>0&&<ul className="uploadStagedList">{revisitFiles.map((f,i)=><li key={f.name+i}><span>✓ {f.name}</span><button type="button" onClick={()=>setRevisitFiles(revisitFiles.filter((_,x)=>x!==i))} aria-label={lang==="he"?"הסרה":"Remove"}>×</button></li>)}</ul>}
+  {revisitFiles.length>0&&<ul className="uploadStagedList">{revisitFiles.map((f,i)=><li key={f.name+i}><span>✓ {f.name}</span><button type="button" onClick={()=>setRevisitFiles(revisitFiles.filter((_,x)=>x!==i))} aria-label={tx(lang,"הסרה","Remove")}>×</button></li>)}</ul>}
   {revisitNotice&&<div className="uploadNotice">{revisitNotice}</div>}
   {revisitBusy&&<div className="uploadProgress"><div style={{width:`${revisitPct}%`}}></div><span>{revisitPct}%</span></div>}
   <button className="primary" disabled={revisitBusy||!revisitFiles.length} onClick={uploadMoreForRevisit}>{revisitBusy?p.saving:p.uploadMorePhotos}</button>
   <small className="uploadLimitNote">{p.uploadLimitNote}</small>
  </div></div>,document.body)}
- {viewingMission&&typeof document!=="undefined"&&createPortal(<div className="missionPopupOverlay" role="presentation" onClick={()=>setViewingMission(null)}><div className="missionPopupCard" role="dialog" aria-modal="true" onClick={e=>e.stopPropagation()}><button type="button" className="missionPopupClose" aria-label={lang==="he"?"סגירה":"Close"} onClick={()=>setViewingMission(null)}>×</button>{viewingMission.day?<div className="missionPopupBadge">{viewingMission.day}</div>:null}{popupMeta(viewingMission,lang)&&<div className="missionPopupMeta">{popupMeta(viewingMission,lang)}</div>}<div className="missionType">{missionLabels[lang==="he"?"he":"en"][viewingMission.type]||viewingMission.type}</div><h3>{viewingMission.title}</h3><p><LinkifiedText text={viewingMission.text}/></p>{viewingMission.hotel&&<div className="journeyStopHotel">🏨 {viewingMission.hotel}</div>}{navUrl(viewingMission)&&<a className="journeyNavigateBtn" href={navUrl(viewingMission)} target="_blank" rel="noopener noreferrer">🧭 {p.navigate}</a>}<div className={"missionPopupStatus "+((prog.completedMissionIds||[]).includes(viewingMission.id)?"done":"locked")}>{(prog.completedMissionIds||[]).includes(viewingMission.id)?`✓ ${p.missionDoneHint}`:`🔒 ${p.missionLockedHint}`}</div></div></div>,document.body)}
+ {viewingMission&&typeof document!=="undefined"&&createPortal(<div className="missionPopupOverlay" role="presentation" onClick={()=>setViewingMission(null)}><div className="missionPopupCard" role="dialog" aria-modal="true" onClick={e=>e.stopPropagation()}><button type="button" className="missionPopupClose" aria-label={tx(lang,"סגירה","Close")} onClick={()=>setViewingMission(null)}>×</button>{viewingMission.day?<div className="missionPopupBadge">{viewingMission.day}</div>:null}{popupMeta(viewingMission,lang)&&<div className="missionPopupMeta">{popupMeta(viewingMission,lang)}</div>}<div className="missionType">{missionLabelsFor(lang)[viewingMission.type]||viewingMission.type}</div><h3>{viewingMission.title}</h3><p><LinkifiedText text={viewingMission.text}/></p>{viewingMission.hotel&&<div className="journeyStopHotel">🏨 {viewingMission.hotel}</div>}{navUrl(viewingMission)&&<a className="journeyNavigateBtn" href={navUrl(viewingMission)} target="_blank" rel="noopener noreferrer">🧭 {p.navigate}</a>}<div className={"missionPopupStatus "+((prog.completedMissionIds||[]).includes(viewingMission.id)?"done":"locked")}>{(prog.completedMissionIds||[]).includes(viewingMission.id)?`✓ ${p.missionDoneHint}`:`🔒 ${p.missionLockedHint}`}</div></div></div>,document.body)}
  </>;
 
- const joinForm=<div className="participantJoin"><div className="participantJoinMark" aria-hidden="true"><span></span><span></span><span></span></div><div className="participantJoinEyebrow">MORIVO · EXPERIENCE</div><h2>{p.joinTitle}</h2><p className="joinInstructions">{lang==="he"?(code?"הקוד כבר מוכן. כתבו את השם שיופיע למארגן ולחצו על הצטרפות.":"קיבלתם קישור או קוד מהמארגן? הזינו שם וקוד כדי להתחיל. אין צורך ליצור חשבון."):(code?"Your code is ready. Enter the name the organizer should see, then join.":"Enter your name and the code from your organizer to get started. No account is needed.")}</p><label htmlFor="participant-name">{p.yourName}</label><input id="participant-name" autoComplete="name" value={name} placeholder={p.namePlaceholder} onChange={e=>setName(e.target.value)}/><label htmlFor="participant-code">{p.joinCode}</label><input id="participant-code" autoCapitalize="characters" value={code} onChange={e=>setCode(e.target.value.toUpperCase())} onKeyDown={e=>e.key==="Enter"&&join()}/><div className="actions centerActions"><button className="primary" disabled={joining} onClick={join}>{joining?p.joining:p.joinBtn}</button></div></div>;
+ const joinForm=<div className="participantJoin"><div className="participantJoinMark" aria-hidden="true"><span></span><span></span><span></span></div><div className="participantJoinEyebrow">MORIVO · EXPERIENCE</div><h2>{p.joinTitle}</h2><p className="joinInstructions">{code?tx(lang,"הקוד כבר מוכן. כתבו את השם שיופיע למארגן ולחצו על הצטרפות.","Your code is ready. Enter the name the organizer should see, then join."):tx(lang,"קיבלתם קישור או קוד מהמארגן? הזינו שם וקוד כדי להתחיל. אין צורך ליצור חשבון.","Enter your name and the code from your organizer to get started. No account is needed.")}</p><label htmlFor="participant-name">{p.yourName}</label><input id="participant-name" autoComplete="name" value={name} placeholder={p.namePlaceholder} onChange={e=>setName(e.target.value)}/><label htmlFor="participant-code">{p.joinCode}</label><input id="participant-code" autoCapitalize="characters" value={code} onChange={e=>setCode(e.target.value.toUpperCase())} onKeyDown={e=>e.key==="Enter"&&join()}/><div className="actions centerActions"><button className="primary" disabled={joining} onClick={join}>{joining?p.joining:p.joinBtn}</button></div></div>;
 
- const portalLangSwitch=<LangSwitcher country={country} selectLang={selectLang} label={lang==="he"?"שינוי שפה":"Change language"} className="portalLangSwitch"/>;
+ const portalLangSwitch=<LangSwitcher country={country} selectLang={selectLang} label={tx(lang,"שינוי שפה","Change language")} className="portalLangSwitch"/>;
 
  if(chromeless){
   return <div className="portalShell" dir={dir} style={{backgroundImage:portalBg}}><div className="portalCard">{portalLangSwitch}{!portal&&<div className="tag">{p.tag}</div>}{joined?joinedContent:joinForm}</div></div>;

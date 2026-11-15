@@ -13,9 +13,10 @@ import missionAnswers from "../functions/missionAnswers";
 import { getCurrentPosition, geocodeAddress } from "../lib/geo";
 import { pieceAtGridIndex } from "../lib/familyPuzzle";
 import { enableOrganizerPushNotifications, pushSupported } from "../lib/push";
+import {tx,missionLabelsFor} from "../lib/i18n";
 
 export default function Studio({ experience, setExperience, setView, t, lang }) {
-  const he=lang==="he",labels=missionLabels[he?"he":"en"];
+  const he=lang==="he",labels=missionLabelsFor(lang);
   const [justPublished,setJustPublished]=useState(false);
   useEffect(()=>{if(justPublished)document.getElementById("experience-share")?.scrollIntoView({behavior:"smooth",block:"center"})},[justPublished]);
   const s = t.studio;
@@ -335,7 +336,7 @@ export default function Studio({ experience, setExperience, setView, t, lang }) 
       const { url, alreadyPaid } = await createCheckoutSessionRemote(experience.id, `${base}?paid=1`, base) || {};
       if (alreadyPaid) { setPaying(false); publish(); return; }
       if (url) { window.location.href = url; return; }
-      setPayError(he ? "לא ניתן היה להתחיל את התשלום. נסו שוב." : "Couldn't start checkout. Please try again.");
+      setPayError(tx(lang,"לא ניתן היה להתחיל את התשלום. נסו שוב.","Couldn't start checkout. Please try again."));
       setPaying(false);
     } catch (e) {
       setPayError(e.message);
@@ -425,7 +426,7 @@ export default function Studio({ experience, setExperience, setView, t, lang }) 
               className="flightAlertsBtn"
               disabled={flightAlertsState === "asking" || !!experience.organizerPushToken}
               onClick={async () => {
-                if (!experience.id) return showToast(he ? "שמרו את החוויה קודם." : "Save the experience first.");
+                if (!experience.id) return showToast(tx(lang,"שמרו את החוויה קודם.","Save the experience first."));
                 setFlightAlertsState("asking");
                 try {
                   await enableOrganizerPushNotifications(experience.id);
@@ -438,10 +439,10 @@ export default function Studio({ experience, setExperience, setView, t, lang }) 
               }}
             >
               {experience.organizerPushToken
-                ? (he ? "🔔 התראות טיסה פעילות" : "🔔 Flight alerts on")
+                ? (tx(lang,"🔔 התראות טיסה פעילות","🔔 Flight alerts on"))
                 : flightAlertsState === "asking"
                   ? "…"
-                  : (he ? "🔔 קבלת התראות על שינויים בטיסות" : "🔔 Get notified about flight changes")}
+                  : (tx(lang,"🔔 קבלת התראות על שינויים בטיסות","🔔 Get notified about flight changes"))}
             </button>
           )}
         </div>
@@ -449,7 +450,7 @@ export default function Studio({ experience, setExperience, setView, t, lang }) 
         <div className="familyPuzzleBox">
           <div className="tag">{s.familyPuzzleTag}</div>
           <p className="rosterHint">{s.familyPuzzleHint}</p>
-          {!experience.id&&<p className="quizNoCorrect">⚠ {he?"שמרו את החוויה כדי להעלות תמונה (החוויה עדיין לא קיבלה מזהה).":"Save the experience first to upload a photo (it doesn't have an ID yet)."}</p>}
+          {!experience.id&&<p className="quizNoCorrect">⚠ {tx(lang,"שמרו את החוויה כדי להעלות תמונה (החוויה עדיין לא קיבלה מזהה).","Save the experience first to upload a photo (it doesn't have an ID yet).")}</p>}
           <label className="familyPuzzleUpload">{puzzlePhotoSaving?s.saving:experience.familyPuzzle?.url?s.familyPuzzleReplace:s.familyPuzzleUpload}
             <input type="file" accept="image/jpeg,image/png,image/webp" disabled={!experience.id||puzzlePhotoSaving} onChange={async e=>{
               const file=e.target.files?.[0];if(!file)return;
@@ -488,7 +489,7 @@ export default function Studio({ experience, setExperience, setView, t, lang }) 
           })()}
         </div>
 
-        <p className="contextHint">{he?"בחרו תחנה קיימת מהרשימה כדי לערוך אותה, או הוסיפו משימה חדשה מהאפשרויות הבאות.":"Select a stop below to edit it, or add a new mission using these options."}</p>
+        <p className="contextHint">{tx(lang,"בחרו תחנה קיימת מהרשימה כדי לערוך אותה, או הוסיפו משימה חדשה מהאפשרויות הבאות.","Select a stop below to edit it, or add a new mission using these options.")}</p>
         <div className="atomBar">
           {["photo", "video", "map", "quiz", "puzzle", "note", "reward", "story", "branch"].map(
             (type) => (
@@ -657,30 +658,30 @@ export default function Studio({ experience, setExperience, setView, t, lang }) 
 
             {atom.type === "story" && Array.isArray(atom.options) && atom.options.length > 0 && (
               <div className="linkOptionsEditor">
-                <label>{he?"אפשרויות (שם, סיבה וקישור)":"Options (name, reason & link)"}</label>
-                <p className="linkOptionsHint">{he?"אפשר לערוך את השמות, ההמלצות והקישורים האלה בכל שלב — גם אחרי הפרסום.":"You can edit these names, recommendations and links at any time — including after publishing."}</p>
+                <label>{tx(lang,"אפשרויות (שם, סיבה וקישור)","Options (name, reason & link)")}</label>
+                <p className="linkOptionsHint">{tx(lang,"אפשר לערוך את השמות, ההמלצות והקישורים האלה בכל שלב — גם אחרי הפרסום.","You can edit these names, recommendations and links at any time — including after publishing.")}</p>
                 {atom.options.map((o) => (
                   <div className="linkOptionRow" key={o.id}>
                     <input
                       value={o.name || ""}
-                      placeholder={he?"שם":"Name"}
+                      placeholder={tx(lang,"שם","Name")}
                       onChange={(e) => updateLinkOption(o.id, { name: e.target.value })}
                     />
                     <input
                       value={o.why || ""}
-                      placeholder={he?"למה זה מתאים":"Why it fits"}
+                      placeholder={tx(lang,"למה זה מתאים","Why it fits")}
                       onChange={(e) => updateLinkOption(o.id, { why: e.target.value })}
                     />
                     <input
                       dir="ltr"
                       value={o.url || ""}
-                      placeholder={he?"קישור":"Link URL"}
+                      placeholder={tx(lang,"קישור","Link URL")}
                       onChange={(e) => updateLinkOption(o.id, { url: e.target.value })}
                     />
                     <button type="button" className="danger" onClick={() => removeLinkOption(o.id)}>✕</button>
                   </div>
                 ))}
-                <button type="button" onClick={addLinkOption}>+ {he?"הוספת אפשרות":"Add option"}</button>
+                <button type="button" onClick={addLinkOption}>+ {tx(lang,"הוספת אפשרות","Add option")}</button>
               </div>
             )}
 
@@ -822,18 +823,18 @@ export default function Studio({ experience, setExperience, setView, t, lang }) 
                 {waitingOnWebhook ? s.waitingConfirmation
                   : paying ? s.openingCheckout
                   : publishing ? s.publishing
-                  : experience.status==="live"&&experience.joinCode ? (he?"שיתוף וניהול החוויה":"Share & manage experience")
+                  : experience.status==="live"&&experience.joinCode ? (tx(lang,"שיתוף וניהול החוויה","Share & manage experience"))
                   : needsPayment ? s.payAndPublish
                   : s.publish}
               </button>
             </div>
-            <p className="contextHint">{saving?(he?"ממתינים לסיום השמירה לפני הפרסום.":"Wait for changes to save before publishing."):saveError?(he?"השמירה נכשלה. תקנו או שמרו שוב לפני הפרסום.":"Saving failed. Save your changes successfully before publishing."):!flow.length?(he?"הוסיפו לפחות משימה אחת כדי לפרסם.":"Add at least one mission to publish."):experience.status==="live"?(he?"החוויה פעילה. השינויים נשמרים ומתעדכנים אצל המשתתפים מיד.":"This experience is live. Saved changes update for participants immediately."):he?"הפרסום ייצור קישור וקוד הצטרפות. אפשר להמשיך לערוך גם אחרי הפרסום.":"Publishing creates a join link and code. You can keep editing after publishing."}</p>
+            <p className="contextHint">{saving?(tx(lang,"ממתינים לסיום השמירה לפני הפרסום.","Wait for changes to save before publishing.")):saveError?(tx(lang,"השמירה נכשלה. תקנו או שמרו שוב לפני הפרסום.","Saving failed. Save your changes successfully before publishing.")):!flow.length?(tx(lang,"הוסיפו לפחות משימה אחת כדי לפרסם.","Add at least one mission to publish.")):experience.status==="live"?(tx(lang,"החוויה פעילה. השינויים נשמרים ומתעדכנים אצל המשתתפים מיד.","This experience is live. Saved changes update for participants immediately.")):tx(lang,"הפרסום ייצור קישור וקוד הצטרפות. אפשר להמשיך לערוך גם אחרי הפרסום.","Publishing creates a join link and code. You can keep editing after publishing.")}</p>
           </>;
         })()}
       </div>
 
       <div className="panel studioPreviewPanel">
-        <p className="contextHint">{he?"תצוגה מקדימה בלבד — כך ייראה תוכן התחנה. כדי להשתתף בפועל, פתחו את קישור ההצטרפות אחרי הפרסום.":"Preview only — this shows the stop's content. To participate, open the join link after publishing."}</p>
+        <p className="contextHint">{tx(lang,"תצוגה מקדימה בלבד — כך ייראה תוכן התחנה. כדי להשתתף בפועל, פתחו את קישור ההצטרפות אחרי הפרסום.","Preview only — this shows the stop's content. To participate, open the join link after publishing.")}</p>
         <div className="previewHeader"><div><div className="tag">{s.liveParticipantPreview}</div><span>LIVE EXPERIENCE</span></div><i></i></div>
 
         {atom ? (

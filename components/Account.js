@@ -3,6 +3,7 @@ import {useEffect,useRef,useState} from "react";
 import {Capacitor} from "@capacitor/core";
 import {firebaseConfigured} from "../lib/firebase";
 import {upgradeToEmailAccount, signInWithEmail, signOutUser, signInWithGoogle} from "../lib/morivoData";
+import {tx} from "../lib/i18n";
 
 export default function Account({user,t,isMaster=false,lang}){
  const [mode,setMode]=useState("save");
@@ -24,7 +25,7 @@ export default function Account({user,t,isMaster=false,lang}){
 
  if(isReal){
    return <div className="accountBar accountSignedIn">
-     {isMaster&&<span className="masterBadge">{lang==="he"?"מנהל מערכת":"MASTER"}</span>}
+     {isMaster&&<span className="masterBadge">{tx(lang,"מנהל מערכת","MASTER")}</span>}
      <span className="accountIdentity">{a.signedInAs} <b dir="ltr">{user.email||user.displayName}</b></span>
      <button onClick={signOutUser}>{a.signOut}</button>
    </div>;

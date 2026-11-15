@@ -4,6 +4,7 @@ import {useEffect,useState} from "react";
 import {firebaseConfigured} from "../lib/firebase";
 import {computeOwnerStats,deleteExperienceRemote} from "../lib/morivoData";
 import {showToast} from "../lib/toast";
+import {tx} from "../lib/i18n";
 
 export default function Dashboard({experience,experiences,setView,openExperience,startAICreate,activeId,setActiveId,t,lang,isMaster=false}){
  const he=lang==="he";
@@ -42,7 +43,7 @@ export default function Dashboard({experience,experiences,setView,openExperience
  }
 
  return <section className="dashboardPage dashboardWarm">
-   <div className="dashboardWelcome"><div><span className="tag">{he?"מרחב החוויות שלך":"YOUR EXPERIENCE SPACE"}</span><p>{he?"יש רגעים שכדאי להפוך לסיפור.":"Some moments deserve a story."}</p></div>{isMaster&&<button className="masterQuickAccess" onClick={()=>setView("master")}>◈ {he?"ניהול כל החוויות":"Manage all experiences"}</button>}</div>
+   <div className="dashboardWelcome"><div><span className="tag">{tx(lang,"מרחב החוויות שלך","YOUR EXPERIENCE SPACE")}</span><p>{tx(lang,"יש רגעים שכדאי להפוך לסיפור.","Some moments deserve a story.")}</p></div>{isMaster&&<button className="masterQuickAccess" onClick={()=>setView("master")}>◈ {tx(lang,"ניהול כל החוויות","Manage all experiences")}</button>}</div>
    <div className="hero morivoHero">
      <div className="heroCopy">
        <div className="tag">{d.tag}</div>
@@ -54,7 +55,7 @@ export default function Dashboard({experience,experiences,setView,openExperience
      </div>
      <PhotoJourney/>
    </div>
-   <div className="journeyPromise" aria-label={he?"מחוויה לזיכרון":"From experience to memory"}>{(he?["רעיון שמתחיל איתך","מסע שחווים ביחד","ספר שנשאר לתמיד"]:["An idea that starts with you","A journey you share","A book to keep forever"]).map((text,i)=><div key={text}><span>{String(i+1).padStart(2,"0")}</span><p>{text}</p></div>)}</div>
+   <div className="journeyPromise" aria-label={tx(lang,"מחוויה לזיכרון","From experience to memory")}>{([tx(lang,"רעיון שמתחיל איתך","An idea that starts with you"),tx(lang,"מסע שחווים ביחד","A journey you share"),tx(lang,"ספר שנשאר לתמיד","A book to keep forever")]).map((text,i)=><div key={text}><span>{String(i+1).padStart(2,"0")}</span><p>{text}</p></div>)}</div>
 
    <div className="kpis dashboardKpis">
      <button className="kpiBtn" onClick={()=>document.getElementById("yourExperiencesList")?.scrollIntoView({behavior:"smooth",block:"start"})}><small>{d.experiences}</small><b>{experiences?.length||0}</b><span>→</span></button>
@@ -73,14 +74,14 @@ export default function Dashboard({experience,experiences,setView,openExperience
      </div>}
      <div className="experienceGrid">
      {visibleRows.map(x=><article className="experienceRow experienceRowClickable" key={x.id} role="button" tabIndex={0} onClick={()=>openExperience(x,x.wizardDraft?"ai":"studio")} onKeyDown={e=>{if(e.key==="Enter"||e.key===" "){e.preventDefault();openExperience(x,x.wizardDraft?"ai":"studio")}}}>
-       <ExperienceCover experience={x}><span className={"experienceStatus "+(x.paused?"paused":x.status==="live"?"live":"draft")}>{x.paused?(he?"מושהית":"Paused"):x.status==="live"?(he?"פעילה עכשיו":"Live now"):x.wizardDraft?d.unfinishedDraft:(he?"בדרך להרפתקה":"In the making")}</span><span className="experienceCoverPlace">{x.location||x.type||"MORIVO"}</span></ExperienceCover>
-       <div className="experienceInfo"><h3>{x.name||d.draft}</h3><p>{x.wizardDraft?d.continueDraft:`${x.flow?.length||0} ${he?"תחנות במסע":"stops in your story"}`}{x.startDate&&<> <span>·</span> {x.startDate}</>}</p></div>
+       <ExperienceCover experience={x}><span className={"experienceStatus "+(x.paused?"paused":x.status==="live"?"live":"draft")}>{x.paused?(tx(lang,"מושהית","Paused")):x.status==="live"?(tx(lang,"פעילה עכשיו","Live now")):x.wizardDraft?d.unfinishedDraft:(tx(lang,"בדרך להרפתקה","In the making"))}</span><span className="experienceCoverPlace">{x.location||x.type||"MORIVO"}</span></ExperienceCover>
+       <div className="experienceInfo"><h3>{x.name||d.draft}</h3><p>{x.wizardDraft?d.continueDraft:`${x.flow?.length||0} ${tx(lang,"תחנות במסע","stops in your story")}`}{x.startDate&&<> <span>·</span> {x.startDate}</>}</p></div>
        <div className="rowActions">
          <button className="openExperience" onClick={e=>{e.stopPropagation();openExperience(x,x.wizardDraft?"ai":"studio")}}>{x.wizardDraft?d.resumeDraft:d.open}<span>→</span></button>
          {firebaseConfigured && x.id && <button className="danger" disabled={deletingId===x.id} onClick={e=>remove(x,e)}>{deletingId===x.id?d.deleting:d.delete}</button>}
        </div>
      </article>)}
-     {!rows.length&&<div className="dashboardEmpty"><img src="/morivo-memories.svg" alt=""/><div><h3>{he?"הסיפור הבא שלכם מתחיל כאן":"Your next story starts here"}</h3><p>{he?"טיול, יום הולדת או יום מיוחד ביחד — ספרו ל־Morivo מה מתכננים.":"A trip, a birthday or a day together — tell Morivo what you have in mind."}</p><button className="primary" onClick={startAICreate}>{d.createWithAI}</button></div></div>}
+     {!rows.length&&<div className="dashboardEmpty"><img src="/morivo-memories.svg" alt=""/><div><h3>{tx(lang,"הסיפור הבא שלכם מתחיל כאן","Your next story starts here")}</h3><p>{tx(lang,"טיול, יום הולדת או יום מיוחד ביחד — ספרו ל־Morivo מה מתכננים.","A trip, a birthday or a day together — tell Morivo what you have in mind.")}</p><button className="primary" onClick={startAICreate}>{d.createWithAI}</button></div></div>}
      {rows.length>0&&!visibleRows.length&&<p className="contextHint">{d.noMatches}</p>}
      </div>
    </div>

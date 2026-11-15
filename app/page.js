@@ -19,6 +19,7 @@ import { onIdTokenChanged } from "firebase/auth";
 import { ensureUser, subscribeExperiences, subscribeExperience, completeGoogleRedirect } from "../lib/morivoData";
 import { listenForForegroundPush } from "../lib/push";
 import { STRINGS, getDir, COUNTRY_FLAGS, detectInitialLang } from "../lib/i18n";
+import {tx} from "../lib/i18n";
 
 const DEMO={
  id:"thailand-demo", name:"Thailand Family Adventure", type:"Family Trip",
@@ -171,12 +172,12 @@ export default function Home(){
    <main className="content">
      <div className="topBar">
        <div className="topBarRight">
-         <LangSwitcher country={country} selectLang={selectLang} label={lang==="he"?"שינוי שפה":"Change language"}/>
+         <LangSwitcher country={country} selectLang={selectLang} label={tx(lang,"שינוי שפה","Change language")}/>
          <Account user={user} t={t} isMaster={isMaster} lang={lang}/>
        </div>
        <FirebaseStatus t={t}/>
      </div>
-     {isMaster&&activeId&&experience.ownerUid!==user?.uid&&["studio","runtime","memory"].includes(view)&&<div className="masterContext"><span>{lang==="he"?"מצב מאסטר · ניהול חוויה של משתמש אחר":"Master mode · managing another user's experience"}</span><button onClick={()=>setView("master")}>{lang==="he"?"כל החוויות":"All experiences"}</button></div>}
+     {isMaster&&activeId&&experience.ownerUid!==user?.uid&&["studio","runtime","memory"].includes(view)&&<div className="masterContext"><span>{tx(lang,"מצב מאסטר · ניהול חוויה של משתמש אחר","Master mode · managing another user's experience")}</span><button onClick={()=>setView("master")}>{tx(lang,"כל החוויות","All experiences")}</button></div>}
      <div className="viewFade" key={view}><ScreenGuidance {...props} view={view}/>{(!["studio","runtime","memory"].includes(view)||experience.id)&&Screen}</div>
      <ToastContainer dir={dir}/>
    </main>

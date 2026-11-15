@@ -1,6 +1,7 @@
 "use client";
 import {useEffect,useState} from "react";
 import {createPortal} from "react-dom";
+import {tx} from "../lib/i18n";
 
 const items=["dashboard","ai","studio","runtime","memory"];
 const icons={
@@ -15,7 +16,7 @@ export default function Sidebar({view,setView,t,isMaster=false,lang}){
  const [mounted,setMounted]=useState(false);
  useEffect(()=>{setMounted(true)},[]);
  const navItems=items.map(id=>({id,icon:icons[id],label:t.nav[id]}));
- if(isMaster)navItems.push({id:"master",icon:"◈",label:lang==="he"?"ניהול מערכת":"Master console",master:true});
+ if(isMaster)navItems.push({id:"master",icon:"◈",label:tx(lang,"ניהול מערכת","Master console"),master:true});
  function go(id){setView(id);setExpanded(false)}
  return <>
    <aside className="sidebar">
@@ -24,7 +25,7 @@ export default function Sidebar({view,setView,t,isMaster=false,lang}){
        <button key={id} onClick={()=>setView(id)} className={view===id?"active":""}>
         <span className="navIcon">{icons[id]}</span><span>{t.nav[id]}</span>
        </button>
-     )}{isMaster&&<button onClick={()=>setView("master")} className={"masterNav "+(view==="master"?"active":"")}><span className="navIcon" aria-hidden="true">◈</span><span>{lang==="he"?"ניהול מערכת":"Master console"}</span><small>MASTER</small></button>}</nav>
+     )}{isMaster&&<button onClick={()=>setView("master")} className={"masterNav "+(view==="master"?"active":"")}><span className="navIcon" aria-hidden="true">◈</span><span>{tx(lang,"ניהול מערכת","Master console")}</span><small>MASTER</small></button>}</nav>
      <div className="sidebarJourney"><div className="journeyLine"></div><small>CREATE · LIVE · REMEMBER</small></div>
    </aside>
    {mounted&&createPortal(<>
@@ -32,7 +33,7 @@ export default function Sidebar({view,setView,t,isMaster=false,lang}){
        {navItems.map(item=><button key={item.id} type="button" className={"mobileNavIcon "+(view===item.id?"active":"")} title={item.label} aria-label={item.label} onClick={()=>go(item.id)}>
         {typeof item.icon==="string"?item.icon:<span className="navIcon">{item.icon}</span>}
        </button>)}
-       <button type="button" className="mobileNavExpand" aria-haspopup="true" aria-expanded={expanded} aria-label={lang==="he"?"מקרא סמלים":"Icon legend"} onClick={()=>setExpanded(e=>!e)}>ⓘ</button>
+       <button type="button" className="mobileNavExpand" aria-haspopup="true" aria-expanded={expanded} aria-label={tx(lang,"מקרא סמלים","Icon legend")} onClick={()=>setExpanded(e=>!e)}>ⓘ</button>
      </div>
      {expanded&&<div className="mobileNavOverlay" role="presentation" onClick={()=>setExpanded(false)}>
        <div className="mobileNavLegend" role="menu" onClick={e=>e.stopPropagation()}>

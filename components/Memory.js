@@ -9,6 +9,7 @@ import DestinationBackdrop from "./DestinationBackdrop";
 import {getExperienceTheme,buildMemoryChapters,journeyFinished} from "../lib/experienceVisuals";
 import LinkifiedText from "./LinkifiedText";
 import {showToast} from "../lib/toast";
+import {tx} from "../lib/i18n";
 
 function MediaThumb({m}){
  return m.contentType?.startsWith("video/")
@@ -18,7 +19,7 @@ function MediaThumb({m}){
 
 const ICONS={photo:"📸",video:"🎥",quiz:"❓",puzzle:"🧩",note:"📝",map:"📍",story:"📖",reward:"🏆"};
 
-export default function Memory({experience,setExperience,setView,t,user,publicView,memoryId,dir,participantView=false,isMaster=false}){
+export default function Memory({experience,setExperience,setView,t,user,publicView,memoryId,dir,participantView=false,isMaster=false,lang}){
  const m2=t.memory;
  const [writing,setWriting]=useState(false);
  const [sharing,setSharing]=useState(false);
@@ -46,7 +47,7 @@ export default function Memory({experience,setExperience,setView,t,user,publicVi
  const flow=exp.flow||[];
  const he=dir==="rtl";
  const theme=getExperienceTheme(exp);
- const chapters=useMemo(()=>buildMemoryChapters(flow,media,answers,progress,he?"עוד רגעים מהמסע":"More moments from the journey"),[flow,media,answers,progress,he]);
+ const chapters=useMemo(()=>buildMemoryChapters(flow,media,answers,progress,tx(lang,"עוד רגעים מהמסע","More moments from the journey")),[flow,media,answers,progress,he]);
  const finishers=progress.filter(p=>journeyFinished(p,flow)).length;
  const allFinished=participantView||finishers>0;
  const canWriteStory=firebaseConfigured&&exp.id&&exp.id!=="thailand-demo"&&chapters.length>0&&isOwner;
@@ -87,12 +88,12 @@ export default function Memory({experience,setExperience,setView,t,user,publicVi
    <button className="primary" onClick={()=>window.print()}>{m2.exportPrint}</button>
   </div>
  </div>
- <div className="albumAutoStatus">{allFinished?(he?"רגעים שהשלמנו · ספר הזיכרונות שלכם מוכן":"Completed moments · your memory book is ready"):(he?"ספר חי · הרגעים שלכם נאספים כאן אוטומטית":"A living book · your moments are collected automatically")}</div>
+ <div className="albumAutoStatus">{allFinished?(tx(lang,"רגעים שהשלמנו · ספר הזיכרונות שלכם מוכן","Completed moments · your memory book is ready")):(tx(lang,"ספר חי · הרגעים שלכם נאספים כאן אוטומטית","A living book · your moments are collected automatically"))}</div>
  <section className="memoryBook" dir={dir}>
 
   <div className="mbCover" style={coverPhoto?{backgroundImage:`url(${coverPhoto.downloadURL})`}:undefined}>
    {!coverPhoto&&<DestinationBackdrop theme={theme}/>}
-   {!coverPhoto&&<span className="bookCoverIllustration">{he?"איור בהשראת היעד":"Destination-inspired illustration"}</span>}
+   {!coverPhoto&&<span className="bookCoverIllustration">{tx(lang,"איור בהשראת היעד","Destination-inspired illustration")}</span>}
    <div className="mbCoverShade"></div>
    <div className="mbCoverFrame"></div>
    <div className="mbCoverContent">
@@ -135,7 +136,7 @@ export default function Memory({experience,setExperience,setView,t,user,publicVi
    {canWriteStory&&<button className="mbWriteBtn" disabled={writing} onClick={writeStory}>{writing?m2.writing:exp.memoryStory?m2.rewriteWithAI:m2.writeWithAI}</button>}
   </div>
 
-  <MemoryAlbum chapters={chapters} theme={theme} he={he}/>
+  <MemoryAlbum chapters={chapters} theme={theme} lang={lang}/>
 
   {canShare&&<div className="mbSection mbShareSection">
    <div className="mbShare">

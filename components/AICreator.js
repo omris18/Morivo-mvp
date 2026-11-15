@@ -8,6 +8,7 @@ import {firebaseConfigured,functions} from "../lib/firebase";
 import {createExperienceRemote,ensureUser,subscribeSiteAsset,generateBrandImageRemote,saveWizardDraftRemote,finalizeWizardDraftRemote} from "../lib/morivoData";
 import {showToast} from "../lib/toast";
 import {LANGS} from "../lib/i18n";
+import {tx,txf} from "../lib/i18n";
 
 function CircularProgress({pct}){
  const clamped=Math.max(0,Math.min(100,pct)),r=42,c=2*Math.PI*r;
@@ -86,7 +87,7 @@ export default function AICreator({setExperience,setView,setActiveId,user,lang,t
  const TOTAL_STEPS=3;
  const [formStep,setFormStep]=useState(()=>typeof resumedDraft?.wizardStep==="number"?resumedDraft.wizardStep:1);
  const [stepError,setStepError]=useState("");
- const stepTitles=lang==="he"?["מה החוויה שלכם?","מתי ומי מגיעים?","מה יהפוך אותה למיוחדת?"]:["What's the experience?","When, and who's coming?","What makes it special?"];
+ const stepTitles=[tx(lang,"מה החוויה שלכם?","What's the experience?"),tx(lang,"מתי ומי מגיעים?","When, and who's coming?"),tx(lang,"מה יהפוך אותה למיוחדת?","What makes it special?")];
  useEffect(()=>{if(formStep>1){const el=document.getElementById("ai-step-heading");el?.scrollIntoView({behavior:"smooth",block:"start"});el?.focus({preventScroll:true})}},[formStep]);
  const [phase,setPhase]=useState(()=>resumedDraft?.wizardPhase==="review"&&resumedDraft?.wizardItinerary?"review":"form");
  const [itinerary,setItinerary]=useState(()=>resumedDraft?.wizardItinerary||null);
@@ -200,7 +201,7 @@ export default function AICreator({setExperience,setView,setActiveId,user,lang,t
   try{
    const u=user||await ensureUser();
    const payload={
-    name:form.prompt.trim().split(/[.!?\n]/)[0].slice(0,60)||(lang==="he"?"טיוטת חוויה":"Experience draft"),
+    name:form.prompt.trim().split(/[.!?\n]/)[0].slice(0,60)||(tx(lang,"טיוטת חוויה","Experience draft")),
     type:form.type,location:form.location,lang,
     wizardPhase:phase==="review"?"review":"form",
     wizardStep:formStep,
@@ -273,7 +274,7 @@ export default function AICreator({setExperience,setView,setActiveId,user,lang,t
   <div className="panel">
    <div className="aiTop"><div className="tag">{a.tag}</div></div>
    <h1>{a.reviewTitle}</h1><p>{a.reviewDesc}</p>
-   <p className="contextHint">{lang==="he"?"זו תוכנית לבדיקה, עדיין לא חוויה שפורסמה. אפשר לערוך את הטקסט ולבחור הצעות. לחצו על אישור ובנייה כדי ליצור את המשימות בסטודיו.":"This is a plan to review, not a published experience. Edit the text and select suggestions, then approve and build to create the missions in the studio."}</p>
+   <p className="contextHint">{tx(lang,"זו תוכנית לבדיקה, עדיין לא חוויה שפורסמה. אפשר לערוך את הטקסט ולבחור הצעות. לחצו על אישור ובנייה כדי ליצור את המשימות בסטודיו.","This is a plan to review, not a published experience. Edit the text and select suggestions, then approve and build to create the missions in the studio.")}</p>
    <div className="itineraryPlan">
     {itinerary.plan.map(p=><div className="itineraryStep" key={p.step}>
      <div className="itineraryStepBadge">{isMultiDayFamilyTrip?a.dayBadge(p.step):a.partBadge(p.step)}</div>
@@ -320,10 +321,10 @@ export default function AICreator({setExperience,setView,setActiveId,user,lang,t
   <div className="panel">
    <div className="aiTop"><div className="tag">{a.tag}</div></div>
    <h1>{a.title}</h1><p>{a.desc}</p>
-   <div className="aiStepIntro"><small>{lang==="he"?`שלב ${formStep} מתוך 3`:`Step ${formStep} of 3`}</small><h2 id="ai-step-heading" tabIndex={-1}>{stepTitles[formStep-1]}</h2><p>{lang==="he"?(formStep===1?"תארו את הרעיון בכמה מילים. התיאור הוא שדה חובה; סוג ומיקום עוזרים להתאים את החוויה.":formStep===2?"הוסיפו זמן והרכב משתתפים כדי להתאים את המסלול. בטיול עם לינה, תאריכים וגילי ילדים עוזרים לדייק את החיפוש.":"הוסיפו תחומי עניין, גילאים או בקשות מיוחדות. אפשר להשאיר ריק ולהמשיך לתכנון."):(formStep===1?"Describe your idea. A description is required; type and location help personalize it.":formStep===2?"Add timing and participants to tailor the route. For overnight trips, dates and children's ages help refine searches.":"Add interests, ages or special requests. You can leave this blank and continue to planning.")}</p></div>
+   <div className="aiStepIntro"><small>{txf(lang,"שלב {0} מתוך {1}","Step {0} of {1}",formStep,3)}</small><h2 id="ai-step-heading" tabIndex={-1}>{stepTitles[formStep-1]}</h2><p>{formStep===1?tx(lang,"תארו את הרעיון בכמה מילים. התיאור הוא שדה חובה; סוג ומיקום עוזרים להתאים את החוויה.","Describe your idea. A description is required; type and location help personalize it."):formStep===2?tx(lang,"הוסיפו זמן והרכב משתתפים כדי להתאים את המסלול. בטיול עם לינה, תאריכים וגילי ילדים עוזרים לדייק את החיפוש.","Add timing and participants to tailor the route. For overnight trips, dates and children's ages help refine searches."):tx(lang,"הוסיפו תחומי עניין, גילאים או בקשות מיוחדות. אפשר להשאיר ריק ולהמשיך לתכנון.","Add interests, ages or special requests. You can leave this blank and continue to planning.")}</p></div>
    {stepError&&<p className="guidanceError" role="alert">{stepError}</p>}
    <div className={"aiFormStep "+(formStep===1?"active":"")} data-step="1">
-    <label htmlFor="ai-description">{a.prompt} *</label><textarea id="ai-description" className="aiPrompt" aria-required="true" aria-invalid={!!stepError} placeholder={lang==="he"?"לדוגמה: יום כיף בחי פארק עם ילדים בני 7–10, חידות קלילות ומשימות צילום.":"For example: a family day at the zoo with ages 7–10, easy riddles and photo missions."} value={form.prompt} onChange={e=>{setForm({...form,prompt:e.target.value});setStepError("")}}/>
+    <label htmlFor="ai-description">{a.prompt} *</label><textarea id="ai-description" className="aiPrompt" aria-required="true" aria-invalid={!!stepError} placeholder={tx(lang,"לדוגמה: יום כיף בחי פארק עם ילדים בני 7–10, חידות קלילות ומשימות צילום.","For example: a family day at the zoo with ages 7–10, easy riddles and photo missions.")} value={form.prompt} onChange={e=>{setForm({...form,prompt:e.target.value});setStepError("")}}/>
     <div className="fieldRow"><div><label>{a.type}</label><select value={form.type} onChange={e=>setForm({...form,type:e.target.value})}><option value=""></option>{TYPE_OPTIONS[lang].map(x=><option key={x} value={x}>{x}</option>)}</select></div>{!isMultiDayFamilyTrip&&<div><label>{a.location}</label><input value={form.location} onChange={e=>setForm({...form,location:e.target.value})}/></div>}</div>
     {isMultiDayFamilyTrip&&<div className="destinationsField">
      <label>{a.destinationsLabel} *</label>
@@ -358,7 +359,7 @@ export default function AICreator({setExperience,setView,setActiveId,user,lang,t
      <div className="fieldRow"><div><label>{a.duration}</label><select value={form.duration} onChange={e=>setForm({...form,duration:e.target.value})}><option value=""></option>{DURATION_OPTIONS[lang].map(x=><option key={x} value={x}>{x}</option>)}</select></div></div>
      :<div className="fieldRow"><div><label>{a.duration}</label><select value={form.duration} onChange={e=>setForm({...form,duration:e.target.value})}><option value=""></option>{DURATION_OPTIONS[lang].map(x=><option key={x} value={x}>{x}</option>)}</select></div><div><label>{a.people}</label><input type="number" value={form.people} onChange={e=>setForm({...form,people:e.target.value})}/></div></div>}
     {isMultiDayFamilyTrip&&<div className="fieldRow"><div><label>{a.days}</label><div className="tripLengthDisplay">{tripDays?a.tripLength(tripDays):"—"}</div></div></div>}
-    {isFamilyTrip&&<div className="hotelPartyBox"><div className="tag">{isMultiDayFamilyTrip?(lang==="he"?"הרכב לאירוח":"Stay party"):(lang==="he"?"הרכב משפחתי":"Family composition")}</div><div className="fieldRow"><div><label>{lang==="he"?"מבוגרים":"Adults"}</label><input type="number" min="1" max="12" value={form.adults} onChange={e=>setForm({...form,adults:e.target.value})}/></div><div><label>{lang==="he"?"ילדים":"Children"}</label><input type="number" min="0" max="8" value={form.children} onChange={e=>setChildrenCount(e.target.value)}/></div></div>{Number(form.children)>0&&<div className="childrenAges"><label>{isMultiDayFamilyTrip?(lang==="he"?"גילי הילדים — כדי למצוא חדר ומחיר מתאימים":"Children ages — for accurate rooms and pricing"):(lang==="he"?"גילי הילדים":"Children ages")}</label><div className="ageGrid">{form.childrenAges.map((age,i)=><input key={i} type="number" min="0" max="17" placeholder={(lang==="he"?"ילד ":"Child ")+(i+1)} value={age} onChange={e=>setChildAge(i,e.target.value)}/>)}</div></div>}</div>}
+    {isFamilyTrip&&<div className="hotelPartyBox"><div className="tag">{isMultiDayFamilyTrip?(tx(lang,"הרכב לאירוח","Stay party")):(tx(lang,"הרכב משפחתי","Family composition"))}</div><div className="fieldRow"><div><label>{tx(lang,"מבוגרים","Adults")}</label><input type="number" min="1" max="12" value={form.adults} onChange={e=>setForm({...form,adults:e.target.value})}/></div><div><label>{tx(lang,"ילדים","Children")}</label><input type="number" min="0" max="8" value={form.children} onChange={e=>setChildrenCount(e.target.value)}/></div></div>{Number(form.children)>0&&<div className="childrenAges"><label>{isMultiDayFamilyTrip?(tx(lang,"גילי הילדים — כדי למצוא חדר ומחיר מתאימים","Children ages — for accurate rooms and pricing")):(tx(lang,"גילי הילדים","Children ages"))}</label><div className="ageGrid">{form.childrenAges.map((age,i)=><input key={i} type="number" min="0" max="17" placeholder={(tx(lang,"ילד ","Child "))+(i+1)} value={age} onChange={e=>setChildAge(i,e.target.value)}/>)}</div></div>}</div>}
    </div>
 
    <div className={"aiFormStep "+(formStep===3?"active":"")} data-step="3">
@@ -368,26 +369,26 @@ export default function AICreator({setExperience,setView,setActiveId,user,lang,t
    </div>
 
    <div className="stepNav">
-    <span className="stepIndicator">{lang==="he"?`שלב ${formStep} מתוך ${TOTAL_STEPS}`:`Step ${formStep} of ${TOTAL_STEPS}`}</span>
+    <span className="stepIndicator">{txf(lang,"שלב {0} מתוך {1}","Step {0} of {1}",formStep,TOTAL_STEPS)}</span>
     <div className="stepNavBtns">
-     {formStep>1&&<button type="button" onClick={goBack}>{lang==="he"?"→ הקודם":"← Back"}</button>}
+     {formStep>1&&<button type="button" onClick={goBack}>{tx(lang,"→ הקודם","← Back")}</button>}
      <button type="button" className="saveDraftBtn" onClick={saveDraft} disabled={savingDraft}>{savingDraft?a.savingDraft:draftSavedAt?a.savedDraft:a.saveDraft}</button>
-     {formStep<TOTAL_STEPS&&<button type="button" className="primary" onClick={goNext}>{lang==="he"?(formStep===1?"המשך לזמן ולמשתתפים ←":"המשך להעדפות ←"):(formStep===1?"Next: timing & people →":"Next: preferences →")}</button>}
+     {formStep<TOTAL_STEPS&&<button type="button" className="primary" onClick={goNext}>{formStep===1?tx(lang,"המשך לזמן ולמשתתפים ←","Next: timing & people →"):tx(lang,"המשך להעדפות ←","Next: preferences →")}</button>}
     </div>
    </div>
 
    {planError&&<div className="planError">⚠ {planError}</div>}
-   {formStep===TOTAL_STEPS&&<><div className="actions finalActions"><button className="primary aiBuildButton" onClick={goPlan}>✦ {a.planTrip}</button></div><p className="contextHint">{lang==="he"?"קודם תקבלו תוכנית לאישור. החוויה לא תפורסם בלי שתבחרו לפרסם אותה.":"You'll review a plan first. The experience won't be published until you choose to publish it."}</p></>}
+   {formStep===TOTAL_STEPS&&<><div className="actions finalActions"><button className="primary aiBuildButton" onClick={goPlan}>✦ {a.planTrip}</button></div><p className="contextHint">{tx(lang,"קודם תקבלו תוכנית לאישור. החוויה לא תפורסם בלי שתבחרו לפרסם אותה.","You'll review a plan first. The experience won't be published until you choose to publish it.")}</p></>}
   </div>
   <div className="panel aiPromise photoPromise">
    <PhotoJourney image={shownHeroArt||undefined}/>
    <h2>{a.promiseTitle1}<br/>{a.promiseTitle2}</h2><p>{a.promiseDesc}</p>
-   <div className="brandArtRow" title={canGenerateArt?"":(lang==="he"?"מלאו תיאור וסוג חוויה כדי ליצור תמונה מותאמת":"Fill in a description and experience type to generate matching art")}>
+   <div className="brandArtRow" title={canGenerateArt?"":(tx(lang,"מלאו תיאור וסוג חוויה כדי ליצור תמונה מותאמת","Fill in a description and experience type to generate matching art"))}>
     <button type="button" className="brandArtBtn" disabled={!canGenerateArt||!!generatingKey} onClick={()=>generateArt("aiCreatorHero",setCustomHeroArt)}>
-     {generatingKey==="aiCreatorHero"?(lang==="he"?"✨ יוצר תמונה…":"✨ Generating…"):customHeroArt?(lang==="he"?"🔄 ייצר מחדש":"🔄 Regenerate"):(lang==="he"?"✨ ייצר תמונה מותאמת ב-AI":"✨ Generate personalized art")}
+     {generatingKey==="aiCreatorHero"?(tx(lang,"✨ יוצר תמונה…","✨ Generating…")):customHeroArt?(tx(lang,"🔄 ייצר מחדש","🔄 Regenerate")):(tx(lang,"✨ ייצר תמונה מותאמת ב-AI","✨ Generate personalized art"))}
     </button>
     <button type="button" className="brandArtBtn brandArtBtnGhost" disabled={!canGenerateArt||!!generatingKey} onClick={()=>generateArt("bookBuildingHero",setCustomLoadingArt)}>
-     {generatingKey==="bookBuildingHero"?(lang==="he"?"✨ יוצר תמונה…":"✨ Generating…"):customLoadingArt?(lang==="he"?"🔄 ייצר מחדש רקע טעינה":"🔄 Regenerate loading art"):(lang==="he"?"✨ ייצר רקע מותאם למסך הטעינה":"✨ Generate personalized loading art")}
+     {generatingKey==="bookBuildingHero"?(tx(lang,"✨ יוצר תמונה…","✨ Generating…")):customLoadingArt?(tx(lang,"🔄 ייצר מחדש רקע טעינה","🔄 Regenerate loading art")):(tx(lang,"✨ ייצר רקע מותאם למסך הטעינה","✨ Generate personalized loading art"))}
     </button>
    </div>
   </div>

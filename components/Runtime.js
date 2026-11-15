@@ -14,6 +14,7 @@ import {showToast} from "../lib/toast";
 import {subscribeEvents,subscribeParticipants,subscribeAllProgress,subscribeAnswers,sendOrganizerMessage,skipMissionForParticipant,awardBonusPoints,resetMissionForParticipant,updateExperienceRemote,addParticipantCode,subscribeParticipantCodes,removeParticipantCode,subscribeLocationVotes} from "../lib/morivoData";
 import {subscribeMedia} from "../lib/mediaData";
 import {writeNfcTag,nfcWriteSupported} from "../lib/nfc";
+import {tx,missionLabelsFor} from "../lib/i18n";
 const STUCK_MINUTES=3;
 function minutesAgo(ts){ if(!ts?.toMillis)return null; return Math.floor((Date.now()-ts.toMillis())/60000); }
 export default function Runtime({experience,setExperience,setView,t,user,lang,isMaster=false}){
@@ -171,7 +172,7 @@ export default function Runtime({experience,setExperience,setView,t,user,lang,is
  const locationPolls=flow.filter(m=>m.type==="story"&&m.organizerDecides);
  return <section className="runtimePage">
  <ExperienceShare experience={experience} lang={lang} setView={setView}/>
- {!people.length&&experience.status==="live"&&<p className="contextHint">{lang==="he"?"עדיין לא הצטרפו משתתפים. שתפו את הקישור שלמעלה; הרשימה תתעדכן אוטומטית כשיצטרפו.":"No participants yet. Share the link above; this view updates automatically when they join."}</p>}
+ {!people.length&&experience.status==="live"&&<p className="contextHint">{tx(lang,"עדיין לא הצטרפו משתתפים. שתפו את הקישור שלמעלה; הרשימה תתעדכן אוטומטית כשיצטרפו.","No participants yet. Share the link above; this view updates automatically when they join.")}</p>}
  {locationPolls.length>0&&(()=>{
    const pendingCount=locationPolls.filter(m=>{const d=experience.locationDecisions?.[m.id];return !(d&&d.length)}).length;
    return <>
@@ -258,12 +259,12 @@ export default function Runtime({experience,setExperience,setView,t,user,lang,is
  {answers.length>0&&<div className="panel" style={{marginTop:18}}><div className="tag">{r.sharedMemories}</div><div className="feed">{answers.slice(0,8).map(a=><div key={a.id}><b>{a.participantName}</b> — {a.text}</div>)}</div></div>}
  {missionPerf.length>0&&<div className="panel" style={{marginTop:18}}><div className="tag">{r.missionPerformance}</div><div className="missionPerf">{missionPerf.map(m=><div className="missionPerfRow" key={m.id}><b>{m.title}</b><div className="missionPerfBar"><span style={{width:`${m.pct}%`}}></span></div><small>{m.pct}%</small></div>)}</div></div>}
  {canManage&&flow.length>0&&(()=>{
-   const labels=missionLabels[lang==="he"?"he":"en"];
+   const labels=missionLabelsFor(lang);
    const typeIcons={photo:"📸",video:"🎬",map:"🗺️",quiz:"✅",puzzle:"🧩",note:"✍️",story:"📖",branch:"🔀"};
    const typesPresent=[...new Set(flow.map(m=>m.type))].filter(type=>type!=="branch");
    return typesPresent.length>0&&<div className="panel stampsPanel" style={{marginTop:18}}>
-    <div className="tag">{lang==="he"?"חותמות דרכון":"Passport stamps"}</div>
-    <p className="rosterHint">{lang==="he"?"יעדים בטיול מקבלים חותמת דרכון אוטומטית. אפשר גם לסמן כאן במהירות אילו סוגי משימות יקבלו חותמת, בלי להיכנס לעריכה של כל משימה בנפרד.":"Destinations in the trip earn a passport stamp automatically. You can also quickly choose here which mission types earn a stamp, without opening each mission's editor separately."}</p>
+    <div className="tag">{tx(lang,"חותמות דרכון","Passport stamps")}</div>
+    <p className="rosterHint">{tx(lang,"יעדים בטיול מקבלים חותמת דרכון אוטומטית. אפשר גם לסמן כאן במהירות אילו סוגי משימות יקבלו חותמת, בלי להיכנס לעריכה של כל משימה בנפרד.","Destinations in the trip earn a passport stamp automatically. You can also quickly choose here which mission types earn a stamp, without opening each mission's editor separately.")}</p>
     <div className="stampTypeToggles">{typesPresent.map(type=>{
       const matching=flow.filter(m=>m.type===type);
       const allOn=matching.every(m=>m.stamp);
@@ -278,7 +279,7 @@ export default function Runtime({experience,setExperience,setView,t,user,lang,is
    const puzzleTotal=experience.familyPuzzle.totalPieces||8;
    return <div className="panel" style={{marginTop:18}}>
     <div className="tag">{t.participant.familyPuzzleTitle}</div>
-    <p className="rosterHint">{lang==="he"?"כל משתתף מרכיב את הפאזל המשפחתי שלו בעצמו, לפי המשימות שהשלים.":"Each participant assembles their own family puzzle as they complete missions."}</p>
+    <p className="rosterHint">{tx(lang,"כל משתתף מרכיב את הפאזל המשפחתי שלו בעצמו, לפי המשימות שהשלים.","Each participant assembles their own family puzzle as they complete missions.")}</p>
     <div className="missionPerf">{merged.filter(p=>!p.pending).map(p=>{
       const n=unlockedPieces(flow,p.completedMissionIds,puzzleTotal).size;
       const pct=puzzleTotal?Math.round(n/puzzleTotal*100):0;
@@ -288,7 +289,7 @@ export default function Runtime({experience,setExperience,setView,t,user,lang,is
  })()}
  <div className="panel" style={{marginTop:18}}>
   <div className="tag">{r.roster} ({roster.length})</div>
-  <p className="rosterHint">{lang==="he"?"לכל משתתף קישור אישי קבוע. גם מצטרפים דרך הקישור הכללי מופיעים כאן אוטומטית. העתיקו את הקישור או צרבו אותו על תג NFC — הוא מחזיר לאותו משתתף ולאותה התקדמות. אפשר גם להכין הזמנות מראש לפי שם.":"Every participant has a permanent personal link. People joining through the shared link appear here automatically. Copy or write their link to an NFC tag to resume the same journey. You can also prepare invitations by name."}</p>
+  <p className="rosterHint">{tx(lang,"לכל משתתף קישור אישי קבוע. גם מצטרפים דרך הקישור הכללי מופיעים כאן אוטומטית. העתיקו את הקישור או צרבו אותו על תג NFC — הוא מחזיר לאותו משתתף ולאותה התקדמות. אפשר גם להכין הזמנות מראש לפי שם.","Every participant has a permanent personal link. People joining through the shared link appear here automatically. Copy or write their link to an NFC tag to resume the same journey. You can also prepare invitations by name.")}</p>
   <div className="reviseBar"><input placeholder={r.rosterNamePlaceholder} value={rosterName} onChange={e=>setRosterName(e.target.value)} onKeyDown={e=>e.key==="Enter"&&addRoster()} disabled={addingRoster}/><button disabled={addingRoster||!rosterName.trim()} onClick={addRoster}>{addingRoster?r.saving:r.rosterAdd}</button></div>
   {roster.length>0&&<div className="rosterList">{roster.map(entry=>
    <div className="rosterRow" key={entry.code}>

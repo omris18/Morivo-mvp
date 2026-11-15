@@ -2,6 +2,7 @@
 import {useRef,useState} from "react";
 import {buildRouteGroups,dayRangeText} from "../lib/routeGroups";
 import {routeLabels} from "../lib/i18n";
+import {tx,txf} from "../lib/i18n";
 
 const ROUTE_D="M92 60 C470 95, 500 180, 135 235 S95 390, 470 420 S500 585, 130 635 S115 760, 500 780";
 const typeIcons={photo:"📸",video:"🎬",map:"🗺️",quiz:"✅",puzzle:"🧩",note:"✍️",story:"📖",branch:"🔀"};
@@ -101,14 +102,14 @@ export default function ParticipantJourneyMap({experience,flow,prog,idx,finished
   </div>
   {points[activeGroupIndex]&&!finished&&<div className="mapPlane" style={{left:`${points[activeGroupIndex].x}%`,top:`${points[activeGroupIndex].y}%`}}>✈️</div>}
   {popup&&<div className="participantMapMissionPopup" style={{left:popup.left,top:popup.top,width:popup.width}} role="dialog" aria-label={popup.m.title} onClick={e=>e.stopPropagation()}>
-   <button type="button" className="participantMapMissionClose" onClick={()=>setPopup(null)} aria-label={he?"סגירה":"Close"}>×</button>
-   <div className="participantMapMissionMeta"><span>{typeIcons[popup.m.type]||"✨"}</span><small>{he?`משימה ${popup.i+1}`:`Mission ${popup.i+1}`}</small></div>
+   <button type="button" className="participantMapMissionClose" onClick={()=>setPopup(null)} aria-label={tx(lang,"סגירה","Close")}>×</button>
+   <div className="participantMapMissionMeta"><span>{typeIcons[popup.m.type]||"✨"}</span><small>{txf(lang,"משימה {0}","Mission {0}",popup.i+1)}</small></div>
    <strong>{popup.m.title}</strong>
    <p>{popup.m.text||popup.m.description||""}</p>
-   <div className={`participantMapMissionStatus ${completedIds.includes(popup.m.id)?"done":popup.isActive?"current":"locked"}`}>{completedIds.includes(popup.m.id)?`✓ ${p.missionDoneHint}`:popup.isActive?(he?"המשימה הנוכחית":"Current mission"):`🔒 ${p.missionLockedHint}`}</div>
-   <button type="button" className="participantMapMissionOpen" onClick={()=>{setPopup(null);onOpenMission(popup.m,popup.isActive)}}>{popup.isActive?p.openMission:(he?"הצגת פרטי המשימה":"View mission details")}</button>
+   <div className={`participantMapMissionStatus ${completedIds.includes(popup.m.id)?"done":popup.isActive?"current":"locked"}`}>{completedIds.includes(popup.m.id)?`✓ ${p.missionDoneHint}`:popup.isActive?(tx(lang,"המשימה הנוכחית","Current mission")):`🔒 ${p.missionLockedHint}`}</div>
+   <button type="button" className="participantMapMissionOpen" onClick={()=>{setPopup(null);onOpenMission(popup.m,popup.isActive)}}>{popup.isActive?p.openMission:(tx(lang,"הצגת פרטי המשימה","View mission details"))}</button>
   </div>}
-  <div className="mapLegend"><span className="done"><i></i>{he?"הושלם":"Done"}</span><span className="now"><i></i>{he?"עכשיו":"Now"}</span><span className="next"><i></i>{he?"עתידי":"Upcoming"}</span></div>
+  <div className="mapLegend"><span className="done"><i></i>{tx(lang,"הושלם","Done")}</span><span className="now"><i></i>{tx(lang,"עכשיו","Now")}</span><span className="next"><i></i>{tx(lang,"עתידי","Upcoming")}</span></div>
   <style jsx>{`.participantMapMissionPopup{position:absolute;z-index:30;transform:translateX(-50%);padding:14px;border:1px solid rgba(82,123,109,.28);border-radius:20px;background:#fffdf7;color:#243f3a;box-shadow:0 20px 45px rgba(24,61,52,.3);text-align:start}.participantMapMissionPopup:before{content:"";position:absolute;top:-7px;left:calc(50% - 7px);width:14px;height:14px;transform:rotate(45deg);background:#fffdf7;border-left:1px solid rgba(82,123,109,.28);border-top:1px solid rgba(82,123,109,.28)}.participantMapMissionClose{position:absolute;top:5px;inset-inline-end:8px;border:0;background:transparent;color:#60746f;font-size:22px;line-height:1}.participantMapMissionMeta{display:flex;align-items:center;gap:7px;padding-inline-end:24px}.participantMapMissionMeta span{font-size:22px}.participantMapMissionMeta small{font-size:10px;font-weight:900;color:#df7137}.participantMapMissionPopup>strong{display:block;margin:6px 0 4px;font-size:14px}.participantMapMissionPopup p{display:-webkit-box;margin:0 0 9px;overflow:hidden;-webkit-box-orient:vertical;-webkit-line-clamp:3;font-size:11px;line-height:1.45}.participantMapMissionStatus{margin-bottom:9px;font-size:10px;font-weight:900}.participantMapMissionStatus.done{color:#238657}.participantMapMissionStatus.current{color:#d65f20}.participantMapMissionStatus.locked{color:#718079}.participantMapMissionOpen{width:100%;padding:8px 10px;border:0;border-radius:999px;background:#e8754e;color:#fff;font-size:11px;font-weight:900}`}</style>
  </div>;
 }
