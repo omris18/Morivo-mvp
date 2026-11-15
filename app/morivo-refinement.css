@@ -41,3 +41,31 @@ body .appShell .albumWords>p,body .appShell .albumMission p{color:#5d5343}
 body .appShell .albumMission small{color:#977644}
 @media(max-width:700px){.albumPhotos.photos-2 img,.albumPhotos.photos-2 video{height:190px}.albumPhotos.photos-3 figure:first-child img,.albumPhotos.photos-3 figure:first-child video{height:200px}}
 @media print{.albumPhotos.photos-2 img,.albumPhotos.photos-2 video,.albumPhotos.photos-3 figure:first-child img{height:200px}}
+/* The printed / exported memory book: a landscape photo book with one spread per page.
+   This PDF is what a family keeps, so nothing of the app's own chrome may print with it. */
+@page memoryBook{size:A4 landscape;margin:9mm}
+@media print{
+ html,body{background:#fff!important;padding:0!important}
+ .appShell{display:block!important;min-height:0!important}
+ main.content{padding:0!important;margin:0!important;max-width:none!important}
+ .mobileNavRail,.mobileNavOverlay,.toastStack,.mbToolbar,.mbWriteBtn,.mbShareSection,.masterContext{display:none!important}
+ .memoryPage{page:memoryBook;max-width:none!important;padding:0!important}
+ .memoryBook{border-radius:0!important;box-shadow:none!important;overflow:visible!important;background:#fffaf0!important}
+ .memoryPage .mbCover,.albumSpread,.albumSpread.isCurrent{min-height:176mm!important;border-radius:5mm;-webkit-print-color-adjust:exact;print-color-adjust:exact}
+ .mbCoverContent h1{font-size:56px}
+ .timelineRail{flex-wrap:wrap;overflow:visible;row-gap:14px}
+ .timelineNode{min-width:0;flex:1 1 11%}
+ .albumPhotos{padding:10mm!important;gap:7mm}
+ .albumPhotos img,.albumPhotos video{height:58mm!important}
+ .albumPhotos.photos-2 img,.albumPhotos.photos-2 video{height:92mm!important}
+ .albumPhotos.photos-3 figure:first-child img,.albumPhotos.photos-3 figure:first-child video{height:66mm!important}
+ .albumPhotos.photos-3 figure:not(:first-child) img,.albumPhotos.photos-3 figure:not(:first-child) video{height:48mm!important}
+ .albumPhotos.singlePhoto img,.albumPhotos.singlePhoto video{height:125mm!important}
+ .albumIllustration{min-height:125mm}
+ .albumWords{padding:14mm!important}
+ .albumWords h2{font-size:30px}
+ .albumMission p{font-size:17px!important}
+ .albumWords blockquote{font-size:19px}
+ .mbSection{padding:7mm 12mm!important}
+ .mbStoryText{font-size:15px!important;line-height:1.75!important}
+}
