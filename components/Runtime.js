@@ -195,7 +195,7 @@ export default function Runtime({experience,setExperience,setView,t,user,lang,is
           const pending=pendingAttractionPicks[m.id]||decided||[];
           return <div className="orgDecisionRow" key={m.id}>
            <b>{m.title}</b>
-           <div className="orgDecisionOptionList">{m.options.map(o=>{
+           <div className="orgDecisionOptionList">{[...(m.options||[]),...customOptionsFor(m.id)].map(o=>{
              const picked=pending.includes(o.id);
              return <div className={"orgDecisionOptionRow "+(picked?"picked":"")} key={o.id}>
               <label className="orgDecisionCheck"><input type="checkbox" disabled={isDecided} checked={picked} onChange={()=>setPendingAttractionPicks(prev=>{

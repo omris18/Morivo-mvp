@@ -1,0 +1,47 @@
+// Run with React 18, react-test-renderer 18 and esbuild available on NODE_PATH.
+const assert=require('node:assert/strict');
+const rendererRequire=require('node:module').createRequire(require.resolve('react-test-renderer'));
+const React=rendererRequire('react'),{create,act}=require('react-test-renderer');
+const {transformSync}=require('esbuild');
+const fs=require('node:fs');
+const calls=[];let failure=false,finish;
+const code=transformSync(fs.readFileSync('components/CoordinationPanel.js','utf8'),{loader:'jsx',format:'cjs',jsx:'automatic'}).code;
+const mod={exports:{}};
+new Function('require','module','exports',code)(id=>{
+ if(id==='react'||id.startsWith('react/'))return rendererRequire(id);
+ if(id==='react-dom')return {createPortal:node=>node};
+ if(id==='../lib/morivoData')return {castLocationVote:async(...args)=>{calls.push(args);if(failure)throw new Error('Save failed');if(finish)await new Promise(resolve=>{finish=resolve})}};
+ if(id==='../lib/i18n')return {tx:(lang,he,en)=>lang==='he'?he:en};
+ if(id==='../functions/coordination')return require('../functions/coordination');
+ return require(id);
+},mod,mod.exports);
+const Panel=mod.exports.default;
+global.document={body:{}};global.window={addEventListener(){},removeEventListener(){}};
+const experience={id:'test',flow:[{id:'hotel',isLocationPoll:true,title:'Hotels',options:[{id:'h1',name:'Hotel One'},{id:'h2',name:'Hotel Two'}]},{id:'attractions',isAttractionsPoll:true,title:'Attractions',options:[{id:'a1',name:'Museum'},{id:'a2',name:'Park'}]}]};
+let tree;
+const buttons=()=>tree.root.findAllByType('button');
+const button=text=>buttons().find(b=>b.children.some(c=>c===text)||b.findAllByType('b').some(c=>c.children.includes(text)));
+const submit=()=>tree.root.findByProps({className:'coordinationSubmit'});
+const input=()=>tree.root.findByType('input');
+(async()=>{
+ await act(async()=>{tree=create(React.createElement(Panel,{experience,uid:'one',name:'Tester',votes:[],lang:'he'}))});
+ assert.equal(submit().props.disabled,true);
+ assert.ok(tree.root.findByType('label').children.includes('אפשרות אחרת (לא חובה)'));
+ assert.ok(input().props['aria-describedby']);
+ await act(async()=>button('Hotel One').props.onClick());assert.equal(submit().props.disabled,false);assert.equal(calls.length,0);
+ await act(async()=>button('Hotel One').props.onClick());assert.equal(submit().props.disabled,true);
+ await act(async()=>input().props.onChange({target:{value:'   '}}));assert.equal(submit().props.disabled,true);
+ await act(async()=>button('Hotel Two').props.onClick());
+ await act(async()=>input().props.onChange({target:{value:'My Hotel'}}));
+ assert.equal(button('Hotel Two').props['aria-pressed'],false);assert.equal(submit().props.disabled,false);
+ failure=true;await act(async()=>submit().props.onClick());assert.equal(tree.root.findByProps({role:'alert'}).children[0],'Save failed');assert.equal(input().props.value,'My Hotel');
+ failure=false;await act(async()=>submit().props.onClick());assert.equal(calls[1][4].name,'My Hotel');assert.deepEqual(calls[1][2],[calls[1][4].id]);
+ assert.equal(tree.root.findByType('h2').children[0],'Attractions');assert.equal(submit().props.disabled,true);
+ await act(async()=>button('Museum').props.onClick());await act(async()=>button('Park').props.onClick());
+ await act(async()=>button('Museum').props.onClick());assert.equal(calls.length,2);
+ await act(async()=>input().props.onChange({target:{value:'Boat trip'}}));
+ await act(async()=>submit().props.onClick());assert.deepEqual(calls[2][2],['a2',calls[2][4].id]);assert.equal(calls[2][4].name,'Boat trip');
+ assert.equal(tree.root.findAllByProps({role:'dialog'}).length,0);
+ await act(async()=>tree.unmount());
+ console.log('PASS: explanatory field, disabled empty/whitespace, selection toggles, explicit submission, hotel replacement, attraction multi-select/custom, save failure/retry, next poll and close');
+})().catch(e=>{console.error(e);process.exit(1)});
