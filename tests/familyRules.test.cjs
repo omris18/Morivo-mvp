@@ -44,6 +44,7 @@ const fs=require('node:fs');
  await assertFails(updateDoc(doc(owner,'experiences/trip'),{families:[{id:'changed'}]}));
  await assertSucceeds(getDoc(doc(stranger,'experiences/legacy/media/photo')));
  const storageA=env.authenticatedContext('a1').storage(),storageB=env.authenticatedContext('b1').storage();
+ await assertSucceeds(uploadBytes(ref(env.authenticatedContext('owner').storage(),'experiences/trip/media/owner/family-puzzle.jpg'),new Uint8Array([1]),{contentType:'image/jpeg'}));
  const path='experiences/trip/families/a/media/a1/test.jpg';
  await assertSucceeds(uploadBytes(ref(storageA,path),new Uint8Array([1,2,3]),{contentType:'image/jpeg'}));
  await assertSucceeds(getBytes(ref(storageA,path)));
