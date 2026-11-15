@@ -63,5 +63,17 @@ jobs:
       - name: Deploy experience generator
         run: npx --yes firebase-tools@14 deploy --only functions --project morivo-mvp --non-interactive --force
 
+      - uses: google-github-actions/setup-gcloud@v3
+
+      # Storage rules check the authenticated session’s family in Firestore.
+      # firebase-tools skips this prerequisite in non-interactive deployments.
+      - name: Enable Storage family membership checks
+        run: >-
+          gcloud projects add-iam-policy-binding morivo-mvp
+          --member=serviceAccount:service-1018467228668@gcp-sa-firebasestorage.iam.gserviceaccount.com
+          --role=roles/firebaserules.firestoreServiceAgent
+          --condition=None --quiet
+          --format='value(version)'
+
       - name: Deploy access rules
         run: npx --yes firebase-tools@14 deploy --only firestore:rules,storage --project morivo-mvp --non-interactive
