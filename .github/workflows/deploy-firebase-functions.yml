@@ -63,5 +63,21 @@ jobs:
       - name: Deploy experience generator
         run: npx --yes firebase-tools@14 deploy --only functions --project morivo-mvp --non-interactive --force
 
+      - uses: google-github-actions/setup-gcloud@v3
+
+      - name: Verify Storage membership permission
+        run: |
+          gcloud projects get-iam-policy morivo-mvp --format=json > /tmp/morivo-iam.json
+          python3 - <<'PYTHON'
+          import json
+          policy=json.load(open("/tmp/morivo-iam.json"))
+          member="serviceAccount:service-1018467228668@gcp-sa-firebasestorage.iam.gserviceaccount.com"
+          role="roles/firebaserules.firestoreServiceAgent"
+          matches=[b for b in policy.get("bindings",[]) if b["role"]==role and member in b.get("members",[])]
+          print("Storage cross-service membership role:", "PRESENT" if matches else "MISSING")
+          print("Conditional:", any("condition" in b for b in matches))
+          if not matches: raise SystemExit("Project administrator must complete FAMILY_SETUP.md")
+          PYTHON
+
       - name: Deploy access rules
         run: npx --yes firebase-tools@14 deploy --only firestore:rules,storage --project morivo-mvp --non-interactive
