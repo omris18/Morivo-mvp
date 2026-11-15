@@ -1,8 +1,8 @@
 # Family memory books: production prerequisite
 
-The family feature is deployed. Family invitations, participant identities and Firestore isolation have been validated. Production Storage uploads currently fail because the Firebase Storage service agent cannot read Firestore membership records. Firebase CLI 14 skips cross-service IAM setup in non-interactive mode.
+The family feature is deployed. Family invitations, participant identities and Firestore isolation have been validated. Production Storage uploads and family-book isolation were verified on 2026-11-15 after the administrator granted the service agent role below. Firebase CLI 14 skips cross-service IAM setup in non-interactive mode.
 
-A project administrator must run this once in Google Cloud Shell:
+Already completed by the project administrator; retained here for future project setup:
 
 ```sh
 gcloud projects add-iam-policy-binding morivo-mvp \
@@ -15,8 +15,10 @@ This grants the existing Firebase Storage service agent the standard role needed
 
 The deployment identity `morivo-functions-deploy@morivo-mvp.iam.gserviceaccount.com` cannot change the project's IAM policy; the automated attempt failed with `morivo-mvp:setIamPolicy: Policy update access denied`. The deployment workflow intentionally does not keep retrying the unauthorized IAM operation.
 
-After the role propagates, retry the family photo upload, reload the family book, and verify that the other family's book remains empty. The live test experience is “הרפתקה אתונאית: משפחות שדה וכהן כובשות את יוון” (ID 7u8pr4J7nXPiXsM3zEDF). Two illustrative photos are selected in the participant test browser but have NOT uploaded successfully.
+Live verification: in “הרפתקה אתונאית: משפחות שדה וכהן כובשות את יוון” (ID 7u8pr4J7nXPiXsM3zEDF), the participant uploaded two illustrative photos and advanced to the next mission. The Sadeh family book displays both photos; the Cohen family book remains empty. The participant book also displays both photos.
 
-Validation already completed: production Next build; family composition, invitation and identity tests; Firestore/Storage emulator checks (scoped reads and queries, forged assignment denial, private invite/book access, owner roster queries, legacy compatibility); production creation of two families (6 adults, 5 children, 3 rooms), separate family links, member join and persistent individual progress. Live uploads and populated-family-book verification remain pending the administrator step.
+Validation completed: production Next build; family composition, invitation and identity tests; Firestore/Storage emulator checks (scoped reads and queries, forged assignment denial, private invite/book access, owner roster queries, legacy compatibility); production creation of two families (6 adults, 5 children, 3 rooms), separate family links, member join and persistent individual progress, live uploads and family-book isolation.
+
+Separate known issue: the existing AI story-generation service returns an unavailable error. Photo upload, book rendering and family isolation do not depend on that service.
 
 Official guidance: https://firebase.google.com/docs/rules/manage-deploy#manage_permissions_for_cross-service
