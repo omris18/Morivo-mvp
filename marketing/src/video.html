@@ -1,0 +1,67 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8">
+<link rel="stylesheet" href="node_modules/@fontsource/heebo/400.css">
+<link rel="stylesheet" href="node_modules/@fontsource/heebo/700.css">
+<link rel="stylesheet" href="node_modules/@fontsource/heebo/900.css">
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+html,body{width:1080px;height:1920px;overflow:hidden;background:#0a0e1a;color:#f3f4f9;font-family:Heebo,sans-serif}
+.scene{position:absolute;inset:0;opacity:0;overflow:hidden}
+.bg{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;transform-origin:50% 40%}
+.shade{position:absolute;inset:0;background:linear-gradient(180deg,rgba(10,14,26,.15) 0%,rgba(10,14,26,0) 30%,rgba(10,14,26,.78) 68%,#0a0e1a 100%)}
+.shadeTop{position:absolute;inset:0;background:linear-gradient(180deg,#0a0e1a 0%,rgba(10,14,26,.8) 24%,rgba(10,14,26,0) 50%,rgba(10,14,26,.35) 100%)}
+.glow{position:absolute;inset:0;background:radial-gradient(circle at 80% 10%,rgba(139,92,246,.5),transparent 45%),radial-gradient(circle at 5% 75%,rgba(95,208,232,.22),transparent 42%)}
+.txt{position:absolute;inset-inline:80px}
+.line{text-wrap:balance;font-weight:900;font-size:86px;line-height:1.08;letter-spacing:-.01em;will-change:transform,opacity}
+.grad{background:linear-gradient(90deg,#5fd0e8,#8b5cf6);-webkit-background-clip:text;background-clip:text;color:transparent;padding-bottom:12px}
+.small{font-weight:400;font-size:46px;line-height:1.4;color:#c9cfde}
+.chip{position:absolute;left:80px;display:flex;align-items:center;gap:22px;padding:22px 38px;border-radius:999px;background:rgba(18,23,41,.92);border:2px solid rgba(255,255,255,.16);font-weight:700;font-size:50px;box-shadow:0 20px 50px rgba(0,0,0,.4)}
+.chip i{font-style:normal;font-size:56px}
+.phone{position:absolute;left:190px;top:640px;width:700px;height:1500px;border:16px solid #05070d;border-radius:84px;overflow:hidden;background:#0a0e1a;box-shadow:0 0 0 2px rgba(255,255,255,.16),0 50px 140px rgba(139,92,246,.5)}
+.phone img{width:100%;display:block}
+.phone:before{content:"";position:absolute;top:18px;left:50%;transform:translateX(-50%);width:190px;height:44px;border-radius:24px;background:#05070d;z-index:2}
+.logo{position:absolute;left:50%;top:560px;width:260px;height:260px;margin-left:-130px;border-radius:64px;box-shadow:0 30px 100px rgba(139,92,246,.6)}
+.center{position:absolute;inset-inline:70px;text-align:center}
+.pill{display:inline-block;padding:34px 64px;border-radius:999px;background:linear-gradient(135deg,#8b5cf6,#6d4fd8);font-weight:700;font-size:52px;box-shadow:0 20px 60px rgba(139,92,246,.5)}
+</style></head><body>
+<div class="scene" id="s1"><img class="bg" style="object-position:14% 50%" src="http://localhost:4173/morivo-coast.svg"><div class="shade"></div>
+ <div class="txt" style="bottom:250px"><div class="line" data-in="0.5">How many trip photos</div><div class="line grad" data-in="1.3">are stuck on your phone?</div></div></div>
+<div class="scene" id="s2"><img class="bg" style="object-position:24% 50%" src="http://localhost:4173/route-journey.svg"><div class="shadeTop"></div>
+ <div class="txt" style="top:150px"><div class="line" data-in="4.9">Morivo turns your trip</div><div class="line grad" data-in="5.4">into a shared journey</div></div>
+ <div class="chip" style="top:1300px" data-in="6.0"><i>📸</i>Family photo missions</div>
+ <div class="chip" style="top:1445px" data-in="6.5"><i>🧩</i>Riddles along the way</div>
+ <div class="chip" style="top:1590px" data-in="7.0"><i>🏆</i>Points and rewards</div></div>
+<div class="scene" id="s3"><div class="glow"></div>
+ <div class="center" style="top:150px"><div class="line" data-in="9.1">Describe your idea.</div><div class="line grad" data-in="9.7">Morivo AI builds the route.</div></div>
+ <div class="phone" id="phone"><img id="phoneImg" src="scr-ai-en.png"></div></div>
+<div class="scene" id="s4"><img class="bg" src="http://localhost:4173/morivo-memories.svg"><div class="shade"></div>
+ <div class="txt" style="bottom:250px"><div class="small" data-in="13.4" style="margin-bottom:18px">And when the trip ends</div><div class="line" data-in="13.9">a memory book,</div><div class="line grad" data-in="14.5">ready and designed.</div></div></div>
+<div class="scene" id="s5"><div class="glow"></div><img class="logo" id="logo" src="http://localhost:4173/morivo-icon.svg">
+ <div class="center" style="top:900px"><div class="line" data-in="17.6" style="font-size:150px">Morivo</div><div class="small" data-in="18.1" style="margin-top:26px;font-size:54px">Some moments deserve<br>to become a story.</div><div data-in="18.8" style="margin-top:110px"><span class="pill">Create your experience</span></div></div></div>
+<script>
+const clamp=(x,a=0,b=1)=>Math.min(b,Math.max(a,x));
+const ease=x=>1-Math.pow(1-clamp(x),3);
+// [id, start, end] - scenes crossfade over 0.5s
+const SC=[['s1',0,4.6],['s2',4.3,8.8],['s3',8.5,13.0],['s4',12.7,17.2],['s5',16.9,21]];
+const FADE=0.5, TOTAL=20;
+window.setT=function(t){
+ for(const [id,a,b] of SC){
+  const el=document.getElementById(id);
+  const o=Math.min(a===0?1:clamp((t-a)/FADE), b>=TOTAL?1:clamp((b-t)/FADE));
+  el.style.opacity=o;
+  const bg=el.querySelector('.bg');
+  if(bg){const p=clamp((t-a)/(b-a));bg.style.transform=`scale(${1.06+0.12*p}) translateY(${-18*p}px)`}
+ }
+ document.querySelectorAll('[data-in]').forEach(el=>{
+  const p=ease((t-parseFloat(el.dataset.in))/0.6);
+  el.style.opacity=p;
+  el.style.transform=el.classList.contains('chip')?`translateX(${(1-p)*-80}px) scale(${0.9+0.1*p})`:`translateY(${(1-p)*46}px)`;
+ });
+ const pp=ease((t-9.0)/0.9);
+ document.getElementById('phone').style.transform=`translateY(${(1-pp)*500}px)`;
+ document.getElementById('phoneImg').style.transform=`translateY(${-clamp((t-10.6)/2.2)*330}px)`;
+ const lp=ease((t-17.1)/0.7);
+ const logo=document.getElementById('logo');logo.style.opacity=lp;logo.style.transform=`scale(${0.6+0.4*lp})`;
+};
+setT(0);
+</script></body></html>

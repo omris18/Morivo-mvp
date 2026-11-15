@@ -1,0 +1,105 @@
+<!doctype html>
+<html lang="he" dir="rtl">
+<head>
+<meta charset="utf-8">
+<link rel="stylesheet" href="node_modules/@fontsource/heebo/400.css">
+<link rel="stylesheet" href="node_modules/@fontsource/heebo/500.css">
+<link rel="stylesheet" href="node_modules/@fontsource/heebo/700.css">
+<link rel="stylesheet" href="node_modules/@fontsource/heebo/900.css">
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+html,body{width:1080px;height:var(--h);overflow:hidden}
+body{font-family:Heebo,sans-serif;background:#0a0e1a;color:#f3f4f9;position:relative}
+.piece{position:absolute;inset:0;display:none;flex-direction:column}
+.piece.on{display:flex}
+.art{position:relative;flex:1;min-height:0;overflow:hidden}
+.art img{position:absolute;inset:0;width:100%;height:100%;object-fit:cover}
+.art:after{content:"";position:absolute;inset:0;background:linear-gradient(180deg,rgba(10,14,26,0) 45%,rgba(10,14,26,.75) 82%,#0a0e1a 100%)}
+.copy{padding:0 76px 150px;position:relative;z-index:2;margin-top:-90px}
+.eyebrow{font-weight:700;font-size:30px;letter-spacing:.3em;color:#5fd0e8;margin-bottom:22px;direction:ltr;text-align:right}
+h1{font-weight:900;font-size:98px;line-height:1.08;letter-spacing:-.01em;text-wrap:balance}h1 em{display:block}.sub{text-wrap:balance}
+h1 em{font-style:normal;background:linear-gradient(90deg,#5fd0e8,#8b5cf6);-webkit-background-clip:text;background-clip:text;color:transparent}
+.sub{font-weight:400;font-size:42px;line-height:1.45;color:#c3c9d9;margin-top:30px}
+.brand{position:absolute;bottom:56px;inset-inline:76px;display:flex;align-items:center;gap:18px;z-index:3;direction:ltr}
+.brand img{width:64px;height:64px;border-radius:16px}
+.brand b{font-weight:900;font-size:44px}
+.brand span{margin-inline-start:auto;font-size:28px;color:#8b93a8;direction:rtl}
+.glow{position:absolute;inset:0;background:radial-gradient(circle at 85% 8%,rgba(139,92,246,.42),transparent 45%),radial-gradient(circle at 5% 70%,rgba(95,208,232,.2),transparent 40%)}
+/* steps */
+#steps{padding:110px 76px 170px;justify-content:center;gap:34px}
+#steps h1{font-size:92px;position:relative;margin-bottom:22px}
+.step{position:relative;display:flex;align-items:center;gap:34px;background:#141a2e;border:1px solid rgba(255,255,255,.1);border-radius:40px;padding:28px;box-shadow:0 24px 60px rgba(0,0,0,.35)}
+.step img{width:250px;height:250px;border-radius:28px;object-fit:cover;flex:0 0 auto}
+.step .n{font-weight:900;font-size:34px;color:#8b5cf6;direction:ltr;text-align:right}
+.step h2{font-weight:900;font-size:54px;line-height:1.15;margin:6px 0 10px}
+.step p{font-size:34px;line-height:1.4;color:#a6adc0}
+/* phone */
+#ai{align-items:center;padding-top:96px}
+#ai .head{position:relative;text-align:center;padding:0 60px}
+#ai h1{font-size:96px}
+#ai .sub{font-size:40px;margin-top:22px}
+.phone{position:relative;margin-top:60px;width:640px;flex:1;min-height:0;border:14px solid #05070d;border-bottom:0;border-radius:74px 74px 0 0;overflow:hidden;box-shadow:0 0 0 2px rgba(255,255,255,.14),0 40px 120px rgba(139,92,246,.45);background:#0a0e1a}
+.phone img{width:100%;display:block}
+.phone:before{content:"";position:absolute;top:16px;left:50%;transform:translateX(-50%);width:170px;height:40px;border-radius:22px;background:#05070d;z-index:2}
+#ai:after{content:"";position:absolute;bottom:0;inset-inline:0;height:260px;background:linear-gradient(180deg,rgba(10,14,26,0),#0a0e1a 70%)}
+.feed h1{font-size:84px}.feed .sub{font-size:38px}.feed .copy{padding-bottom:140px}
+.feed #steps{padding:70px 76px 150px;gap:22px}.feed .step img{width:190px;height:190px}.feed .step h2{font-size:46px}.feed .step p{font-size:30px}.feed #steps h1{font-size:78px;margin-bottom:8px}
+.feed #ai{padding-top:64px}.feed #ai h1{font-size:82px}.feed .phone{margin-top:40px;width:600px}
+.en .eyebrow,.en .step .n{text-align:left}.en .brand span{direction:ltr}
+.en h1{font-size:84px}.en #steps h1,.en #ai h1{font-size:88px}.en .step h2{font-size:48px}.en .step p{font-size:32px}
+.en.feed h1{font-size:72px}.en.feed #steps h1,.en.feed #ai h1{font-size:74px}.en.feed .step h2{font-size:42px}.en.feed .step p{font-size:28px}
+</style>
+</head>
+<body>
+<section class="piece" id="hook">
+  <div class="art"><img src="http://localhost:4173/morivo-coast.svg"></div>
+  <div class="copy"><div class="eyebrow">MORIVO</div>
+    <h1>כמה תמונות מהטיול האחרון<br><em>נשארות תקועות בטלפון?</em></h1>
+    <p class="sub">הופכים את הטיול למסע משותף, ובסוף מקבלים ספר זיכרונות מוכן.</p></div>
+</section>
+<section class="piece" id="steps">
+  <div class="glow"></div>
+  <h1>שלושה צעדים.<br><em>חוויה אחת.</em></h1>
+  <div class="step"><img src="http://localhost:4173/morivo-destinations.svg"><div><div class="n">01</div><h2>רעיון שמתחיל איתך</h2><p>מתארים את הטיול, ו-Morivo בונה מסלול ומשימות.</p></div></div>
+  <div class="step"><img src="http://localhost:4173/route-journey.svg"><div><div class="n">02</div><h2>מסע שחווים ביחד</h2><p>משימות צילום, חידות ורגעים משותפים לכל המשפחה.</p></div></div>
+  <div class="step"><img src="http://localhost:4173/morivo-memories.svg"><div><div class="n">03</div><h2>ספר שנשאר לתמיד</h2><p>כל התמונות נאספות לבד לספר זיכרונות מעוצב.</p></div></div>
+</section>
+<section class="piece" id="ai">
+  <div class="glow"></div>
+  <div class="head"><div class="eyebrow" style="text-align:center">MORIVO AI</div><h1>תיאור אחד.<br><em>מסע שלם.</em></h1><p class="sub">מספרים על הטיול, ו-Morivo בונה את המסלול והמשימות.</p></div>
+  <div class="phone"><img src="scr-ai.png"></div>
+</section>
+<section class="piece" id="book">
+  <div class="art"><img src="http://localhost:4173/morivo-memories.svg"></div>
+  <div class="copy"><div class="eyebrow">MORIVO</div>
+    <h1>הטיול נגמר.<br><em>הסיפור נשאר.</em></h1>
+    <p class="sub">Morivo אוסף לבד כל תמונה שהעליתם לספר זיכרונות מוכן ומעוצב.</p></div>
+</section>
+<div class="brand"><img src="http://localhost:4173/morivo-icon.svg"><b>Morivo</b><span>יש רגעים שכדאי להפוך לסיפור.</span></div>
+<script>
+const q=new URLSearchParams(location.search);
+const feed=q.get('size')==='feed';
+document.documentElement.style.setProperty('--h',feed?'1350px':'1920px');
+if(feed)document.body.classList.add('feed');
+const EN={
+ hook:['How many trip photos<br><em>are stuck on your phone?</em>','Turn the trip into a shared journey, and finish with a memory book that is already made.'],
+ stepsTitle:'Three steps.<br><em>One experience.</em>',
+ steps:[['It starts with your idea','Describe your trip, and Morivo builds the route and the missions.'],['A journey you share','Photo missions, riddles and shared moments for the whole family.'],['A book that stays','Every photo is collected into a designed memory book.']],
+ ai:['One description.<br><em>A whole journey.</em>','Tell Morivo about your trip. It builds the route and the missions.'],
+ book:['The trip ends.<br><em>The story stays.</em>','Morivo gathers every photo you upload into a ready-made memory book.'],
+ tag:'Some moments deserve to become a story.'
+};
+if(q.get('lang')==='en'){
+ document.documentElement.lang='en';document.documentElement.dir='ltr';document.body.classList.add('en');
+ const set=(sel,html)=>{document.querySelector(sel).innerHTML=html};
+ set('#hook h1',EN.hook[0]);set('#hook .sub',EN.hook[1]);
+ set('#steps h1',EN.stepsTitle);
+ document.querySelectorAll('.step').forEach((el,i)=>{el.querySelector('h2').textContent=EN.steps[i][0];el.querySelector('p').textContent=EN.steps[i][1]});
+ set('#ai h1',EN.ai[0]);set('#ai .sub',EN.ai[1]);document.querySelector('#ai .phone img').src='scr-ai-en.png';
+ set('#book h1',EN.book[0]);set('#book .sub',EN.book[1]);
+ set('.brand span',EN.tag);
+}
+document.getElementById(q.get('piece')||'hook').classList.add('on');
+</script>
+</body>
+</html>
