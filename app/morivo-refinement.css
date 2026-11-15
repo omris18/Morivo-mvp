@@ -32,3 +32,12 @@ body .dashboardWarm .rowActions{display:flex;justify-content:space-between;align
 @media(max-width:900px){.journeyPromise{gap:12px;padding:18px}.journeyPromise p{font-size:11px}.masterHero{padding:28px;grid-template-columns:1.5fr 1fr}.masterStats{gap:10px}.masterStats button{padding:17px}.masterCollectionHead{align-items:flex-start}.masterSearch{min-width:240px}}
 @media(max-width:600px){.dashboardWelcome{align-items:flex-start;flex-direction:column;margin-bottom:20px}.dashboardWelcome p{font-size:15px}body .dashboardWarm .morivoHero{border-radius:24px}.journeyPromise{grid-template-columns:1fr;padding:18px 20px;margin:0 8px 20px;gap:12px}.journeyPromise p{font-size:13px}.journeyPromise span{width:25px;height:25px}body .dashboardWarm .experienceGrid,.masterExperienceGrid{grid-template-columns:1fr}.experienceCover{height:210px}.dashboardEmpty{flex-direction:column;padding:25px;text-align:center}.dashboardEmpty img{width:150px;height:125px}.masterHero{grid-template-columns:1fr;padding:25px;gap:18px}.masterHeroArt{max-width:230px;transform:rotate(-3deg)}.masterHeroArt img{height:130px}.masterStats{grid-template-columns:repeat(2,1fr);margin-bottom:24px}.masterStats b{font-size:29px}.masterCollectionHead{flex-direction:column;gap:20px}.masterSearch{min-width:0;width:100%}.masterSearch input{font-size:16px}.masterContext{align-items:flex-start;flex-direction:column}.masterNav small{display:none}}
 @media(prefers-reduced-motion:reduce){.experienceCover>img,.experienceRow,.masterStats button{transition:none!important;transform:none!important}}
+/* Memory album: the photo page fills up whatever the number of photos (a spread holds 1-4),
+   and its text keeps the book's own ink colour instead of the dark app theme's grey. */
+.albumPhotos.photos-2 img,.albumPhotos.photos-2 video{height:250px}
+.albumPhotos.photos-3 figure:first-child{grid-column:1/-1;transform:rotate(-1deg)}
+.albumPhotos.photos-3 figure:first-child img,.albumPhotos.photos-3 figure:first-child video{height:230px}
+body .appShell .albumWords>p,body .appShell .albumMission p{color:#5d5343}
+body .appShell .albumMission small{color:#977644}
+@media(max-width:700px){.albumPhotos.photos-2 img,.albumPhotos.photos-2 video{height:190px}.albumPhotos.photos-3 figure:first-child img,.albumPhotos.photos-3 figure:first-child video{height:200px}}
+@media print{.albumPhotos.photos-2 img,.albumPhotos.photos-2 video,.albumPhotos.photos-3 figure:first-child img{height:200px}}

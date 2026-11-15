@@ -10,7 +10,7 @@ export default function MemoryAlbum({chapters,theme,lang}){
  return <div className="memoryAlbum">
   <div className="albumControls"><button disabled={current===0} onClick={()=>setPage(current-1)}>{tx(lang,"הקודם","Previous")}</button><span aria-live="polite">{tx(lang,"כפולה","Spread")} {current+1} / {chapters.length}</span><button disabled={current===chapters.length-1} onClick={()=>setPage(current+1)}>{tx(lang,"הבא","Next")}</button></div>
   {chapters.map((chapter,i)=><article className={"albumSpread "+(i===current?"isCurrent":"")} key={chapter.key} aria-label={chapter.mission.title}>
-   <div className={"albumPhotos "+(chapter.photos.length===1?"singlePhoto":"")}>
+   <div className={"albumPhotos photos-"+chapter.photos.length+(chapter.photos.length===1?" singlePhoto":"")}>
     {chapter.photos.length?chapter.photos.map(photo=><figure key={photo.id}>{photo.contentType?.startsWith("video/")?<video controls preload="metadata" src={photo.downloadURL}/>:<a href={photo.downloadURL} target="_blank" rel="noopener noreferrer"><img loading="lazy" src={photo.downloadURL} alt={photo.missionTitle||chapter.mission.title}/></a>}<figcaption>{photo.participantName||""}</figcaption></figure>):<div className="albumIllustration"><DestinationBackdrop theme={theme}/><span>{tx(lang,"אווירת המסע","Journey illustration")}</span></div>}
    </div>
    <div className="albumWords"><span className="albumChapterNumber">{String(chapter.index+1).padStart(2,"0")}</span><div className="mbHeading">{tx(lang,"פרק במסע שלנו","A CHAPTER IN OUR JOURNEY")}{chapter.page>0?(tx(lang," · המשך"," · continued")):""}</div><h2>{chapter.mission.title}</h2>

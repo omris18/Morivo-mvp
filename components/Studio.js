@@ -13,7 +13,9 @@ import missionAnswers from "../functions/missionAnswers";
 import { getCurrentPosition, geocodeAddress } from "../lib/geo";
 import { pieceAtGridIndex } from "../lib/familyPuzzle";
 import { enableOrganizerPushNotifications, pushSupported } from "../lib/push";
-import {tx,missionLabelsFor} from "../lib/i18n";
+import {tx,missionLabelsFor,getDir} from "../lib/i18n";
+import CalendarField from "./CalendarField";
+import {moveTripStart,setTripEnd,daysBetween} from "../lib/tripDates";
 
 export default function Studio({ experience, setExperience, setView, t, lang }) {
   const he=lang==="he",labels=missionLabelsFor(lang);
@@ -119,6 +121,7 @@ export default function Studio({ experience, setExperience, setView, t, lang }) 
           location: next.location,
           people: next.people,
           flights: next.flights || [],
+          ...(next.startDate ? { startDate: next.startDate, endDate: next.endDate || "" } : {}),
           adultsCount: next.adultsCount || 0,
           childrenCount: next.childrenCount || 0,
         });
@@ -405,6 +408,19 @@ export default function Studio({ experience, setExperience, setView, t, lang }) 
                 onChange={(e) => persist({ ...experience, childrenCount: Math.max(0, Number(e.target.value) || 0) })} />
             </div>
           </div>
+          <div className="fieldRow">
+            <div>
+              <label>{t.aiCreator.startDate}</label>
+              <CalendarField value={experience.startDate || ""} lang={lang} dir={getDir(lang)} label={t.aiCreator.startDate}
+                onChange={(v) => persist(moveTripStart(experience, v))} />
+            </div>
+            {(experience.endDate || flow.some((m) => Number(m.day) > 1)) && <div>
+              <label>{t.aiCreator.endDate}{daysBetween(experience.startDate, experience.endDate) > 0 && <> · {t.aiCreator.tripLength(daysBetween(experience.startDate, experience.endDate))}</>}</label>
+              <CalendarField value={experience.endDate || ""} min={experience.startDate} lang={lang} dir={getDir(lang)} label={t.aiCreator.endDate}
+                onChange={(v) => persist(setTripEnd(experience, v))} />
+            </div>}
+          </div>
+          {flow.some((m) => Number(m.day) > 0) && <p className="contextHint">{tx(lang,"המשימות נפתחות לפי ימים, החל מתאריך ההתחלה. שינוי התאריך מזיז את כל הטיול, כולל קישורי המלונות.","Missions open day by day, counted from the start date. Changing it moves the whole trip, hotel links included.")}</p>}
           <label>{s.flightsLabel}</label>
           {(experience.flights || []).map((f) => (
             <div className="flightRow" key={f.id}>
