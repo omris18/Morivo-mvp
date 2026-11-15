@@ -1,3 +1,4 @@
+const {plainSummary,missionSummary}=require("./missionPresentation");
 const { normalizeMission } = require("./missionAnswers");
 
 const MISSION_TYPES = ["photo", "video", "quiz", "puzzle", "note", "map", "story", "reward"];
@@ -11,7 +12,8 @@ function sanitizeFlow(rawFlow) {
       const atom = {
         id: `${type}-${Date.now()}-${i}`,
         type,
-        title: String(m.title || `Mission ${i + 1}`).slice(0, 120),
+        title: plainSummary(m.title || `Mission ${i + 1}`,120),
+        summary: missionSummary(m,/[\u0590-\u05ff]/.test(m.text||m.title||"")?"he":"en"),
         // 600 cut real, grounded mission text off mid-sentence - the SYSTEM_PROMPT asks for
         // "one to two sentences," but a grounded mission naming a specific real place, why it
         // fits this exact group, and a concrete action easily runs longer than that estimate

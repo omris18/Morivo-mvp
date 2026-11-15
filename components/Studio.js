@@ -1,4 +1,5 @@
 "use client";
+import missionPresentation from "../functions/missionPresentation";
 
 import { useEffect, useState, useRef } from "react";
 import { httpsCallable } from "firebase/functions";
@@ -151,7 +152,7 @@ export default function Studio({ experience, setExperience, setView, t, lang }) 
     if (!atom) return;
 
     const nextFlow = flow.map((x) =>
-      x.id === atom.id ? { ...x, ...values } : x
+      x.id === atom.id ? { ...x, ...values, ...(Object.hasOwn(values,"text")?{summary:""}:{}) } : x
     );
 
     persist({ ...experience, flow: nextFlow });
@@ -566,7 +567,7 @@ export default function Studio({ experience, setExperience, setView, t, lang }) 
               >
                 <small>{coordination.isCoordinationMission(item)?tx(lang,"תיאום לפני הטיול · לא משימה","Pre-trip coordination · not a mission"):labels[item.type]||item.type}</small>
                 <b>{item.title}</b>
-                <span>{item.text ? (item.text.length > 90 ? item.text.slice(0, 90) + "…" : item.text) : s.noInstructionYet}</span>
+                <span>{missionPresentation.missionSummary(item,lang)||s.noInstructionYet}</span>
               </button>
 
               {index < flow.length - 1 && (
