@@ -92,7 +92,7 @@ export default function ParticipantJourneyMap({experience,flow,prog,idx,finished
         const isActive=!finished&&i===idx;
         const dayState=mDone?"done":isActive?(missionDayLocked?"locked":"today"):"future";
         return <button type="button" key={m.id} className={`destinationDay ${dayState}`} onClick={e=>{e.stopPropagation();showMission(e,m,i,isActive)}} aria-label={m.title}>
-         <span className="destinationDayDot">{isActive&&missionDayLocked?"🔒":(m.day||i+1)}{mDone&&<i className="destinationDayCheck">✓</i>}{typeIcons[m.type]&&<i className="destinationDayType">{typeIcons[m.type]}</i>}</span>
+         <span className="destinationDayDot">{isActive&&missionDayLocked?"🔒":(i+1)}{mDone&&<i className="destinationDayCheck">✓</i>}{typeIcons[m.type]&&<i className="destinationDayType">{typeIcons[m.type]}</i>}</span>
         </button>;
        })}
       </div>

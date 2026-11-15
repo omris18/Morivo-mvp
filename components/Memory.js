@@ -6,7 +6,7 @@ import { subscribeMedia } from "../lib/mediaData";
 import { subscribeFamilyBook, saveFamilyBook, subscribeAnswers, subscribeAllProgress, subscribeExperience, updateExperienceRemote, ensureUser } from "../lib/morivoData";
 import MemoryPhotoManager from "./MemoryPhotoManager";
 import coordination from "../functions/coordination";
-import {unlockedPieces} from "../lib/familyPuzzle";
+import {unlockedPieces,puzzleCompletedIds} from "../lib/familyPuzzle";
 import MemoryAlbum from "./MemoryAlbum";
 import DestinationBackdrop from "./DestinationBackdrop";
 import {getExperienceTheme,buildMemoryChapters,journeyFinished} from "../lib/experienceVisuals";
@@ -64,7 +64,7 @@ export default function Memory({experience,setExperience,setView,t,user,publicVi
 
  const flow=coordination.journeyFlow(exp.flow||[]);
  const puzzle=grouped?book.familyPuzzle:exp.familyPuzzle;
- const puzzlePieces=unlockedPieces(flow,[...new Set(progress.flatMap(p=>p.completedMissionIds||[]))],puzzle?.totalPieces||8);
+ const puzzlePieces=unlockedPieces(flow,puzzleCompletedIds(exp.flow||[],progress),puzzle?.totalPieces||8);
  const he=dir==="rtl";
  const theme=getExperienceTheme(exp);
  const chapters=useMemo(()=>buildMemoryChapters(flow,media,answers,progress,tx(lang,"עוד רגעים מהמסע","More moments from the journey")),[flow,media,answers,progress,he]);

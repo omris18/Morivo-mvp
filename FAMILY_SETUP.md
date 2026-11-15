@@ -19,6 +19,8 @@ Live verification: in “הרפתקה אתונאית: משפחות שדה וכה
 
 Validation completed: production Next build; family composition, invitation and identity tests; Firestore/Storage emulator checks (scoped reads and queries, forged assignment denial, private invite/book access, owner roster queries, legacy compatibility); production creation of two families (6 adults, 5 children, 3 rooms), separate family links, member join and persistent individual progress, live uploads and family-book isolation.
 
-Separate known issue: the existing AI story-generation service returns an unavailable error. Photo upload, book rendering and family isolation do not depend on that service.
+The story generator now uses bounded Gemini attempts followed by OpenAI fallback. Provider success/fallback/failure, family-scoped queries, removed-photo exclusion, authorization and quotas pass mocked handler tests. Production verification is currently blocked by the demo anonymous account's daily story limit after earlier failed calls; do not claim a successful live story generation yet.
+
+The next family update adds protected per-family puzzle images in familyBooks, a puzzle finale, organizer photo caption/replacement and recoverable removal, explicit title editing, pre-trip coordination polls outside journey progress and calendar-only date formatting. Production checks confirmed different puzzle images per family, title persistence, photo caption/removal/restore and an automatically opened poll whose selection persists.
 
 Official guidance: https://firebase.google.com/docs/rules/manage-deploy#manage_permissions_for_cross-service

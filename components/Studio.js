@@ -482,7 +482,7 @@ export default function Studio({ experience, setExperience, setView, t, lang }) 
         <div className="familyPuzzleBox">
           <div className="tag">{s.familyPuzzleTag}</div>
           {experience.families?.length>0&&<label>{tx(lang,"הפאזל של המשפחה","Family puzzle")}<select value={puzzleFamilyId||""} disabled={puzzlePhotoSaving||puzzleRemoving||puzzleShuffling} onChange={e=>setPuzzleFamily(e.target.value)}>{experience.families.map(f=><option key={f.id} value={f.id}>{f.name}</option>)}</select></label>}
-          <p className="rosterHint">{s.familyPuzzleHint}</p>
+          <p className="rosterHint">{tx(lang,"בחרו תמונה לכל משפחה. החלקים ייחשפו אוטומטית עם ההתקדמות, או לפי מספרי חלקים שתשייכו למשימות. הפאזל יופיע בעמוד האחרון בספר.","Choose a photo for each family. Pieces reveal automatically with progress, or by piece numbers you assign to missions. The puzzle appears on the last book page.")}</p>
           {!experience.id&&<p className="quizNoCorrect">⚠ {tx(lang,"שמרו את החוויה כדי להעלות תמונה (החוויה עדיין לא קיבלה מזהה).","Save the experience first to upload a photo (it doesn't have an ID yet).")}</p>}
           <label className="familyPuzzleUpload">{puzzlePhotoSaving?s.saving:familyPuzzle?.url?s.familyPuzzleReplace:s.familyPuzzleUpload}
             <input type="file" accept="image/jpeg,image/png,image/webp" disabled={!experience.id||puzzlePhotoSaving} onChange={async e=>{
@@ -556,7 +556,7 @@ export default function Studio({ experience, setExperience, setView, t, lang }) 
             </div>
           )}
 
-          {flow.map((item, index) => (
+          {[...flow.filter(coordination.isCoordinationMission),...coordination.journeyFlow(flow)].map((item, index) => (
             <div key={item.id} className="flowWrap">
               <button
                 className={
@@ -564,7 +564,7 @@ export default function Studio({ experience, setExperience, setView, t, lang }) 
                 }
                 onClick={() => setSelected(item.id)}
               >
-                <small>{labels[item.type]||item.type}</small>
+                <small>{coordination.isCoordinationMission(item)?tx(lang,"תיאום לפני הטיול · לא משימה","Pre-trip coordination · not a mission"):labels[item.type]||item.type}</small>
                 <b>{item.title}</b>
                 <span>{item.text ? (item.text.length > 90 ? item.text.slice(0, 90) + "…" : item.text) : s.noInstructionYet}</span>
               </button>
@@ -795,7 +795,7 @@ export default function Studio({ experience, setExperience, setView, t, lang }) 
             </label>
             <p className="organizerDecidesHint">{s.stampMissionHint}</p>
 
-            {familyPuzzle?.url && (
+            {familyPuzzle?.url && !coordination.isCoordinationMission(atom) && (
               <>
                 <label>{s.puzzlePieceLabel}</label>
                 <input
