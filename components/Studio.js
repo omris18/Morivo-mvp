@@ -17,6 +17,8 @@ import { getCurrentPosition, geocodeAddress } from "../lib/geo";
 import { pieceAtGridIndex } from "../lib/familyPuzzle";
 import { enableOrganizerPushNotifications, pushSupported } from "../lib/push";
 import {tx,missionLabelsFor,getDir} from "../lib/i18n";
+import {useFamilyPuzzle} from "../lib/useFamilyPuzzle";
+import coordination from "../functions/coordination";
 import CalendarField from "./CalendarField";
 import {moveTripStart,setTripEnd,daysBetween} from "../lib/tripDates";
 
@@ -25,6 +27,12 @@ export default function Studio({ experience, setExperience, setView, t, lang }) 
   const [justPublished,setJustPublished]=useState(false);
   useEffect(()=>{if(justPublished)document.getElementById("experience-share")?.scrollIntoView({behavior:"smooth",block:"center"})},[justPublished]);
   const s = t.studio;
+  const [puzzleFamily,setPuzzleFamily]=useState("");
+  const puzzleFamilyId=experience.families?.find(f=>f.id===puzzleFamily)?.id||experience.families?.[0]?.id||null;
+  const {puzzle:familyPuzzle}=useFamilyPuzzle(experience,puzzleFamilyId);
+  const [titleDraft,setTitleDraft]=useState(experience.name||"");
+  useEffect(()=>setTitleDraft(experience.name||""),[experience.id,experience.name]);
+  useEffect(()=>{setPuzzlePhotoPreview(null);setPuzzlePhotoError("");setPuzzleShuffleError("")},[puzzleFamilyId]);
   const flow = experience.flow || [];
   const [selected, setSelected] = useState(flow[0]?.id || null);
   const [saving, setSaving] = useState(false);
@@ -400,6 +408,8 @@ export default function Studio({ experience, setExperience, setView, t, lang }) 
 
         <div className="tripDetails">
           <div className="tag">{s.tripDetailsTag}</div>
+          <label>{tx(lang,"כותרת החוויה","Experience title")}<input value={titleDraft} maxLength={160} onChange={e=>setTitleDraft(e.target.value)}/></label>
+          <button disabled={saving||!titleDraft.trim()||titleDraft.trim()===experience.name} onClick={()=>persist({...experience,name:titleDraft.trim()})}>{tx(lang,"שמירת הכותרת","Save title")}</button>
           {experience.families?.length?<><FamilyEditor value={experience.families} lang={lang} disabled={!!experience.joinCode} onChange={families=>{const sum=familiesDomain.totals(families);persist({...experience,families,adultsCount:sum.adults,childrenCount:sum.children,people:sum.adults+sum.children})}}/><FamilyAccommodation experience={experience} lang={lang}/></>:<>
           <div className="fieldRow">
             <div>
@@ -471,40 +481,41 @@ export default function Studio({ experience, setExperience, setView, t, lang }) 
 
         <div className="familyPuzzleBox">
           <div className="tag">{s.familyPuzzleTag}</div>
+          {experience.families?.length>0&&<label>{tx(lang,"הפאזל של המשפחה","Family puzzle")}<select value={puzzleFamilyId||""} disabled={puzzlePhotoSaving||puzzleRemoving||puzzleShuffling} onChange={e=>setPuzzleFamily(e.target.value)}>{experience.families.map(f=><option key={f.id} value={f.id}>{f.name}</option>)}</select></label>}
           <p className="rosterHint">{s.familyPuzzleHint}</p>
           {!experience.id&&<p className="quizNoCorrect">⚠ {tx(lang,"שמרו את החוויה כדי להעלות תמונה (החוויה עדיין לא קיבלה מזהה).","Save the experience first to upload a photo (it doesn't have an ID yet).")}</p>}
-          <label className="familyPuzzleUpload">{puzzlePhotoSaving?s.saving:experience.familyPuzzle?.url?s.familyPuzzleReplace:s.familyPuzzleUpload}
+          <label className="familyPuzzleUpload">{puzzlePhotoSaving?s.saving:familyPuzzle?.url?s.familyPuzzleReplace:s.familyPuzzleUpload}
             <input type="file" accept="image/jpeg,image/png,image/webp" disabled={!experience.id||puzzlePhotoSaving} onChange={async e=>{
               const file=e.target.files?.[0];if(!file)return;
               setPuzzlePhotoPreview(URL.createObjectURL(file));
               setPuzzlePhotoSaving(true);setPuzzlePhotoError("");
-              try{await uploadFamilyPhoto(experience.id,file)}catch(err){setPuzzlePhotoError(err.message)}finally{setPuzzlePhotoSaving(false);e.target.value=""}
+              try{await uploadFamilyPhoto(experience.id,file,puzzleFamilyId)}catch(err){setPuzzlePhotoError(err.message)}finally{setPuzzlePhotoSaving(false);e.target.value=""}
             }}/>
           </label>
-          {puzzlePhotoPreview&&!experience.familyPuzzle?.url&&<div className="celebrationCartoonPreview">
+          {puzzlePhotoPreview&&!familyPuzzle?.url&&<div className="celebrationCartoonPreview">
             <img src={puzzlePhotoPreview} alt={s.familyPuzzleTag}/>
           </div>}
           {puzzlePhotoError&&<p className="quizNoCorrect">⚠ {puzzlePhotoError}</p>}
-          {experience.familyPuzzle?.url&&(()=>{
-            const total=experience.familyPuzzle.totalPieces||8,cols=4,rows=Math.ceil(total/cols);
+          {familyPuzzle?.url&&(()=>{
+            const total=familyPuzzle.totalPieces||8,cols=4,rows=Math.ceil(total/cols);
             return <div className="celebrationCartoonBox">
               <div className="familyPuzzleGrid studioPuzzlePreview" style={{gridTemplateColumns:`repeat(${cols},1fr)`,aspectRatio:`${cols}/${rows}`}}>
                 {Array.from({length:total},(_,gridIdx)=>gridIdx).map(gridIdx=>{
-                  const n=pieceAtGridIndex(experience.familyPuzzle.layout,total,gridIdx);
+                  const n=pieceAtGridIndex(familyPuzzle.layout,total,gridIdx);
                   const col=gridIdx%cols,row=Math.floor(gridIdx/cols);
                   return <div className="puzzleTile" key={gridIdx}>
-                    <div className="puzzleTileImage" style={{backgroundImage:`url(${experience.familyPuzzle.url})`,backgroundSize:`${cols*100}% ${rows*100}%`,backgroundPosition:`${cols>1?col/(cols-1)*100:0}% ${rows>1?row/(rows-1)*100:0}%`}}/>
+                    <div className="puzzleTileImage" style={{backgroundImage:`url(${familyPuzzle.url})`,backgroundSize:`${cols*100}% ${rows*100}%`,backgroundPosition:`${cols>1?col/(cols-1)*100:0}% ${rows>1?row/(rows-1)*100:0}%`}}/>
                     <span className="puzzlePieceNumber">{n}</span>
                   </div>;
                 })}
               </div>
               <button type="button" disabled={puzzleShuffling} onClick={async()=>{
                 setPuzzleShuffling(true);setPuzzleShuffleError("");
-                try{await reshuffleFamilyPuzzleLayout(experience.id,total)}catch(err){setPuzzleShuffleError(err.message)}finally{setPuzzleShuffling(false)}
+                try{await reshuffleFamilyPuzzleLayout(experience.id,total,puzzleFamilyId)}catch(err){setPuzzleShuffleError(err.message)}finally{setPuzzleShuffling(false)}
               }}>{puzzleShuffling?s.saving:s.shufflePuzzleBtn}</button>
               <button type="button" disabled={puzzleRemoving} onClick={async()=>{
                 setPuzzleRemoving(true);setPuzzleShuffleError("");
-                try{await removeFamilyPuzzle(experience.id);setPuzzlePhotoPreview(null)}catch(err){setPuzzleShuffleError(err.message)}finally{setPuzzleRemoving(false)}
+                try{await removeFamilyPuzzle(experience.id,puzzleFamilyId);setPuzzlePhotoPreview(null)}catch(err){setPuzzleShuffleError(err.message)}finally{setPuzzleRemoving(false)}
               }}>{puzzleRemoving?s.saving:s.familyPuzzleRemove}</button>
               {puzzleShuffleError&&<p className="quizNoCorrect">⚠ {puzzleShuffleError}</p>}
             </div>;
@@ -784,18 +795,18 @@ export default function Studio({ experience, setExperience, setView, t, lang }) 
             </label>
             <p className="organizerDecidesHint">{s.stampMissionHint}</p>
 
-            {experience.familyPuzzle?.url && (
+            {familyPuzzle?.url && (
               <>
                 <label>{s.puzzlePieceLabel}</label>
                 <input
                   type="number"
                   min="1"
-                  max={experience.familyPuzzle.totalPieces || 8}
+                  max={familyPuzzle.totalPieces || 8}
                   value={atom.puzzlePiece || ""}
                   placeholder={s.puzzlePiecePlaceholder}
                   onChange={(e) => {
                     const v = e.target.value.trim();
-                    patch({ puzzlePiece: v === "" ? null : Math.max(1, Math.min(experience.familyPuzzle.totalPieces || 8, Number(v) || 1)) });
+                    patch({ puzzlePiece: v === "" ? null : Math.max(1, Math.min(familyPuzzle.totalPieces || 8, Number(v) || 1)) });
                   }}
                 />
               </>

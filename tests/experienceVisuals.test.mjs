@@ -1,9 +1,6 @@
 import assert from "node:assert/strict";
-import {readFile} from "node:fs/promises";
-import artContext from "../functions/experienceArtContext.js";
-const progressSource=(await readFile(new URL("../functions/journeyProgress.js",import.meta.url),"utf8")).replace('module.exports=', 'const journeyProgress=');
-const source=(await readFile(new URL("../lib/experienceVisuals.js",import.meta.url),"utf8")).replace('import artContext from "../functions/experienceArtContext";',`const artContext={experienceArtContext:${artContext.experienceArtContext.toString()}};`).replace('import journeyProgress from "../functions/journeyProgress";',progressSource);
-const {getExperienceTheme,buildMemoryChapters,journeyFinished,missionMapUrl}=await import("data:text/javascript;base64,"+Buffer.from(source).toString("base64"));
+import {getExperienceTheme,buildMemoryChapters,journeyFinished,missionMapUrl,missionUnlockDate} from "../lib/experienceVisuals.js";
+import {localDateKey} from "../lib/tripDates.js";
 const flow=[{id:"a",title:"Photo",type:"photo"},{id:"b",title:"Note",type:"note"}];
 assert.equal(getExperienceTheme({location:"פוקט, תאילנד"}).key,"thailand");
 assert.equal(getExperienceTheme({location:"Athens, Greece"}).key,"greece");
@@ -30,3 +27,7 @@ assert.equal(missionMapUrl({lat:100,lng:10}),null);
 assert.equal(missionMapUrl({text:"Thailand"}),null);
 assert.ok(missionMapUrl({location:"Bangkok"}).endsWith("Bangkok"));
 console.log("20 route, completion and album pagination checks passed");
+
+process.env.TZ="Asia/Jerusalem";
+assert.equal(localDateKey(missionUnlockDate("2026-12-06",{day:1})),"2026-12-06");
+assert.equal(localDateKey(missionUnlockDate("2026-12-06",{day:2})),"2026-12-07");

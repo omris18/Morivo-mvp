@@ -4,6 +4,9 @@ import { httpsCallable } from "firebase/functions";
 import { firebaseConfigured, functions } from "../lib/firebase";
 import { subscribeMedia } from "../lib/mediaData";
 import { subscribeFamilyBook, saveFamilyBook, subscribeAnswers, subscribeAllProgress, subscribeExperience, updateExperienceRemote, ensureUser } from "../lib/morivoData";
+import MemoryPhotoManager from "./MemoryPhotoManager";
+import coordination from "../functions/coordination";
+import {unlockedPieces} from "../lib/familyPuzzle";
 import MemoryAlbum from "./MemoryAlbum";
 import DestinationBackdrop from "./DestinationBackdrop";
 import {getExperienceTheme,buildMemoryChapters,journeyFinished} from "../lib/experienceVisuals";
@@ -47,7 +50,8 @@ export default function Memory({experience,setExperience,setView,t,user,publicVi
  const familyId=grouped?(isOwner?(exp.families.find(f=>f.id===selectedFamily)?.id||exp.families[0].id):participantFamilyId):null;
  const family=exp.families?.find(f=>f.id===familyId);
  const book=grouped?(familyBook._familyId===familyId?familyBook:{}):exp;
- const media=grouped?rawMedia.filter(m=>m.familyId===familyId):rawMedia;
+ const familyMedia=grouped?rawMedia.filter(m=>m.familyId===familyId):rawMedia;
+ const media=familyMedia.filter(m=>!m.deleted);
  const answers=grouped?rawAnswers.filter(m=>m.familyId===familyId):rawAnswers;
  const progress=grouped?rawProgress.filter(m=>m.familyId===familyId):rawProgress;
  useEffect(()=>{
@@ -58,7 +62,9 @@ export default function Memory({experience,setExperience,setView,t,user,publicVi
   return()=>{a();b();c();d()};
  },[exp.id,familyId,grouped]);
 
- const flow=exp.flow||[];
+ const flow=coordination.journeyFlow(exp.flow||[]);
+ const puzzle=grouped?book.familyPuzzle:exp.familyPuzzle;
+ const puzzlePieces=unlockedPieces(flow,[...new Set(progress.flatMap(p=>p.completedMissionIds||[]))],puzzle?.totalPieces||8);
  const he=dir==="rtl";
  const theme=getExperienceTheme(exp);
  const chapters=useMemo(()=>buildMemoryChapters(flow,media,answers,progress,tx(lang,"עוד רגעים מהמסע","More moments from the journey")),[flow,media,answers,progress,he]);
@@ -145,11 +151,6 @@ export default function Memory({experience,setExperience,setView,t,user,publicVi
    <div className="statTileMB"><b>{flow.length}</b><small>{m2.missions}</small></div>
   </div>
 
-  {!grouped&&exp.familyPuzzle?.url&&<div className="mbSection mbPuzzleReveal">
-   <div className="mbHeading">{m2.puzzleRevealTitle}</div>
-   <div className="mbPuzzleImage" style={{backgroundImage:`url(${exp.familyPuzzle.url})`}}></div>
-   <p className="mbPuzzleSub">{m2.puzzleRevealSub}</p>
-  </div>}
 
   <div className={"mbSection mbStory "+(!book.memoryStory&&!book.story?"mbStoryEmpty":"")}>
    <div className="mbHeading">{m2.ourStory}</div>
@@ -157,7 +158,8 @@ export default function Memory({experience,setExperience,setView,t,user,publicVi
    {canWriteStory&&<button className="mbWriteBtn" disabled={writing} onClick={writeStory}>{writing?m2.writing:book.memoryStory?m2.rewriteWithAI:m2.writeWithAI}</button>}
   </div>
 
-  <MemoryAlbum key={`${exp.id}:${familyId||"all"}`} chapters={chapters} theme={theme} lang={lang} seed={book.memoryDesign?.seed||`${exp.id}:${familyId||"all"}`} canEdit={isOwner&&firebaseConfigured} onSaveDesign={saveMemoryDesign}/>
+  {isOwner&&<MemoryPhotoManager key={`${exp.id}:${familyId}`} experienceId={exp.id} photos={familyMedia} familyName={family?.name} lang={lang}/>}
+  <MemoryAlbum puzzle={puzzle} puzzlePieces={puzzlePieces} familyName={family?.name} key={`${exp.id}:${familyId||"all"}`} chapters={chapters} theme={theme} lang={lang} seed={book.memoryDesign?.seed||`${exp.id}:${familyId||"all"}`} canEdit={isOwner&&firebaseConfigured} onSaveDesign={saveMemoryDesign}/>
 
   {canShare&&<div className="mbSection mbShareSection">
    <div className="mbShare">

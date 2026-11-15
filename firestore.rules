@@ -85,7 +85,7 @@ service cloud.firestore {
       match /media/{mediaId} {
         allow read: if familyRead(experienceId);
         allow create: if familyCreate(experienceId) && signedIn() && isParticipant(experienceId, request.resource.data.uid);
-        allow update: if stableFamily() && signedIn() && (isParticipant(experienceId, resource.data.uid) || isMaster());
+        allow update: if stableFamily() && signedIn() && (isParticipant(experienceId, resource.data.uid) || isExperienceOwner(experienceId));
         allow delete: if signedIn() && (isParticipant(experienceId, resource.data.uid) || isExperienceOwner(experienceId));
       }
       match /progress/{uid} {

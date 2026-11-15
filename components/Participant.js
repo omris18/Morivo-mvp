@@ -1,4 +1,8 @@
 "use client";
+import CoordinationPanel from "./CoordinationPanel";
+import coordination from "../functions/coordination";
+import {useFamilyPuzzle} from "../lib/useFamilyPuzzle";
+import {localDateKey} from "../lib/tripDates";
 import FamilyAccommodation from "./FamilyAccommodation";
 import Memory from "./Memory";
 import {participantHint} from "../lib/experienceGuidance";
@@ -101,7 +105,7 @@ export default function Participant({experience,setExperience,setView,setActiveI
   catch{window.prompt(tx(lang,"הקישור האישי שלכם","Your personal link"),window.location.href)}
  }
  useEffect(()=>{if(firebaseConfigured&&joined&&eid&&eid!=="thailand-demo")return subscribeExperience(eid,x=>x&&setExperience(x))},[eid,joined]);
- useEffect(()=>{if(firebaseConfigured&&joined&&eid&&eid!=="thailand-demo")return subscribeMedia(eid,setCoverMedia,familyId)},[joined,eid,familyId]);
+ useEffect(()=>{if(firebaseConfigured&&joined&&eid&&eid!=="thailand-demo")return subscribeMedia(eid,rows=>setCoverMedia(rows.filter(m=>!m.deleted)),familyId)},[joined,eid,familyId]);
  useEffect(()=>{if(firebaseConfigured&&joined&&eid&&uid){initializeProgress(eid,uid);return subscribeMyProgress(eid,uid,setProg)}},[joined,eid,uid]);
  useEffect(()=>{if(firebaseConfigured&&joined&&eid)return subscribeMessages(eid,setMessages)},[joined,eid]);
  useEffect(()=>{if(firebaseConfigured&&joined&&eid)return subscribeLocationVotes(eid,setLocationVotes)},[joined,eid]);
@@ -115,9 +119,9 @@ export default function Participant({experience,setExperience,setView,setActiveI
  },[joined,eid,lang,experience.lang,experience.updatedAt?.seconds,experience.updatedAt?.nanoseconds]);
  const latestMessage=messages.find(m=>!dismissed.includes(m.id));
  const experienceName=translated?.name||experience.name;
- const rawFlow=(experience.flow||[]).map(missionAnswers.normalizeMission);
+ const rawFlow=coordination.journeyFlow(experience.flow||[]).map(missionAnswers.normalizeMission);
  const flow=translated?rawFlow.map(m=>missionAnswers.normalizeMission({...m,...translated.flow.find(x=>x.id===m.id),...(m.responseMode==="open"?{type:"note",responseMode:"open"}:{})})):rawFlow;
- const rawIdx=journeyProgress.currentMissionIndex(prog,flow);
+ const rawIdx=journeyProgress.currentMissionIndex(prog,experience.flow||[]);
  // A branch mission can jump the participant straight past the end of the array (skipping
  // whatever missions their path didn't take), so "finished" has to mean "position is past the
  // last mission", not "every mission in the array got completed" - that second definition
@@ -132,21 +136,22 @@ export default function Participant({experience,setExperience,setView,setActiveI
  const missionUnlocksOn=missionDayLocked?missionUnlockDate(experience.startDate,mission):null;
  const badges=computeBadges(prog,flow);
  const earnedStamps=flow.filter(m=>isStampMission(m)&&(prog.completedMissionIds||[]).includes(m.id));
- const puzzleTotal=experience.familyPuzzle?.totalPieces||8;
- const unlockedPuzzlePieces=useMemo(()=>unlockedPieces(flow,prog.completedMissionIds,puzzleTotal),[flow,prog.completedMissionIds,puzzleTotal]);
+ const {puzzle:familyPuzzle,completedIds:familyCompletedIds}=useFamilyPuzzle(experience,joined?familyId:null,prog.completedMissionIds);
+ const puzzleTotal=familyPuzzle?.totalPieces||8;
+ const unlockedPuzzlePieces=useMemo(()=>unlockedPieces(flow,familyCompletedIds,puzzleTotal),[flow,familyCompletedIds,puzzleTotal]);
  const [flyingPiece,setFlyingPiece]=useState(null);
  const [confettiKey,setConfettiKey]=useState(0);
  const prevUnlockedRef=useRef(new Set());
  useEffect(()=>{
   const newlyUnlocked=[...unlockedPuzzlePieces].filter(n=>!prevUnlockedRef.current.has(n));
   prevUnlockedRef.current=unlockedPuzzlePieces;
-  if(newlyUnlocked.length&&experience.familyPuzzle?.url){
+  if(newlyUnlocked.length&&familyPuzzle?.url){
    setFlyingPiece(newlyUnlocked[0]);
    setConfettiKey(k=>k+1);
    const t=setTimeout(()=>setFlyingPiece(null),1200);
    return ()=>clearTimeout(t);
   }
- },[unlockedPuzzlePieces,experience.familyPuzzle?.url]);
+ },[unlockedPuzzlePieces,familyPuzzle?.url]);
  useEffect(()=>{setQuizAnswer(null);setQuizFeedback(null);setQuizWrongAttempts(0);setNoteText("");setPuzzleAnswer("");setLocStatus(null);setQrVerified(false);setSuggestText("");setMissionPopupOpen(false);setFiles([]);setUploadNotice("");stopScan()},[mission?.id]);
  useEffect(()=>{setRevisitFiles([]);setRevisitNotice("");setRevisitPct(0)},[revisitMission?.id]);
  const branchResolvingRef=useRef(false);
@@ -238,7 +243,7 @@ export default function Participant({experience,setExperience,setView,setActiveI
    await uploadMissionPhoto({experienceId:eid,mission:targetMission,file:batch[i],participantName:name,onProgress:filePct=>onOverallProgress(Math.round(((i+filePct/100)/batch.length)*100))});
   }
  }
- async function complete(){if(!mission)return;if(missionDayLocked)return showToast(p.missionDayLockedHint(missionUnlocksOn?formatStopDate(missionUnlocksOn.toISOString().slice(0,10),lang):""));if(experience.paused)return showToast(p.pausedByOrganizer);const isMedia=mission.type==="photo"||mission.type==="video";if(isMedia&&!files.length)return showToast(p.chooseFirst(mission.type));if(mission.type==="note"&&!noteText.trim())return showToast(p.writeSomethingFirst);if(mission.type==="puzzle"&&!puzzleAnswer.trim())return showToast(p.writeSomethingFirst);if(mission.type==="puzzle"&&mission.answer&&!missionAnswers.answerMatches(puzzleAnswer,mission.answer))return showToast(p.wrongAnswer);if(mission.type==="map"&&(hasGpsCheckpoint||hasQrCheckpoint)&&!((hasGpsCheckpoint&&locStatus&&locStatus.within)||(hasQrCheckpoint&&qrVerified)))return showToast(p.getCloserFirst);setBusy(true);try{
+ async function complete(){if(!mission)return;if(missionDayLocked)return showToast(p.missionDayLockedHint(missionUnlocksOn?formatStopDate(localDateKey(missionUnlocksOn),lang):""));if(experience.paused)return showToast(p.pausedByOrganizer);const isMedia=mission.type==="photo"||mission.type==="video";if(isMedia&&!files.length)return showToast(p.chooseFirst(mission.type));if(mission.type==="note"&&!noteText.trim())return showToast(p.writeSomethingFirst);if(mission.type==="puzzle"&&!puzzleAnswer.trim())return showToast(p.writeSomethingFirst);if(mission.type==="puzzle"&&mission.answer&&!missionAnswers.answerMatches(puzzleAnswer,mission.answer))return showToast(p.wrongAnswer);if(mission.type==="map"&&(hasGpsCheckpoint||hasQrCheckpoint)&&!((hasGpsCheckpoint&&locStatus&&locStatus.within)||(hasQrCheckpoint&&qrVerified)))return showToast(p.getCloserFirst);setBusy(true);try{
    if(isMedia&&firebaseConfigured)await uploadBatch(mission,files,setPct);
    if(["note","puzzle"].includes(mission.type)&&firebaseConfigured)await saveMissionAnswer(eid,mission,mission.type==="note"?noteText.trim():puzzleAnswer.trim(),name);
    if(firebaseConfigured)await completeJourneyMission(eid,mission,idx,name);else setProg(pr=>({completedMissionIds:[...pr.completedMissionIds,mission.id],currentMissionIndex:idx+1,points:pr.points+(mission.points||100)}));
@@ -341,6 +346,7 @@ export default function Participant({experience,setExperience,setView,setActiveI
  {latestMessage&&<div className="orgMessage"><span>📣 {latestMessage.text}</span><button onClick={()=>setDismissed(d=>[...d,latestMessage.id])}>✕</button></div>}
  {experience.paused&&!finished&&<div className="pausedBanner">⏸ {p.pausedByOrganizer}</div>}
  <div className="journeyProgressBar"><div className="journeyProgressFill" style={{width:`${progressPct}%`}}></div></div>
+ <CoordinationPanel experience={experience} uid={uid} name={name} votes={locationVotes} lang={lang}/>
  <ParticipantJourneyMap experience={experience} flow={flow} prog={prog} idx={idx} finished={finished} lang={lang} p={p} missionDayLocked={missionDayLocked} onOpenMission={(m,isActive)=>{
    if(isActive){setMissionPopupOpen(true);return}
    const doneAlready=(prog.completedMissionIds||[]).includes(m.id);
@@ -382,17 +388,17 @@ export default function Participant({experience,setExperience,setView,setActiveI
    ? <p className="passportEmpty">{p.passportEmptyHint}</p>
    : <div className="passportStampGrid">{earnedStamps.map(m=><div className="passportStamp" key={m.id}><span className="passportStampIcon">{stampIcons[m.type]||"⭐"}</span><b>{m.day?routeLabels(lang).day(m.day):m.title}</b></div>)}</div>}
   {badges.length>0&&<div className="badgeRow">{badges.map(b=><div className="badge" key={b.id} title={b.label}><span>{b.icon}</span><small>{b.label}</small></div>)}</div>}
-  {experience.familyPuzzle?.url&&(()=>{
+  {familyPuzzle?.url&&(()=>{
     const cols=4,rows=Math.ceil(puzzleTotal/cols);
     return <div className="familyPuzzleSection">
      <div className="passportStampsHead"><span>{p.familyPuzzleTitle}</span><small>{p.puzzlePiecesCount(unlockedPuzzlePieces.size,puzzleTotal)}</small></div>
      <div className="familyPuzzleGrid" style={{gridTemplateColumns:`repeat(${cols},1fr)`,aspectRatio:`${cols}/${rows}`}}>
       {Array.from({length:puzzleTotal},(_,gridIdx)=>gridIdx).map(gridIdx=>{
-       const n=pieceAtGridIndex(experience.familyPuzzle.layout,puzzleTotal,gridIdx);
+       const n=pieceAtGridIndex(familyPuzzle.layout,puzzleTotal,gridIdx);
        const col=gridIdx%cols,row=Math.floor(gridIdx/cols);
        const unlocked=unlockedPuzzlePieces.has(n);
        return <div className={"puzzleTile "+(unlocked?"":"locked")} key={gridIdx}>
-        <div className="puzzleTileImage" style={{backgroundImage:`url(${experience.familyPuzzle.url})`,backgroundSize:`${cols*100}% ${rows*100}%`,backgroundPosition:`${cols>1?col/(cols-1)*100:0}% ${rows>1?row/(rows-1)*100:0}%`}}/>
+        <div className="puzzleTileImage" style={{backgroundImage:`url(${familyPuzzle.url})`,backgroundSize:`${cols*100}% ${rows*100}%`,backgroundPosition:`${cols>1?col/(cols-1)*100:0}% ${rows>1?row/(rows-1)*100:0}%`}}/>
         {!unlocked&&<div className="puzzleLock">🔒</div>}
        </div>;
       })}
@@ -401,11 +407,11 @@ export default function Participant({experience,setExperience,setView,setActiveI
     </div>;
    })()}
  </div></div>,document.body)}
- {flyingPiece&&experience.familyPuzzle?.url&&typeof document!=="undefined"&&createPortal((()=>{
+ {flyingPiece&&familyPuzzle?.url&&typeof document!=="undefined"&&createPortal((()=>{
    const cols=4,rows=Math.ceil(puzzleTotal/cols);
-   const gridIdx=gridIndexForPiece(experience.familyPuzzle.layout,puzzleTotal,flyingPiece);
+   const gridIdx=gridIndexForPiece(familyPuzzle.layout,puzzleTotal,flyingPiece);
    const col=gridIdx%cols,row=Math.floor(gridIdx/cols);
-   return <div className="puzzleFlyPiece" style={{backgroundImage:`url(${experience.familyPuzzle.url})`,backgroundSize:`${cols*100}% ${rows*100}%`,backgroundPosition:`${cols>1?col/(cols-1)*100:0}% ${rows>1?row/(rows-1)*100:0}%`}}/>;
+   return <div className="puzzleFlyPiece" style={{backgroundImage:`url(${familyPuzzle.url})`,backgroundSize:`${cols*100}% ${rows*100}%`,backgroundPosition:`${cols>1?col/(cols-1)*100:0}% ${rows>1?row/(rows-1)*100:0}%`}}/>;
  })(),document.body)}
  {confettiKey>0&&<Confetti key={confettiKey}/>}
  {albumOpen&&typeof document!=="undefined"&&createPortal(<div className="missionPopupOverlay" role="presentation" onClick={()=>setAlbumOpen(false)}><div className="missionPopupCard albumCard" role="dialog" aria-modal="true" onClick={e=>e.stopPropagation()}><button type="button" className="missionPopupClose" aria-label={tx(lang,"סגירה","Close")} onClick={()=>setAlbumOpen(false)}>×</button>
@@ -423,7 +429,7 @@ export default function Participant({experience,setExperience,setView,setActiveI
   <button className="primary" onClick={()=>setHelpOpen(false)}>{p.helpGotIt}</button>
  </div></div>,document.body)}
  {missionPopupOpen&&mission&&!finished&&typeof document!=="undefined"&&createPortal(<div className="missionPopupOverlay" role="presentation" onClick={()=>setMissionPopupOpen(false)}><div className="missionPopupCard" role="dialog" aria-modal="true" onClick={e=>e.stopPropagation()}><button type="button" className="missionPopupClose" aria-label={tx(lang,"סגירה","Close")} onClick={()=>setMissionPopupOpen(false)}>×</button>{mission.day?<div className="missionPopupBadge">{mission.day}</div>:null}{popupMeta(mission,lang)&&<div className="missionPopupMeta">{popupMeta(mission,lang)}</div>}<div className="missionType">{missionLabelsFor(lang)[mission.type]||mission.type}</div><h3>{mission.title}</h3><p className="participantInstruction">{participantHint(mission,lang,tx)}</p><p><LinkifiedText text={mission.text}/></p>{mission.hotel&&<div className="journeyStopHotel">🏨 {mission.hotel}</div>}{navUrl(mission)&&<a className="journeyNavigateBtn" href={navUrl(mission)} target="_blank" rel="noopener noreferrer">🧭 {p.navigate}</a>}
- {missionDayLocked&&<div className="dayLockedNotice">🔒 {p.missionDayLockedHint(missionUnlocksOn?formatStopDate(missionUnlocksOn.toISOString().slice(0,10),lang):"")}</div>}
+ {missionDayLocked&&<div className="dayLockedNotice">🔒 {p.missionDayLockedHint(missionUnlocksOn?formatStopDate(localDateKey(missionUnlocksOn),lang):"")}</div>}
  {!missionDayLocked&&<>
  {(mission.type==="photo"||mission.type==="video")&&<div className="uploadChoiceGrid">
   <label className="uploadChoiceCard"><input type="file" accept={mission.type==="photo"?"image/*":"video/*"} multiple onChange={e=>{stageFiles([...e.target.files],mission,files,setFiles,setUploadNotice);e.target.value=""}}/><span className="uploadChoiceIcon">🖼️</span><b>{p.chooseFromGallery}</b><small>{p.chooseFromGalleryHint}</small></label>

@@ -1,6 +1,7 @@
 "use client";
 import {useEffect,useMemo,useState} from "react";
 import {createPortal} from "react-dom";
+import coordination from "../functions/coordination";
 import ExperienceRoute from "./ExperienceRoute";
 import ExperienceShare from "./ExperienceShare";
 import {journeyFinished,missionDone,missionActive} from "../lib/experienceVisuals";
@@ -121,7 +122,7 @@ export default function Runtime({experience,setExperience,setView,t,user,lang,is
    if(mission&&!mission.isAttractionsPoll&&optionIds?.length){
      const allOptions=[...(mission.options||[]),...customOptionsFor(missionId)];
      const chosen=allOptions.find(o=>o.id===optionIds[0]);
-     if(chosen?.name)patch.flow=flow.map(m=>m.id===missionId?{...m,hotel:chosen.name}:m);
+     if(chosen?.name)patch.flow=(experience.flow||[]).map(m=>m.id===missionId?{...m,hotel:chosen.name}:m);
    }
    updateExperienceRemote(experience.id,patch).catch(e=>showToast(e.message));
    setPendingAttractionPicks(prev=>{const next={...prev};delete next[missionId];return next});
@@ -142,19 +143,20 @@ export default function Runtime({experience,setExperience,setView,t,user,lang,is
  const a=subscribeParticipants(experience.id,setPeople),b=subscribeEvents(experience.id,evs=>setFeed(evs.map(x=>x.text))),c=subscribeMedia(experience.id,setMedia),d=subscribeAllProgress(experience.id,setProgress),e=subscribeAnswers(experience.id,setAnswers),f=subscribeLocationVotes(experience.id,setLocationVotes);return()=>{a();b();c();d();e();f()}},[experience.id]);
  useEffect(()=>{if(!experience.joinCode){setQrDataUrl(null);return}const link=`${window.location.origin}${window.location.pathname}?join=${experience.joinCode}`;QRCode.toDataURL(link,{margin:1,width:160,color:{dark:"#050b13",light:"#ffffff"}}).then(setQrDataUrl).catch(()=>setQrDataUrl(null))},[experience.joinCode]);
  useEffect(()=>{if(!firebaseConfigured||!experience.id||experience.id==="thailand-demo")return;return subscribeParticipantCodes(experience.id,setRoster,e=>showToast(r.rosterLoadError(e.message)),experience.ownerUid)},[experience.id,experience.ownerUid]);
- const flow=experience.flow||[];
+ const allFlow=experience.flow||[];
+ const flow=coordination.journeyFlow(allFlow);
  const canManage=!experience.id||user?.uid===experience.ownerUid||isMaster;
- async function swapMissions(firstId,secondId){const order=flow.map(m=>m.id),a=order.indexOf(firstId),b=order.indexOf(secondId);if(a<0||b<0)return;[order[a],order[b]]=[order[b],order[a]];if(firebaseConfigured&&experience.id)await reorderExperienceRemote(experience.id,order,flow.map(m=>m.id));else setExperience(prev=>({...prev,flow:order.map(id=>prev.flow.find(m=>m.id===id))}));}
+ async function swapMissions(firstId,secondId){const order=allFlow.map(m=>m.id),a=order.indexOf(firstId),b=order.indexOf(secondId);if(a<0||b<0)return;[order[a],order[b]]=[order[b],order[a]];if(firebaseConfigured&&experience.id)await reorderExperienceRemote(experience.id,order,allFlow.map(m=>m.id));else setExperience(prev=>({...prev,flow:order.map(id=>prev.flow.find(m=>m.id===id))}));}
  async function saveMission(original,edited){if(firebaseConfigured&&experience.id)await updateMissionRemote(experience.id,original,edited);else setExperience(prev=>({...prev,flow:prev.flow.map(m=>m.id===original.id?{...edited,id:original.id}:m)}));}
  async function toggleStampByType(type){
   const matching=flow.filter(m=>m.type===type);
   const allOn=matching.length>0&&matching.every(m=>m.stamp);
-  const nextFlow=flow.map(m=>m.type===type?{...m,stamp:!allOn}:m);
+  const nextFlow=allFlow.map(m=>m.type===type?{...m,stamp:!allOn}:m);
   if(firebaseConfigured&&experience.id)await updateExperienceRemote(experience.id,{flow:nextFlow}).catch(e=>showToast(e.message));
   else setExperience(prev=>({...prev,flow:nextFlow}));
  }
  const merged=useMemo(()=>{
-   const real=people.map(p=>journeyProgress.normalizeProgress({...p,...(progress.find(x=>x.uid===p.id)||{})},flow));
+   const real=people.map(p=>journeyProgress.normalizeProgress({...p,...(progress.find(x=>x.uid===p.id)||{})},allFlow));
    const realNames=new Set(real.map(p=>p.name||p.participantName));
    const realIds=new Set(real.map(p=>p.id));
    const pending=roster.filter(entry=>entry.participantId?!realIds.has(entry.participantId):!realNames.has(entry.name)).map(entry=>({id:entry.code,name:entry.name,pending:true,points:0,currentMissionIndex:0,completedMissionIds:[]}));
@@ -169,7 +171,7 @@ export default function Runtime({experience,setExperience,setView,t,user,lang,is
  const dropOff=useMemo(()=>missionPerf.length&&merged.length?missionPerf.reduce((worst,m)=>worst===null||m.pct<worst.pct?m:worst,null):null,[missionPerf,merged.length]);
  const journeyGridStyle={gridTemplateColumns:`minmax(140px,1.5fr) repeat(${flow.length},42px) 70px 116px`,minWidth:`${140+flow.length*42+70+116+5*(flow.length+3)}px`};
  const organizerBranches=flow.filter(m=>m.type==="branch"&&m.organizerDecides);
- const locationPolls=flow.filter(m=>m.type==="story"&&m.organizerDecides);
+ const locationPolls=allFlow.filter(m=>m.type==="story"&&m.organizerDecides);
  return <section className="runtimePage">
  <ExperienceShare experience={experience} lang={lang} setView={setView}/>
  {!people.length&&experience.status==="live"&&<p className="contextHint">{tx(lang,"עדיין לא הצטרפו משתתפים. שתפו את הקישור שלמעלה; הרשימה תתעדכן אוטומטית כשיצטרפו.","No participants yet. Share the link above; this view updates automatically when they join.")}</p>}

@@ -1,4 +1,12 @@
+const {journeyFlow}=require("./coordination");
 function normalizeProgress(progress = {}, flow = []) {
+  const originalFlow=flow;
+  flow=journeyFlow(flow);
+  if(progress.progressVersion!==2 && originalFlow.length!==flow.length){
+    const oldIndex=Math.max(0,Number(progress.currentMissionIndex)||0);
+    const prior=originalFlow.slice(0,oldIndex);
+    progress={...progress,currentMissionIndex:flow.filter(m=>prior.some(x=>x.id===m.id)).length};
+  }
   const completedMissionIds = [...new Set(progress.completedMissionIds || [])];
   const legacyIndex = Math.max(0,Number(progress.currentMissionIndex) || 0);
   const skippedMissionIds = [...new Set(progress.skippedMissionIds || (progress.progressVersion === 2 ? [] : flow.slice(0,legacyIndex).filter(m=>!completedMissionIds.includes(m.id)).map(m=>m.id)))];
@@ -9,7 +17,9 @@ function normalizeProgress(progress = {}, flow = []) {
 }
 function currentMissionIndex(progress,flow) {return normalizeProgress(progress,flow).currentMissionIndex;}
 function advanceProgress(progress,flow,missionId,{skip=false,branchTarget,awardedPoints}={}) {
-  const p=normalizeProgress(progress,flow),index=flow.findIndex(m=>m.id===missionId);
+  const p=normalizeProgress(progress,flow);
+  flow=journeyFlow(flow);
+  const index=flow.findIndex(m=>m.id===missionId);
   if(index<0)throw new Error('This mission was removed. Refresh the experience.');
   if(p.currentMissionId!==missionId) {
     if(p.completedMissionIds.includes(missionId)||p.skippedMissionIds.includes(missionId))return p;
@@ -32,6 +42,7 @@ function advanceProgress(progress,flow,missionId,{skip=false,branchTarget,awarde
 }
 function reorderProgress(progress,oldFlow,newFlow) {
   const p=normalizeProgress(progress,oldFlow);
+  newFlow=journeyFlow(newFlow);
   return {...p,currentMissionIndex:p.currentMissionId?newFlow.findIndex(m=>m.id===p.currentMissionId):newFlow.length};
 }
 module.exports={normalizeProgress,currentMissionIndex,advanceProgress,reorderProgress};
