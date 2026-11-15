@@ -136,7 +136,7 @@ export default function Participant({experience,setExperience,setView,setActiveI
  const missionUnlocksOn=missionDayLocked?missionUnlockDate(experience.startDate,mission):null;
  const badges=computeBadges(prog,flow);
  const earnedStamps=flow.filter(m=>isStampMission(m)&&(prog.completedMissionIds||[]).includes(m.id));
- const {puzzle:familyPuzzle,completedIds:familyCompletedIds}=useFamilyPuzzle(experience,joined?familyId:null,prog.completedMissionIds);
+ const {puzzle:familyPuzzle,completedIds:familyCompletedIds}=useFamilyPuzzle(experience,joined?familyId:null,prog);
  const puzzleTotal=familyPuzzle?.totalPieces||8;
  const unlockedPuzzlePieces=useMemo(()=>unlockedPieces(flow,familyCompletedIds,puzzleTotal),[flow,familyCompletedIds,puzzleTotal]);
  const [flyingPiece,setFlyingPiece]=useState(null);

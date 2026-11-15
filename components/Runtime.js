@@ -115,7 +115,7 @@ export default function Runtime({experience,setExperience,setView,t,user,lang,is
  function decideLocation(missionId,optionIds){
    if(!firebaseConfigured)return showToast(r.connectFirebaseCtrl);
    const patch={[`locationDecisions.${missionId}`]:optionIds};
-   const mission=flow.find(m=>m.id===missionId);
+   const mission=(experience.flow||[]).find(m=>m.id===missionId);
    // A hotel-type decision (not an attractions multi-pick) names the winning option directly
    // on the mission, so the participant's stop card and popup can show the hotel + navigate
    // to it right away instead of only learning "the organizer decided" with no details.
