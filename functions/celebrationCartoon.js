@@ -2,6 +2,7 @@ const {onCall, HttpsError} = require("firebase-functions/v2/https");
 const {randomUUID} = require("crypto");
 const {OpenAI, toFile} = require("openai");
 const {canManageExperience} = require("./masterAccess");
+const {consumeAiQuota} = require("./aiQuota");
 module.exports = function celebrationCartoon(admin, secret) {
   return onCall({secrets:[secret],cors:true,timeoutSeconds:180,memory:"512MiB",maxInstances:3}, async request => {
     if (!request.auth) throw new HttpsError("unauthenticated","Sign in first.");
@@ -13,6 +14,7 @@ module.exports = function celebrationCartoon(admin, secret) {
     if (!canManageExperience(request.auth,exp)) throw new HttpsError("permission-denied","Only the organizer or master can create the cartoon.");
     const portrait = exp.celebrationPortrait;
     if (!portrait?.storagePath) throw new HttpsError("failed-precondition","Upload the birthday child's photo first.");
+    await consumeAiQuota(admin, request.auth, "image", exp.lang);
     try {
       const bucket = admin.storage().bucket();
       const [buffer] = await bucket.file(portrait.storagePath).download();

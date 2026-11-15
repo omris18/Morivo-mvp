@@ -21,9 +21,9 @@ function participantCountOf(exp) {
 }
 
 // Stripe Checkout - a page Stripe hosts and secures itself, so this app never touches a card
-// number. Works identically from the website and from the Android app (Capacitor opens it in
-// the system browser) with no extra per-platform work; unlike iOS, Google Play doesn't require
-// its own in-app billing for a plain web checkout like this one.
+// number. This is the website's payment path. Inside the store apps, both Apple and Google
+// generally require their own in-app billing for digital purchases, so check each store's
+// current payments policy before offering this checkout from the iOS or Android app.
 function createCheckoutSession(admin, stripeSecretKey) {
   return onCall({ secrets: [stripeSecretKey], cors: true, timeoutSeconds: 30 }, async (request) => {
     if (!request.auth) throw new HttpsError("unauthenticated", "Sign in first.");

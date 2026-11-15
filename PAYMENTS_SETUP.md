@@ -4,8 +4,12 @@
 (`createCheckoutSession`, `stripeWebhook`) are written but commented out in `functions/index.js`
 - the first deploy attempt with them active failed the *entire* deploy (not just these two
 functions), because they reference secrets that didn't exist yet. Once you've done steps 1–4
-below, ask Claude to uncomment those lines in `functions/index.js` and push - that's a one-line
-follow-up, not a rebuild.
+below, ask Claude to uncomment those lines in `functions/index.js`, set `PAYMENTS_ENABLED` to
+`true` right above them, and push - that's a small follow-up, not a rebuild.
+
+Until then publishing is free: the `publishExperience` function is the only way an experience
+goes live (the database refuses it from a browser), and it only asks for payment once
+`PAYMENTS_ENABLED` is `true`.
 
 Publishing a draft experience in Studio will require payment first, priced per participant
 (adults + children for a family trip, or the participant count for any other experience type).

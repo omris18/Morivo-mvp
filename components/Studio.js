@@ -44,6 +44,10 @@ export default function Studio({ experience, setExperience, setView, t, lang }) 
   const [flightAlertsState, setFlightAlertsState] = useState("idle");
   const [paying, setPaying] = useState(false);
   const [payError, setPayError] = useState("");
+  // Set when the server answers a publish attempt with "payment comes first" - it is the server
+  // that decides whether payment applies and for how many participants, never this component.
+  const [paymentInfo, setPaymentInfo] = useState(null);
+  useEffect(() => { setPaymentInfo(null); }, [experience.id]);
   // Stripe sends the organizer back here after a successful payment; the webhook that actually
   // marks the experience paid can land a moment later than the redirect itself, so this flag
   // covers that gap instead of the publish button briefly flashing "pay again."
@@ -360,12 +364,14 @@ export default function Studio({ experience, setExperience, setView, t, lang }) 
 
     setPublishing(true);
     try {
-      const code = await publishExperienceRemote(experience);
+      const result = await publishExperienceRemote(experience);
+      if (result?.paymentRequired) { setPaymentInfo(result); return; }
 
+      setPaymentInfo(null);
       setExperience({
         ...experience,
         status: "live",
-        joinCode: code,
+        joinCode: result.joinCode,
       });
 
       setJustPublished(true);
@@ -797,16 +803,12 @@ export default function Studio({ experience, setExperience, setView, t, lang }) 
         )}
 
         {(() => {
-          const needsPayment = firebaseConfigured && experience.status !== "live" && !experience.paid;
-          const adults = Number(experience.adultsCount), children = Number(experience.childrenCount);
-          const participantCount = Number.isFinite(adults) || Number.isFinite(children)
-            ? Math.max(1, (Number.isFinite(adults) ? adults : 0) + (Number.isFinite(children) ? children : 0))
-            : Math.max(1, Number(experience.people) || 1);
-          const waitingOnWebhook = needsPayment && justReturnedFromPayment;
+          const needsPayment = !!paymentInfo && experience.status !== "live" && !experience.paid;
+          const waitingOnWebhook = justReturnedFromPayment && experience.status !== "live" && !experience.paid;
           const busy = publishing || paying;
           return <>
-            {needsPayment && <p className="contextHint">
-              {waitingOnWebhook ? s.confirmingPayment : s.paymentRequiredFor(participantCount)}
+            {(needsPayment || waitingOnWebhook) && <p className="contextHint">
+              {waitingOnWebhook ? s.confirmingPayment : s.paymentRequiredFor(paymentInfo.participants)}
             </p>}
             {payError && <p className="guidanceError" role="alert">⚠ {payError}</p>}
             <div className="actions studioPublishBar">

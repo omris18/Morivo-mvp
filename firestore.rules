@@ -23,8 +23,13 @@ service cloud.firestore {
     }
 
     match /experiences/{experienceId} {
+      // Going live (status "live" plus a join code) and the payment fields are only ever set by
+      // Cloud Functions - publishExperience and stripeWebhook - which use the admin SDK and so
+      // bypass these rules. If an organizer's own client could write them, paying before
+      // publishing would be optional for anyone who opens devtools.
       allow create: if signedIn() && request.resource.data.ownerUid == request.auth.uid
-        && !request.resource.data.keys().hasAny(['paid', 'paidAt', 'paidAmount', 'paymentSessionId']);
+        && !request.resource.data.keys().hasAny(['paid', 'paidAt', 'paidAmount', 'paymentSessionId', 'joinCode'])
+        && request.resource.data.get('status', 'draft') != 'live';
       // Participants only ever need to READ the experience (to see missions/status) - every
       // legitimate write (Studio edits, publish, pause) is organizer-only. A joined participant
       // must never be able to update or delete the experience document itself.
@@ -35,13 +40,11 @@ service cloud.firestore {
         exists(/databases/$(database)/documents/experiences/$(experienceId)/participantSessions/$(request.auth.uid)) ||
         resource.data.memoryPublic == true
       );
-      // The payment fields below are only ever meant to be set by the stripeWebhook function
-      // (functions/payments.js), which uses the admin SDK and so bypasses these rules entirely -
-      // an organizer's own client-side update must never be able to touch them, or paying for an
-      // experience would be optional for anyone who opens devtools.
       allow update: if signedIn() && (isMaster() || (resource.data.ownerUid == request.auth.uid
         && request.resource.data.ownerUid == resource.data.ownerUid
-        && !request.resource.data.diff(resource.data).affectedKeys().hasAny(['paid', 'paidAt', 'paidAmount', 'paymentSessionId'])));
+        && !request.resource.data.diff(resource.data).affectedKeys().hasAny(['paid', 'paidAt', 'paidAmount', 'paymentSessionId', 'joinCode'])
+        && (!request.resource.data.diff(resource.data).affectedKeys().hasAny(['status'])
+          || request.resource.data.get('status', 'draft') != 'live')));
       allow delete: if signedIn() && (isMaster() || resource.data.ownerUid == request.auth.uid);
 
       match /participantSessions/{uid} {
@@ -134,8 +137,14 @@ service cloud.firestore {
 
     match /publicExperiences/{joinCode} {
       allow read: if signedIn();
-      allow create, update: if signedIn() && (isMaster() || request.resource.data.ownerUid == request.auth.uid);
+      // Written only by the publishExperience function (admin SDK) - see experiences above.
+      allow create, update: if isMaster();
       allow delete: if signedIn() && (isMaster() || resource.data.ownerUid == request.auth.uid);
+    }
+
+    // AI usage counters (functions/aiQuota.js) - server-only, no client access at all.
+    match /aiUsage/{id} {
+      allow read, write: if false;
     }
 
     // Pre-registered personal codes (one per named participant, meant for NFC tags) -

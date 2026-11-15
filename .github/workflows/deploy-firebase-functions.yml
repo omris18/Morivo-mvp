@@ -48,6 +48,8 @@ jobs:
           node tests/masterAccess.test.cjs
           node tests/reorderExperience.test.cjs
           node tests/experienceArtwork.test.cjs
+          node tests/publishExperience.test.cjs
+          node tests/aiQuota.test.cjs
 
       # Every function added here used to also need adding, by name, to an explicit --only list
       # below - and proposeItinerary never was. It silently never deployed through this workflow

@@ -3,6 +3,7 @@ const {createHash, randomUUID} = require("crypto");
 const OpenAI = require("openai");
 const {experienceArtContext} = require("./experienceArtContext");
 const {canManageExperience}=require('./masterAccess');
+const {consumeAiQuota}=require('./aiQuota');
 module.exports = function experienceArtwork(admin, secret) {
   return onCall({secrets:[secret],cors:true,timeoutSeconds:180,memory:"512MiB",maxInstances:3}, async request => {
     if (!request.auth) throw new HttpsError("unauthenticated","Sign in first.");
@@ -26,6 +27,10 @@ module.exports = function experienceArtwork(admin, secret) {
       await ref.update({routeArtwork:{url:cached,context}});
       return {url:cached,context};
     }
+    // Counted only when a new image is really about to be generated; a refused call must not
+    // leave the "still being created" marker behind.
+    try { await consumeAiQuota(admin, request.auth, "image", exp.lang); }
+    catch (e) { await job.delete().catch(() => {}); throw e; }
     try {
       const client = new OpenAI({apiKey:secret.value().trim()});
       const birthday = /birthday|יום הולדת/i.test(`${exp.type || ""} ${exp.name || ""}`);

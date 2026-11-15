@@ -1,6 +1,11 @@
 const { onCall, HttpsError } = require("firebase-functions/v2/https");
 const { onDocumentCreated } = require("firebase-functions/v2/firestore");
 const { defineSecret } = require("firebase-functions/params");
+const { setGlobalOptions } = require("firebase-functions/v2");
+// A ceiling on how far any one function can scale out, so a traffic spike or an attack is
+// bounded instead of turning straight into cost. Must run before any function is defined.
+// Each instance serves many requests at once; raise this as real usage grows.
+setGlobalOptions({ maxInstances: 20 });
 const OpenAI = require("openai");
 const admin = require("firebase-admin");
 const {canManageExperience}=require("./masterAccess");
@@ -14,6 +19,7 @@ const aerodataboxApiKey = defineSecret("AERODATABOX_API_KEY");
 const {normalizeMission} = require("./missionAnswers");
 const {sanitizeFlow, MISSION_TYPES} = require("./sanitizeFlow");
 const {insertExtrasIntoFlow} = require("./routeExtras");
+const {consumeAiQuota} = require("./aiQuota");
 exports.generateExperienceArtwork = require("./experienceArtwork")(admin, openaiApiKey);
 exports.generateCelebrationCartoon = require("./celebrationCartoon")(admin, openaiApiKey);
 exports.reorderExperience = require("./reorderExperience")(admin);
@@ -26,6 +32,10 @@ exports.checkFlightStatuses = require("./flightAlerts")(admin, aerodataboxApiKey
 // blocks every function from deploying, not just these two - exactly what happened the one time
 // this was wired up before the Stripe secrets existed. Uncomment once PAYMENTS_SETUP.md's
 // STRIPE_SECRET_KEY/STRIPE_WEBHOOK_SECRET steps are actually done.
+// Set PAYMENTS_ENABLED to true in the same change that uncomments the lines below: it is what
+// makes publishExperience demand a completed payment. While it is false, publishing is free.
+const PAYMENTS_ENABLED = false;
+exports.publishExperience = require("./publishExperience")(admin, {paymentsEnabled: PAYMENTS_ENABLED});
 // const stripeSecretKey = defineSecret("STRIPE_SECRET_KEY");
 // const stripeWebhookSecret = defineSecret("STRIPE_WEBHOOK_SECRET");
 // const {createCheckoutSession, stripeWebhook} = require("./payments");
@@ -497,6 +507,7 @@ exports.proposeItinerary = onCall({ secrets: [openaiApiKey, geminiApiKey], cors:
   if (!prompt || !String(prompt).trim()) {
     throw new HttpsError("invalid-argument", "A description of the experience is required.");
   }
+  await consumeAiQuota(admin, request.auth, "plan", lang);
 
   // Multiple named destinations (e.g. "Tokyo, Kyoto, Osaka") means one hotel choice per
   // destination rather than a single whole-trip hotel list - see hotelsByDestination below.
@@ -655,6 +666,7 @@ exports.generateExperience = onCall({ secrets: [openaiApiKey, geminiApiKey], cor
   if (!prompt || !String(prompt).trim()) {
     throw new HttpsError("invalid-argument", "A description of the experience is required.");
   }
+  await consumeAiQuota(admin, request.auth, "generate", lang);
 
   const client = new OpenAI({ apiKey: openaiApiKey.value().trim() });
 
@@ -905,6 +917,7 @@ exports.translateExperience = onCall({ secrets: [openaiApiKey], cors: true, time
     }
   }
 
+  await consumeAiQuota(admin, request.auth, "translate", targetLang);
   const client = new OpenAI({ apiKey: openaiApiKey.value().trim() });
   const sourceForPrompt = {
     name: exp.name || "",
@@ -1017,6 +1030,7 @@ exports.generateMemoryStory = onCall({ secrets: [openaiApiKey], cors: true, time
   if (!canManageExperience(request.auth,experience)) {
     throw new HttpsError("permission-denied", "Only the experience owner can generate its story.");
   }
+  await consumeAiQuota(admin, request.auth, "story", experience.lang);
 
   const [mediaSnap, answersSnap] = await Promise.all([
     expRef.collection("media").get(),
@@ -1103,6 +1117,7 @@ exports.reviseExperience = onCall({ secrets: [openaiApiKey], cors: true, timeout
   if (!instruction || !String(instruction).trim()) {
     throw new HttpsError("invalid-argument", "Tell the AI what to change.");
   }
+  await consumeAiQuota(admin, request.auth, "revise", lang);
 
   const client = new OpenAI({ apiKey: openaiApiKey.value().trim() });
   const currentFlow = flow.map((m) => ({ type: m.type, title: m.title, text: m.text, reward: m.reward, points: m.points, ...(m.type === "puzzle" && m.answer ? { answer: m.answer } : {}), ...(m.type === "quiz" && Array.isArray(m.options) && m.options.length ? { options: m.options, answer: m.answer || "" } : {}), ...(m.destination ? { destination: m.destination } : {}), ...(Number.isFinite(m.day) ? { day: m.day } : {}), ...(m.isCoordination ? { isCoordination: true } : {}) }));
@@ -1296,6 +1311,7 @@ exports.generateBrandImage = onCall({ secrets: [openaiApiKey], cors: true, timeo
     ? `${spec.prompt}\n\nPersonalize the mood, colors and any suggested motifs to fit this specific real experience (do not render any text, words or logos in the image): "${cleanContext}"`
     : spec.prompt;
 
+  await consumeAiQuota(admin, request.auth, "image");
   const client = new OpenAI({ apiKey: openaiApiKey.value().trim() });
   let result;
   try {
