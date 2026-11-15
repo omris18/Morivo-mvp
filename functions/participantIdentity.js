@@ -18,7 +18,8 @@ function handler(admin) {
     return db.runTransaction(async tx => {
       let eid = input.experienceId, invitation = null;
       if (action !== 'create') {
-        const snap = await tx.get(db.doc(`${action === 'personal' ? 'participantCodes' : 'publicExperiences'}/${code}`));
+        let snap = await tx.get(db.doc(`${action === 'personal' ? 'participantCodes' : 'publicExperiences'}/${code}`));
+        if(!snap.exists&&action==='join')snap=await tx.get(db.doc(`familyCodes/${code}`));
         if (!snap.exists) throw new HttpsError('not-found', 'הקישור אינו תקף. בקשו קישור חדש מהמארגן.');
         invitation = { code, ...snap.data() }; eid = invitation.experienceId;
       }
@@ -28,8 +29,13 @@ function handler(admin) {
       const exp = expSnap.data(), base = `experiences/${eid}`;
       if (action === 'create' && !canManageExperience(request.auth, exp)) throw new HttpsError('permission-denied', 'Only the organizer can create invitations.');
       if (action !== 'create' && exp.status !== 'live') throw new HttpsError('failed-precondition', 'החוויה עדיין לא פורסמה.');
+      const familyId=invitation?.familyId||null;
+      const family=familyId?exp.families?.find(f=>f.id===familyId):null;
+      if(exp.families?.length&&!family)throw new HttpsError('failed-precondition','לחוויה הזו יש קישור נפרד לכל משפחה. בקשו את הקישור המשפחתי מהמארגן.');
+      if(familyId&&!family)throw new HttpsError('not-found','Family no longer exists.');
       const sessionRef = db.doc(`${base}/participantSessions/${request.auth.uid}`);
       const session = await tx.get(sessionRef);
+      if(action==='join'&&familyId&&session.exists&&session.data().familyId!==familyId)throw new HttpsError('permission-denied','המכשיר כבר משויך למשפחה אחרת בחוויה הזו. השתמשו במכשיר או פרופיל דפדפן נפרד.');
       const roster = await tx.get(db.collection('participantCodes').where('experienceId', '==', eid));
       const codes = roster.docs.map(d => ({ code: d.id, ...d.data() }));
       let pid = action === 'personal' ? invitation.participantId : action === 'create' ? input.participantId : session.data()?.participantId;
@@ -44,8 +50,8 @@ function handler(admin) {
       let selected = action === 'personal' ? invitation : person?.exists ? codes.find(c => c.participantId === pid) : null;
       if (!selected) {
         const wantedName = person?.exists ? normalizeName(person.data().name) : action === 'personal' ? normalizeName(invitation.name) : name;
-        if (!wantedName) return { needsName: true };
-        const matches = codes.filter(c => normalizeName(c.name) === wantedName && ((action === 'create' && !person?.exists) || !c.participantId));
+        if (!wantedName) return { needsName: true, ...(family?{familyId,familyName:family.name}:{}) };
+        const matches = codes.filter(c => normalizeName(c.name) === wantedName && (c.familyId||null)===familyId && ((action === 'create' && !person?.exists) || !c.participantId));
         if (matches.length > 1) throw new HttpsError('failed-precondition', 'יש כמה הזמנות בשם הזה. השתמשו בקישור האישי מהמארגן.');
         selected = matches[0] || null;
       }
@@ -67,16 +73,16 @@ function handler(admin) {
       pid = person?.exists ? person.id : selected?.participantId || db.collection(`${base}/participants`).doc().id;
       const now = admin.firestore.FieldValue.serverTimestamp();
       const codeRef = db.doc(`participantCodes/${personalCode}`);
-      const binding = { experienceId: eid, ownerUid: exp.ownerUid, name: resolvedName, participantId: pid };
+      const binding = { experienceId: eid, ownerUid: exp.ownerUid, name: resolvedName, participantId: pid, ...(familyId?{familyId}:{}) };
       if (selected) tx.set(codeRef, binding, { merge: true });
       else tx.create(codeRef, { ...binding, createdAt: now });
       const personRef = db.doc(`${base}/participants/${pid}`);
       if (!person?.exists) {
-        tx.create(personRef, { uid: pid, name: resolvedName, team: 'Participants', points: 0, missions: 0, joinedAt: now });
+        tx.create(personRef, { uid: pid, name: resolvedName, team: family?.name||'Participants', ...(familyId?{familyId}:{}), points: 0, missions: 0, joinedAt: now });
         tx.create(db.collection(`${base}/events`).doc(), { type: 'join', uid: pid, text: `👋 ${resolvedName} joined the experience`, createdAt: now });
       }
-      if (action !== 'create') tx.set(sessionRef, { participantId: pid, updatedAt: now });
-      return { experienceId: eid, uid: pid, name: resolvedName, personalCode, joinCode: exp.joinCode || '', code: personalCode };
+      if (action !== 'create') tx.set(sessionRef, { participantId: pid, ...(familyId?{familyId}:{}), updatedAt: now });
+      return { ...(family?{familyId,familyName:family.name}:{}), experienceId: eid, uid: pid, name: resolvedName, personalCode, joinCode: exp.joinCode || '', code: personalCode };
     });
   };
 }

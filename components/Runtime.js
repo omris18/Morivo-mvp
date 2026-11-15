@@ -89,7 +89,7 @@ export default function Runtime({experience,setExperience,setView,t,user,lang,is
    if(!name.trim())return;
    setGeneratingFor(p.id);
    try{
-     const code=await addParticipantCode(experience.id, experience.ownerUid||user?.uid, name, p.id);
+     const code=roster.find(entry=>entry.participantId===p.id)?.code||await addParticipantCode(experience.id, experience.ownerUid||user?.uid, name, p.id);
      await copyPersonalLink(code,name);
    }catch(e){ showToast(e.message); }
    finally{ setGeneratingFor(null); }
@@ -254,7 +254,7 @@ export default function Runtime({experience,setExperience,setView,t,user,lang,is
    const stuck=!p.pending&&!finished&&mins!==null&&mins>=STUCK_MINUTES;
    return <div className={"journeyTableRow "+(stuck?"stuckRow":"")+(p.pending?" pendingRow":"")} style={journeyGridStyle} key={p.id}><span><b>{p.name||p.participantName}</b>{mins!==null&&<small className="lastActive">{stuck?"⚠ ":""}{mins<1?r.justNow:r.minAgo(mins)}</small>}</span>{flow.map((m,i)=>{const done=missionDone(p,m,i),active=missionActive(p,m,flow),skipped=(p.skippedMissionIds||[]).includes(m.id),resettable=!p.pending&&(done||skipped);return <span key={m.id} className={(done?"cellDone":active?"cellActive":"cellLocked")+(resettable?" cellResettable":"")} onClick={resettable?()=>resetCell(p,m):undefined} title={resettable?r.resetMissionCellTitle:undefined}>{done?"✓":active?"●":skipped?"↷":"·"}</span>})}<span>{p.pending?<small className="pendingTag">{r.notJoinedYet}</small>:<b>{p.points||0}</b>}</span><span className="rowActionBtns">{!p.pending&&<>{!finished&&<button className="skipBtn" onClick={()=>skip(p)} title={r.skipTitle}>⏭</button>}<button className="bonusBtn" onClick={()=>bonus(p)} title={r.bonusTitle}>🎁</button><button disabled={generatingFor===p.id} onClick={()=>generateNfcForParticipant(p)} title={r.generateNfcTitle}>{generatingFor===p.id?"…":"📲"}</button></>}</span></div>
  })}</div></details>
- <div className="actions"><button onClick={()=>setView("studio")}>{r.studioBtn}</button><button onClick={togglePause}>{experience.paused?`▶ ${r.resumeBtn}`:`⏸ ${r.pauseBtn}`}</button><button onClick={messageEveryone}>{r.messageEveryone}</button>{experience.joinCode&&<button className="primary" onClick={copyJoinLink}>{r.participantMode}</button>}</div></div>
+ <div className="actions"><button onClick={()=>setView("studio")}>{r.studioBtn}</button><button onClick={togglePause}>{experience.paused?`▶ ${r.resumeBtn}`:`⏸ ${r.pauseBtn}`}</button><button onClick={messageEveryone}>{r.messageEveryone}</button>{experience.joinCode&&!experience.families?.length&&<button className="primary" onClick={copyJoinLink}>{r.participantMode}</button>}</div></div>
  <div className="grid2" style={{marginTop:18}}><div className="panel"><div className="tag">{r.liveActivity}</div><div className="feed">{feed.map((x,i)=><div key={i}>{x}</div>)}</div></div><div className="panel"><div className="tag">{r.latestMemories}</div>{media.length?<div className="runtimeMedia">{media.slice(0,6).map(m=>m.contentType?.startsWith("video/")?<video key={m.id} src={m.downloadURL} muted/>:<img key={m.id} src={m.downloadURL} alt="memory"/>)}</div>:<p>{r.noPhotosYet}</p>}</div></div>
  {answers.length>0&&<div className="panel" style={{marginTop:18}}><div className="tag">{r.sharedMemories}</div><div className="feed">{answers.slice(0,8).map(a=><div key={a.id}><b>{a.participantName}</b> — {a.text}</div>)}</div></div>}
  {missionPerf.length>0&&<div className="panel" style={{marginTop:18}}><div className="tag">{r.missionPerformance}</div><div className="missionPerf">{missionPerf.map(m=><div className="missionPerfRow" key={m.id}><b>{m.title}</b><div className="missionPerfBar"><span style={{width:`${m.pct}%`}}></span></div><small>{m.pct}%</small></div>)}</div></div>}
@@ -290,10 +290,10 @@ export default function Runtime({experience,setExperience,setView,t,user,lang,is
  <div className="panel" style={{marginTop:18}}>
   <div className="tag">{r.roster} ({roster.length})</div>
   <p className="rosterHint">{tx(lang,"לכל משתתף קישור אישי קבוע. גם מצטרפים דרך הקישור הכללי מופיעים כאן אוטומטית. העתיקו את הקישור או צרבו אותו על תג NFC — הוא מחזיר לאותו משתתף ולאותה התקדמות. אפשר גם להכין הזמנות מראש לפי שם.","Every participant has a permanent personal link. People joining through the shared link appear here automatically. Copy or write their link to an NFC tag to resume the same journey. You can also prepare invitations by name.")}</p>
-  <div className="reviseBar"><input placeholder={r.rosterNamePlaceholder} value={rosterName} onChange={e=>setRosterName(e.target.value)} onKeyDown={e=>e.key==="Enter"&&addRoster()} disabled={addingRoster}/><button disabled={addingRoster||!rosterName.trim()} onClick={addRoster}>{addingRoster?r.saving:r.rosterAdd}</button></div>
+  {!experience.families?.length&&<div className="reviseBar"><input placeholder={r.rosterNamePlaceholder} value={rosterName} onChange={e=>setRosterName(e.target.value)} onKeyDown={e=>e.key==="Enter"&&addRoster()} disabled={addingRoster}/><button disabled={addingRoster||!rosterName.trim()} onClick={addRoster}>{addingRoster?r.saving:r.rosterAdd}</button></div>}
   {roster.length>0&&<div className="rosterList">{roster.map(entry=>
    <div className="rosterRow" key={entry.code}>
-    <span className="rosterName">{entry.name}</span>
+    <span className="rosterName">{entry.name}{entry.familyId&&<small> · {experience.families?.find(f=>f.id===entry.familyId)?.name}</small>}</span>
     <span className="rosterCode">{entry.code}</span>
     <span className="rosterActions">
      <button onClick={()=>copyPersonalLink(entry.code,entry.name)}>{r.rosterCopyLink}</button>

@@ -44,6 +44,7 @@ jobs:
 
       - name: Verify master authorization
         run: |
+          node tests/families.test.cjs
           node tests/participantIdentity.test.cjs
           node tests/masterAccess.test.cjs
           node tests/reorderExperience.test.cjs

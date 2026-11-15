@@ -10,9 +10,24 @@ service firebase.storage {
     function isExperienceOwner(experienceId) {
       return signedIn() && (isMaster() || firestore.get(/databases/(default)/documents/experiences/$(experienceId)).data.ownerUid == request.auth.uid);
     }
+    function familyMode(eid) { return firestore.get(/databases/(default)/documents/experiences/$(eid)).data.get('families', []).size() > 0; }
+    function familyMember(eid, fid) {
+      let path = /databases/(default)/documents/experiences/$(eid)/participantSessions/$(request.auth.uid);
+      return signedIn() && firestore.exists(path) && firestore.get(path).data.get('familyId', '') == fid;
+    }
+    function validMedia() {
+      return (request.resource.contentType.matches('image/.*') && request.resource.size < 15 * 1024 * 1024)
+        || (request.resource.contentType.matches('video/.*') && request.resource.size < 100 * 1024 * 1024);
+    }
+    match /experiences/{experienceId}/families/{familyId}/media/{uid}/{fileName} {
+      allow read: if isExperienceOwner(experienceId) || familyMember(experienceId, familyId);
+      allow create: if signedIn() && request.auth.uid == uid && familyMember(experienceId, familyId) && validMedia();
+      allow delete: if isExperienceOwner(experienceId) || (request.auth.uid == uid && familyMember(experienceId, familyId));
+      allow update: if false;
+    }
     match /experiences/{experienceId}/media/{uid}/{fileName} {
-      allow read: if signedIn();
-      allow create: if signedIn() && request.auth.uid == uid && (
+      allow read: if signedIn() && (!familyMode(experienceId) || isExperienceOwner(experienceId));
+      allow create: if (!familyMode(experienceId) || isExperienceOwner(experienceId)) && signedIn() && request.auth.uid == uid && (
         (request.resource.contentType.matches('image/.*') && request.resource.size < 15 * 1024 * 1024) ||
         (request.resource.contentType.matches('video/.*') && request.resource.size < 100 * 1024 * 1024)
       );

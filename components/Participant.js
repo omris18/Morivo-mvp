@@ -1,4 +1,5 @@
 "use client";
+import FamilyAccommodation from "./FamilyAccommodation";
 import Memory from "./Memory";
 import {participantHint} from "../lib/experienceGuidance";
 import missionAnswers from "../functions/missionAnswers";
@@ -37,6 +38,9 @@ function navUrl(m){
 const stampIcons={photo:"📸",video:"🎬",map:"🗺️",quiz:"✅",puzzle:"🧩",note:"✍️",story:"📖",branch:"🧭"};
 export default function Participant({experience,setExperience,setView,setActiveId,deepLinkCode,t,lang,setLang,country,selectLang,dir,portal,portalCode,chromeless}){
  const p=t.participant;
+ const [familyId,setFamilyId]=useState(null),[familyName,setFamilyName]=useState("");
+ const [bookOpen,setBookOpen]=useState(()=>typeof window!=="undefined"&&new URLSearchParams(window.location.search).get("book")==="1");
+ const myFamily=experience.families?.find(f=>f.id===familyId);
  const [code,setCode]=useState(deepLinkCode||experience.joinCode||""),[name,setName]=useState(""),[joined,setJoined]=useState(false),[eid,setEid]=useState(experience.id),[uid,setUid]=useState("");
  const [portalResolving,setPortalResolving]=useState(!!portal||!!deepLinkCode);
  const [portalError,setPortalError]=useState(null);
@@ -71,6 +75,7 @@ export default function Participant({experience,setExperience,setView,setActiveI
  const [viewingMission,setViewingMission]=useState(null);
  useEffect(()=>{if(deepLinkCode)setCode(deepLinkCode)},[deepLinkCode]);
  function acceptIdentity(result){
+  setFamilyId(result.familyId||null);setFamilyName(result.familyName||"");
   setName(result.name);setUid(result.uid);setEid(result.experienceId);setActiveId(result.experienceId);setJoined(true);
   setPersonalCode(result.personalCode);
   const url=new URL(window.location.href);
@@ -86,7 +91,7 @@ export default function Participant({experience,setExperience,setView,setActiveI
   let alive=true;
   setPortalResolving(true);setPortalError(null);
   const resolve=portalCode?joinExperienceByPersonalCode(portalCode):joinExperienceByCode(deepLinkCode);
-  resolve.then(result=>{if(alive&&!result.needsName)acceptIdentity(result)})
+  resolve.then(result=>{if(alive){setFamilyId(result.familyId||null);setFamilyName(result.familyName||"");if(!result.needsName)acceptIdentity(result)}})
    .catch(e=>{if(alive)setPortalError(e.message)})
    .finally(()=>{if(alive)setPortalResolving(false)});
   return ()=>{alive=false};
@@ -96,7 +101,7 @@ export default function Participant({experience,setExperience,setView,setActiveI
   catch{window.prompt(tx(lang,"הקישור האישי שלכם","Your personal link"),window.location.href)}
  }
  useEffect(()=>{if(firebaseConfigured&&joined&&eid&&eid!=="thailand-demo")return subscribeExperience(eid,x=>x&&setExperience(x))},[eid,joined]);
- useEffect(()=>{if(firebaseConfigured&&joined&&eid&&eid!=="thailand-demo")return subscribeMedia(eid,setCoverMedia)},[joined,eid]);
+ useEffect(()=>{if(firebaseConfigured&&joined&&eid&&eid!=="thailand-demo")return subscribeMedia(eid,setCoverMedia,familyId)},[joined,eid,familyId]);
  useEffect(()=>{if(firebaseConfigured&&joined&&eid&&uid){initializeProgress(eid,uid);return subscribeMyProgress(eid,uid,setProg)}},[joined,eid,uid]);
  useEffect(()=>{if(firebaseConfigured&&joined&&eid)return subscribeMessages(eid,setMessages)},[joined,eid]);
  useEffect(()=>{if(firebaseConfigured&&joined&&eid)return subscribeLocationVotes(eid,setLocationVotes)},[joined,eid]);
@@ -327,6 +332,9 @@ export default function Participant({experience,setExperience,setView,setActiveI
  const joinedContent=<>
  {personalCode&&<div className="participantPersonalLink"><p>{tx(lang,"זה הקישור האישי שלכם — רענון או פתיחה מחדש מחזירים לאותה התקדמות. הקישור זמין גם אצל המארגן לתג NFC. שמרו אותו לעצמכם.","This is your personal link. Refresh or reopen it to resume your progress. Your organizer has the same link for your NFC tag. Keep it private.")}</p><code>{personalCode}</code><button onClick={copyMyLink}>{linkCopied?(tx(lang,"הקישור הועתק","Link copied")):(tx(lang,"העתקת הקישור האישי","Copy my personal link"))}</button></div>}
 
+ {familyId&&<FamilyAccommodation experience={experience} familyId={familyId} lang={lang}/>}
+ {familyName&&<div className="familyPassport"><b>{familyName}</b><button onClick={()=>setBookOpen(v=>!v)}>{tx(lang,bookOpen?"חזרה למסע":"ספר הזיכרונות המשפחתי",bookOpen?"Back to journey":"Family memory book")}</button></div>}
+ {bookOpen&&<Memory experience={experience} setExperience={setExperience} setView={setView} t={t} dir={dir} lang={lang} familyId={familyId} participantView/>}
  {chromeless&&<div className="journeyGreeting"><h2>{p.welcomeGreeting(name)}</h2><p>{experienceName}</p></div>}
  <div className="participantHeader"><div><small>{experienceName}</small><h2>{finished?p.journeyComplete:p.missionOf(idx+1,flow.length)}</h2></div><div className={"pointsBadge "+(bump?"bump":"")}>{prog.points||0}<small>PTS</small></div></div>
  {firebaseConfigured&&pushSupported&&pushState!=="on"&&<button className="pushEnable" disabled={pushState==="asking"} onClick={enableNotifications}>🔔 {pushState==="asking"?p.asking:p.enableNotifications}</button>}
@@ -342,8 +350,8 @@ export default function Participant({experience,setExperience,setView,setActiveI
  {chromeless&&!!experience.startDate&&(experience.adultsCount>0||experience.childrenCount>0)&&<div className="familyPassport">
   <div className="journeySectionTitle">{p.familyPassportTitle}</div>
   <div className="familyIcons">
-   {Array.from({length:experience.adultsCount||0}).map((_,i)=><span key={"a"+i}>🧑</span>)}
-   {Array.from({length:experience.childrenCount||0}).map((_,i)=><span key={"c"+i}>🧒</span>)}
+   {Array.from({length:myFamily?.adults??experience.adultsCount??0}).map((_,i)=><span key={"a"+i}>🧑</span>)}
+   {Array.from({length:myFamily?.children??experience.childrenCount??0}).map((_,i)=><span key={"c"+i}>🧒</span>)}
   </div>
  </div>}
  {chromeless&&(experience.flights||[]).length>0&&<div className="flightsSection">
@@ -358,7 +366,7 @@ export default function Participant({experience,setExperience,setView,setActiveI
   })}
  </div>}
  {chromeless&&<button type="button" className="printJourneyBtn noPrint" onClick={()=>window.print()}>🖨 {p.downloadJourneyPdf}</button>}
- {finished&&<div className="finishCard viewFade" key="finish"><div className="confetti">{Array.from({length:16}).map((_,i)=><span key={i}></span>)}</div><div className="finishIcon">🏆</div><h2>{p.journeyCompleteTitle}</h2><p>{p.journeyCompleteSub}</p>{badges.length>0&&<div className="badgeRow">{badges.map(b=><div className="badge" key={b.id} title={b.label}><span>{b.icon}</span><small>{b.label}</small></div>)}</div>}<button className="primary" onClick={()=>document.getElementById("finished-memory-book")?.scrollIntoView({behavior:"smooth"})}>{p.openMemoryBook}</button><div id="finished-memory-book" className="finishedMemoryBook"><Memory experience={experience} setExperience={setExperience} setView={setView} t={t} dir={dir} participantView/></div></div>}
+ {finished&&<div className="finishCard viewFade" key="finish"><div className="confetti">{Array.from({length:16}).map((_,i)=><span key={i}></span>)}</div><div className="finishIcon">🏆</div><h2>{p.journeyCompleteTitle}</h2><p>{p.journeyCompleteSub}</p>{badges.length>0&&<div className="badgeRow">{badges.map(b=><div className="badge" key={b.id} title={b.label}><span>{b.icon}</span><small>{b.label}</small></div>)}</div>}<button className="primary" onClick={()=>document.getElementById("finished-memory-book")?.scrollIntoView({behavior:"smooth"})}>{p.openMemoryBook}</button><div id="finished-memory-book" className="finishedMemoryBook"><Memory experience={experience} setExperience={setExperience} setView={setView} t={t} dir={dir} lang={lang} familyId={familyId} participantView/></div></div>}
  {chromeless&&typeof document!=="undefined"&&createPortal(<nav className="participantBottomNav">
   <button type="button" className="navBtn" onClick={goHome}>🏠<span>{p.navHome}</span></button>
   <button type="button" className="navBtn" onClick={()=>setPassportOpen(true)}>🛂<span>{p.navPassport}</span></button>
@@ -402,7 +410,7 @@ export default function Participant({experience,setExperience,setView,setActiveI
  {confettiKey>0&&<Confetti key={confettiKey}/>}
  {albumOpen&&typeof document!=="undefined"&&createPortal(<div className="missionPopupOverlay" role="presentation" onClick={()=>setAlbumOpen(false)}><div className="missionPopupCard albumCard" role="dialog" aria-modal="true" onClick={e=>e.stopPropagation()}><button type="button" className="missionPopupClose" aria-label={tx(lang,"סגירה","Close")} onClick={()=>setAlbumOpen(false)}>×</button>
   <h3>{p.albumTitle}</h3>
-  {(()=>{const mine=coverMedia.filter(m=>m.uid===uid);return mine.length===0
+  {(()=>{const mine=coverMedia.filter(m=>familyId||m.uid===uid);return mine.length===0
    ? <p className="passportEmpty">{p.albumEmpty}</p>
    : <div className="albumGrid">{mine.map(m=><a key={m.id} href={m.downloadURL} target="_blank" rel="noopener noreferrer" className="albumThumb">{m.contentType?.startsWith("video/")?<video src={m.downloadURL} muted/>:<img src={m.downloadURL} alt={m.missionTitle||""}/>}</a>)}</div>;})()}
  </div></div>,document.body)}
@@ -500,7 +508,7 @@ export default function Participant({experience,setExperience,setView,setActiveI
  {viewingMission&&typeof document!=="undefined"&&createPortal(<div className="missionPopupOverlay" role="presentation" onClick={()=>setViewingMission(null)}><div className="missionPopupCard" role="dialog" aria-modal="true" onClick={e=>e.stopPropagation()}><button type="button" className="missionPopupClose" aria-label={tx(lang,"סגירה","Close")} onClick={()=>setViewingMission(null)}>×</button>{viewingMission.day?<div className="missionPopupBadge">{viewingMission.day}</div>:null}{popupMeta(viewingMission,lang)&&<div className="missionPopupMeta">{popupMeta(viewingMission,lang)}</div>}<div className="missionType">{missionLabelsFor(lang)[viewingMission.type]||viewingMission.type}</div><h3>{viewingMission.title}</h3><p><LinkifiedText text={viewingMission.text}/></p>{viewingMission.hotel&&<div className="journeyStopHotel">🏨 {viewingMission.hotel}</div>}{navUrl(viewingMission)&&<a className="journeyNavigateBtn" href={navUrl(viewingMission)} target="_blank" rel="noopener noreferrer">🧭 {p.navigate}</a>}<div className={"missionPopupStatus "+((prog.completedMissionIds||[]).includes(viewingMission.id)?"done":"locked")}>{(prog.completedMissionIds||[]).includes(viewingMission.id)?`✓ ${p.missionDoneHint}`:`🔒 ${p.missionLockedHint}`}</div></div></div>,document.body)}
  </>;
 
- const joinForm=<div className="participantJoin"><div className="participantJoinMark" aria-hidden="true"><span></span><span></span><span></span></div><div className="participantJoinEyebrow">MORIVO · EXPERIENCE</div><h2>{p.joinTitle}</h2><p className="joinInstructions">{code?tx(lang,"הקוד כבר מוכן. כתבו את השם שיופיע למארגן ולחצו על הצטרפות.","Your code is ready. Enter the name the organizer should see, then join."):tx(lang,"קיבלתם קישור או קוד מהמארגן? הזינו שם וקוד כדי להתחיל. אין צורך ליצור חשבון.","Enter your name and the code from your organizer to get started. No account is needed.")}</p><label htmlFor="participant-name">{p.yourName}</label><input id="participant-name" autoComplete="name" value={name} placeholder={p.namePlaceholder} onChange={e=>setName(e.target.value)}/><label htmlFor="participant-code">{p.joinCode}</label><input id="participant-code" autoCapitalize="characters" value={code} onChange={e=>setCode(e.target.value.toUpperCase())} onKeyDown={e=>e.key==="Enter"&&join()}/><div className="actions centerActions"><button className="primary" disabled={joining} onClick={join}>{joining?p.joining:p.joinBtn}</button></div></div>;
+ const joinForm=<div className="participantJoin"><div className="participantJoinMark" aria-hidden="true"><span></span><span></span><span></span></div><div className="participantJoinEyebrow">MORIVO · EXPERIENCE</div><h2>{p.joinTitle}</h2>{familyName&&<p>{familyName}</p>}<p className="joinInstructions">{code?tx(lang,"הקוד כבר מוכן. כתבו את השם שיופיע למארגן ולחצו על הצטרפות.","Your code is ready. Enter the name the organizer should see, then join."):tx(lang,"קיבלתם קישור או קוד מהמארגן? הזינו שם וקוד כדי להתחיל. אין צורך ליצור חשבון.","Enter your name and the code from your organizer to get started. No account is needed.")}</p><label htmlFor="participant-name">{p.yourName}</label><input id="participant-name" autoComplete="name" value={name} placeholder={p.namePlaceholder} onChange={e=>setName(e.target.value)}/><label htmlFor="participant-code">{p.joinCode}</label><input id="participant-code" autoCapitalize="characters" value={code} onChange={e=>setCode(e.target.value.toUpperCase())} onKeyDown={e=>e.key==="Enter"&&join()}/><div className="actions centerActions"><button className="primary" disabled={joining} onClick={join}>{joining?p.joining:p.joinBtn}</button></div></div>;
 
  const portalLangSwitch=<LangSwitcher country={country} selectLang={selectLang} label={tx(lang,"שינוי שפה","Change language")} className="portalLangSwitch"/>;
 

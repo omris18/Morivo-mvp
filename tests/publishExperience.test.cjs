@@ -50,5 +50,15 @@ const base=()=>({'experiences/abc1234567':{ownerUid:'owner',name:'Trip',flow:[{i
  // Master can publish on an organizer's behalf without a payment.
  docs=base();({admin,writes}=makeAdmin(docs));
  assert.deepEqual(plain(await load(admin,true)({auth:{uid:'m',token:{email:'omris18@gmail.com',email_verified:true}},data:{experienceId:'abc1234567'}})),{joinCode:'M1234567'});
+ docs=base();docs['experiences/abc1234567'].families=[{id:'a',name:'Alpha',adults:2,children:1,childrenAges:[7],rooms:1},{id:'b',name:'Beta',adults:4,children:4,childrenAges:[2,5,7,10],rooms:2}];
+ ({admin,writes}=makeAdmin(docs));publish=load(admin,false);
+ await publish({auth:{uid:'owner'},data:{experienceId:'abc1234567'}});
+ const familyCode=docs['experiences/abc1234567/familyInvites/a'].code;
+ assert.equal(docs[`familyCodes/${familyCode}`].familyId,'a');
+ assert.equal(docs['experiences/abc1234567'].people,11);
+ await publish({auth:{uid:'owner'},data:{experienceId:'abc1234567'}});
+ assert.equal(docs['experiences/abc1234567/familyInvites/a'].code,familyCode);
+ assert.notEqual(docs['experiences/abc1234567/familyInvites/b'].code,familyCode);
+ console.log('PASS: private stable family invitation codes and normalized totals');
  console.log('publishExperience: ownership, empty flow, join-code collisions and the payment gate all enforced server-side');
 })().catch(e=>{console.error(e);process.exit(1)});
