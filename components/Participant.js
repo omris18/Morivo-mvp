@@ -5,6 +5,7 @@ import {useFamilyPuzzle} from "../lib/useFamilyPuzzle";
 import {localDateKey} from "../lib/tripDates";
 import FamilyAccommodation from "./FamilyAccommodation";
 import Memory from "./Memory";
+import familyJourney from "../functions/familyJourney";
 import {participantHint} from "../lib/experienceGuidance";
 import missionAnswers from "../functions/missionAnswers";
 import journeyProgress from "../functions/journeyProgress";
@@ -119,8 +120,9 @@ export default function Participant({experience,setExperience,setView,setActiveI
  },[joined,eid,lang,experience.lang,experience.updatedAt?.seconds,experience.updatedAt?.nanoseconds]);
  const latestMessage=messages.find(m=>!dismissed.includes(m.id));
  const experienceName=translated?.name||experience.name;
- const rawFlow=coordination.journeyFlow(experience.flow||[]).map(missionAnswers.normalizeMission);
- const flow=translated?rawFlow.map(m=>missionAnswers.normalizeMission({...m,...translated.flow.find(x=>x.id===m.id),...(m.responseMode==="open"?{type:"note",responseMode:"open"}:{})})):rawFlow;
+ const effectiveFlow=familyJourney.familyFlow(experience,familyId);
+ const rawFlow=coordination.journeyFlow(effectiveFlow).map(missionAnswers.normalizeMission);
+ const flow=translated?rawFlow.map(m=>missionAnswers.normalizeMission({...m,...(experience.familyMissionOverrides?.[familyId]?.[m.id]?{}:translated.flow.find(x=>x.id===m.id)),...(m.responseMode==="open"?{type:"note",responseMode:"open"}:{})})):rawFlow;
  const rawIdx=journeyProgress.currentMissionIndex(prog,experience.flow||[]);
  // A branch mission can jump the participant straight past the end of the array (skipping
  // whatever missions their path didn't take), so "finished" has to mean "position is past the
@@ -332,14 +334,15 @@ export default function Participant({experience,setExperience,setView,setActiveI
  const coverPhoto=coverMedia.find(m=>!m.contentType?.startsWith("video/"));
  const cartoonBg=experience.celebrationPortrait?.useAsBackground&&experience.celebrationPortrait?.cartoonUrl;
  const portalBg=cartoonBg?`linear-gradient(180deg,rgba(5,11,19,.55),rgba(5,11,19,.92)),url(${cartoonBg})`:coverPhoto?`linear-gradient(180deg,rgba(5,11,19,.55),rgba(5,11,19,.92)),url(${coverPhoto.downloadURL})`:experienceGradient(experience.location||experience.type||experience.name);
+ const bookAvailable=familyJourney.bookReleased(experience,[prog]);
  const completedCount=(prog.completedMissionIds||[]).length;
  const progressPct=flow.length?Math.round((completedCount/flow.length)*100):0;
  const joinedContent=<>
  {personalCode&&<div className="participantPersonalLink"><p>{tx(lang,"זה הקישור האישי שלכם — רענון או פתיחה מחדש מחזירים לאותה התקדמות. הקישור זמין גם אצל המארגן לתג NFC. שמרו אותו לעצמכם.","This is your personal link. Refresh or reopen it to resume your progress. Your organizer has the same link for your NFC tag. Keep it private.")}</p><code>{personalCode}</code><button onClick={copyMyLink}>{linkCopied?(tx(lang,"הקישור הועתק","Link copied")):(tx(lang,"העתקת הקישור האישי","Copy my personal link"))}</button></div>}
 
  {familyId&&<FamilyAccommodation experience={experience} familyId={familyId} lang={lang}/>}
- {familyName&&<div className="familyPassport"><b>{familyName}</b><button onClick={()=>setBookOpen(v=>!v)}>{tx(lang,bookOpen?"חזרה למסע":"ספר הזיכרונות המשפחתי",bookOpen?"Back to journey":"Family memory book")}</button></div>}
- {bookOpen&&<Memory experience={experience} setExperience={setExperience} setView={setView} t={t} dir={dir} lang={lang} familyId={familyId} participantView/>}
+ {familyName&&<div className="familyPassport"><b>{familyName}</b><button disabled={!bookAvailable} onClick={()=>setBookOpen(v=>!v)}>{!bookAvailable?tx(lang,"🔒 הספר ייפתח בסיום הטיול","🔒 Book opens after the trip"):tx(lang,bookOpen?"חזרה למסע":"ספר הזיכרונות המשפחתי",bookOpen?"Back to journey":"Family memory book")}</button></div>}
+ {bookOpen&&bookAvailable&&<Memory experience={experience} setExperience={setExperience} setView={setView} t={t} dir={dir} lang={lang} familyId={familyId} participantView/>}
  {chromeless&&<div className="journeyGreeting"><h2>{p.welcomeGreeting(name)}</h2><p>{experienceName}</p></div>}
  <div className="participantHeader"><div><small>{experienceName}</small><h2>{finished?p.journeyComplete:p.missionOf(idx+1,flow.length)}</h2></div><div className={"pointsBadge "+(bump?"bump":"")}>{prog.points||0}<small>PTS</small></div></div>
  {firebaseConfigured&&pushSupported&&pushState!=="on"&&<button className="pushEnable" disabled={pushState==="asking"} onClick={enableNotifications}>🔔 {pushState==="asking"?p.asking:p.enableNotifications}</button>}
@@ -372,7 +375,7 @@ export default function Participant({experience,setExperience,setView,setActiveI
   })}
  </div>}
  {chromeless&&<button type="button" className="printJourneyBtn noPrint" onClick={()=>window.print()}>🖨 {p.downloadJourneyPdf}</button>}
- {finished&&<div className="finishCard viewFade" key="finish"><div className="confetti">{Array.from({length:16}).map((_,i)=><span key={i}></span>)}</div><div className="finishIcon">🏆</div><h2>{p.journeyCompleteTitle}</h2><p>{p.journeyCompleteSub}</p>{badges.length>0&&<div className="badgeRow">{badges.map(b=><div className="badge" key={b.id} title={b.label}><span>{b.icon}</span><small>{b.label}</small></div>)}</div>}<button className="primary" onClick={()=>document.getElementById("finished-memory-book")?.scrollIntoView({behavior:"smooth"})}>{p.openMemoryBook}</button><div id="finished-memory-book" className="finishedMemoryBook"><Memory experience={experience} setExperience={setExperience} setView={setView} t={t} dir={dir} lang={lang} familyId={familyId} participantView/></div></div>}
+ {finished&&<div className="finishCard viewFade" key="finish"><div className="confetti">{Array.from({length:16}).map((_,i)=><span key={i}></span>)}</div><div className="finishIcon">🏆</div><h2>{p.journeyCompleteTitle}</h2><p>{p.journeyCompleteSub}</p>{badges.length>0&&<div className="badgeRow">{badges.map(b=><div className="badge" key={b.id} title={b.label}><span>{b.icon}</span><small>{b.label}</small></div>)}</div>}<button className="primary" disabled={!bookAvailable} onClick={()=>document.getElementById("finished-memory-book")?.scrollIntoView({behavior:"smooth"})}>{p.openMemoryBook}</button><div id="finished-memory-book" className="finishedMemoryBook"><Memory experience={experience} setExperience={setExperience} setView={setView} t={t} dir={dir} lang={lang} familyId={familyId} participantView/></div></div>}
  {chromeless&&typeof document!=="undefined"&&createPortal(<nav className="participantBottomNav">
   <button type="button" className="navBtn" onClick={goHome}>🏠<span>{p.navHome}</span></button>
   <button type="button" className="navBtn" onClick={()=>setPassportOpen(true)}>🛂<span>{p.navPassport}</span></button>

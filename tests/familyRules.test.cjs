@@ -51,6 +51,8 @@ const fs=require('node:fs');
  await assertFails(getDocs(query(collection(a,'participantCodes'),where('experienceId','==','trip'))));
  await assertFails(getDoc(doc(stranger,'experiences/trip')));
  await assertFails(updateDoc(doc(owner,'experiences/trip'),{families:[{id:'changed'}]}));
+ await assertSucceeds(updateDoc(doc(owner,'experiences/trip'),{familyMissionOverrides:{a:{one:{title:'Family A only'}}}}));
+ await assertFails(updateDoc(doc(a,'experiences/trip'),{familyMissionOverrides:{a:{one:{title:'Spoof'}}}}));
  await assertSucceeds(getDoc(doc(stranger,'experiences/legacy/media/photo')));
  const storageA=env.authenticatedContext('a1').storage(),storageB=env.authenticatedContext('b1').storage();
  await assertSucceeds(uploadBytes(ref(env.authenticatedContext('owner').storage(),'experiences/trip/media/owner/family-puzzle.jpg'),new Uint8Array([1]),{contentType:'image/jpeg'}));

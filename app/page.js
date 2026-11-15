@@ -6,6 +6,7 @@ import Dashboard from "../components/Dashboard";
 import MasterDashboard from "../components/MasterDashboard";
 import masterAccess from "../functions/masterAccess";
 import AICreator from "../components/AICreator";
+import FamilyManagement from "../components/FamilyManagement";
 import Studio from "../components/Studio";
 import Runtime from "../components/Runtime";
 import Participant from "../components/Participant";
@@ -37,6 +38,8 @@ const DEMO={
 
 export default function Home(){
  const [view,setView]=useState("dashboard");
+ const [managedFamily,setManagedFamily]=useState(null);
+ function onManageFamily(id){setManagedFamily(id);setView("family")}
  const [user,setUser]=useState(null);
  const [isMaster,setIsMaster]=useState(false);
  useEffect(()=>{window.scrollTo({top:0,behavior:"auto"});document.getElementById("screen-guide-title")?.focus({preventScroll:true})},[view]);
@@ -101,7 +104,7 @@ export default function Home(){
      const current=++generation;
      unsubExp();
      setIsMaster(false);
-     if(previousUid!==u?.uid){setActiveId(null);setExperience({id:null,name:"",flow:[],status:"draft"});setExperiences([]);setView(v=>["studio","runtime","memory","master"].includes(v)?"dashboard":v)}
+     if(previousUid!==u?.uid){setActiveId(null);setExperience({id:null,name:"",flow:[],status:"draft"});setExperiences([]);setView(v=>["studio","runtime","memory","master","family"].includes(v)?"dashboard":v)}
      previousUid=u?.uid||null;
      setUser(u);
      if(u) unsubExp=subscribeExperiences(u.uid, rows=>setExperiences(rows));
@@ -143,17 +146,18 @@ export default function Home(){
 
  const t=STRINGS[lang];
  const dir=getDir(lang);
- const props={experience,setExperience,setView,user,isMaster,experiences,setExperiences,activeId,setActiveId,openExperience,startAICreate,deepLinkCode,lang,setLang,country,selectLang,t,dir};
+ const props={onManageFamily,experience,setExperience,setView,user,isMaster,experiences,setExperiences,activeId,setActiveId,openExperience,startAICreate,deepLinkCode,lang,setLang,country,selectLang,t,dir};
 
  const Screen=useMemo(()=>({
    dashboard:<Dashboard {...props}/>,
    master:<MasterDashboard {...props}/>,
    ai:<AICreator {...props}/>,
    studio:<Studio {...props}/>,
+   family:<FamilyManagement {...props} key={`${experience.id}:${managedFamily}`} familyId={managedFamily}/>,
    runtime:<Runtime {...props}/>,
    participant:<Participant {...props}/>,
    memory:<Memory {...props}/>
- })[view],[view,experience,experiences,user,isMaster,activeId,lang]);
+ })[view],[view,experience,experiences,user,isMaster,activeId,lang,managedFamily]);
 
  if(view==="portal"){
    return <><Participant {...props} portal chromeless portalCode={portalCode}/><ToastContainer dir={dir}/></>;

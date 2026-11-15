@@ -18,7 +18,7 @@ import {writeNfcTag,nfcWriteSupported} from "../lib/nfc";
 import {tx,missionLabelsFor} from "../lib/i18n";
 const STUCK_MINUTES=3;
 function minutesAgo(ts){ if(!ts?.toMillis)return null; return Math.floor((Date.now()-ts.toMillis())/60000); }
-export default function Runtime({experience,setExperience,setView,t,user,lang,isMaster=false}){
+export default function Runtime({experience,setExperience,setView,t,user,lang,isMaster=false,onManageFamily}){
  const r=t.runtime;
  const [people,setPeople]=useState([]),[feed,setFeed]=useState([]),[media,setMedia]=useState([]),[progress,setProgress]=useState([]),[answers,setAnswers]=useState([]),[locationVotes,setLocationVotes]=useState([]),[pendingAttractionPicks,setPendingAttractionPicks]=useState({});
  const [decisionsModalOpen,setDecisionsModalOpen]=useState(false);
@@ -173,7 +173,7 @@ export default function Runtime({experience,setExperience,setView,t,user,lang,is
  const organizerBranches=flow.filter(m=>m.type==="branch"&&m.organizerDecides);
  const locationPolls=allFlow.filter(m=>m.type==="story"&&m.organizerDecides);
  return <section className="runtimePage">
- <ExperienceShare experience={experience} lang={lang} setView={setView}/>
+ <ExperienceShare onManageFamily={onManageFamily} experience={experience} lang={lang} setView={setView}/>
  {!people.length&&experience.status==="live"&&<p className="contextHint">{tx(lang,"עדיין לא הצטרפו משתתפים. שתפו את הקישור שלמעלה; הרשימה תתעדכן אוטומטית כשיצטרפו.","No participants yet. Share the link above; this view updates automatically when they join.")}</p>}
  {locationPolls.length>0&&(()=>{
    const pendingCount=locationPolls.filter(m=>{const d=experience.locationDecisions?.[m.id];return !(d&&d.length)}).length;

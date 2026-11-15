@@ -4,6 +4,7 @@ import { httpsCallable } from "firebase/functions";
 import { firebaseConfigured, functions } from "../lib/firebase";
 import { subscribeMedia } from "../lib/mediaData";
 import { subscribeFamilyBook, saveFamilyBook, subscribeAnswers, subscribeAllProgress, subscribeExperience, updateExperienceRemote, ensureUser } from "../lib/morivoData";
+import familyJourney from "../functions/familyJourney";
 import MemoryPhotoManager from "./MemoryPhotoManager";
 import coordination from "../functions/coordination";
 import {unlockedPieces,puzzleCompletedIds} from "../lib/familyPuzzle";
@@ -44,7 +45,7 @@ export default function Memory({experience,setExperience,setView,t,user,publicVi
  const exp=publicView?(localExp||{}):experience;
  const isOwner=!!(user?.uid&&exp.ownerUid&&(user.uid===exp.ownerUid||isMaster));
 
- const [selectedFamily,setSelectedFamily]=useState("");
+ const [selectedFamily,setSelectedFamily]=useState(participantFamilyId||"");
  const [familyBook,setFamilyBook]=useState({});
  const grouped=!!exp.families?.length;
  const familyId=grouped?(isOwner?(exp.families.find(f=>f.id===selectedFamily)?.id||exp.families[0].id):participantFamilyId):null;
@@ -62,7 +63,7 @@ export default function Memory({experience,setExperience,setView,t,user,publicVi
   return()=>{a();b();c();d()};
  },[exp.id,familyId,grouped]);
 
- const flow=coordination.journeyFlow(exp.flow||[]);
+ const flow=coordination.journeyFlow(familyJourney.familyFlow(exp,familyId));
  const puzzle=grouped?book.familyPuzzle:exp.familyPuzzle;
  const puzzlePieces=unlockedPieces(flow,puzzleCompletedIds(exp.flow||[],progress),puzzle?.totalPieces||8);
  const he=dir==="rtl";
@@ -106,6 +107,7 @@ export default function Memory({experience,setExperience,setView,t,user,publicVi
  if(publicView&&!publicLoaded)return <section className="memoryBook memoryBookPublicState" dir={dir}><p>⏳ {m2.publicLoading}</p></section>;
  if(publicView&&!localExp)return <section className="memoryBook memoryBookPublicState" dir={dir}><p>⚠ {m2.publicNotFound}</p></section>;
 
+ if(!isOwner&&!familyJourney.bookReleased(exp,progress))return <section className="panel narrow" dir={dir}><h2>🔒 {tx(lang,"ספר הזיכרונות ייפתח בסיום הטיול","Your memory book opens after the trip")}</h2><p>{tx(lang,"התמונות והזיכרונות נשמרים בינתיים. אחרי יום החזרה תוכלו לפתוח את הספר המשפחתי כאן.","Your photos and memories are being saved. Come back after your return day to open your family book.")}</p></section>;
  return <div className="memoryPage" dir={dir}>
  <div className="mbToolbar">
   {grouped&&isOwner&&<label>{tx(lang,"הספר של המשפחה","Family book")}<select value={familyId||""} onChange={e=>setSelectedFamily(e.target.value)}>{exp.families.map(f=><option key={f.id} value={f.id}>{f.name}</option>)}</select></label>}
