@@ -1,5 +1,5 @@
 import assert from "node:assert/strict";
-import {daysBetween, moveTripStart, setTripEnd} from "../lib/tripDates.js";
+import {daysBetween, moveTripStart, setTripEnd, localDateKey} from "../lib/tripDates.js";
 
 assert.equal(daysBetween("2026-06-01", "2026-06-07"), 7);
 assert.equal(daysBetween("2026-06-01", "2026-06-01"), 1);
@@ -42,3 +42,10 @@ assert.equal(dated.endDate, "");
 assert.equal(moveTripStart({ endDate: "2026-09-20", flow: [] }, "2026-09-12").endDate, "2026-09-20");
 assert.equal(moveTripStart({ endDate: "2026-09-01", flow: [] }, "2026-09-12").endDate, "");
 console.log("tripDates: moving the start shifts the whole trip and its booking links; the end date changes the length");
+
+process.env.TZ='Asia/Jerusalem';
+assert.equal(localDateKey(new Date('2026-12-06T00:00:00')),'2026-12-06');
+assert.equal(localDateKey(new Date('2026-03-27T00:00:00')),'2026-03-27');
+process.env.TZ='America/Los_Angeles';
+assert.equal(localDateKey(new Date('2026-12-06T00:00:00')),'2026-12-06');
+console.log('Calendar dates retain Dec 6 in Israel and US timezones, including DST boundary');

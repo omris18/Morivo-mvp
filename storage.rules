@@ -21,7 +21,7 @@ service firebase.storage {
     }
     match /experiences/{experienceId}/families/{familyId}/media/{uid}/{fileName} {
       allow read: if isExperienceOwner(experienceId) || familyMember(experienceId, familyId);
-      allow create: if signedIn() && request.auth.uid == uid && familyMember(experienceId, familyId) && validMedia();
+      allow create: if signedIn() && request.auth.uid == uid && (isExperienceOwner(experienceId) || familyMember(experienceId, familyId)) && validMedia();
       allow delete: if isExperienceOwner(experienceId) || (request.auth.uid == uid && familyMember(experienceId, familyId));
       allow update: if false;
     }

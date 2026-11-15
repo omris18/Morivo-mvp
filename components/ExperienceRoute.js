@@ -1,4 +1,5 @@
 "use client";
+import coordination from "../functions/coordination";
 import {Fragment,useEffect,useRef,useState} from "react";
 import {createPortal} from "react-dom";
 import {generateExperienceArtworkRemote,uploadCelebrationPortrait,updateExperienceRemote,generateCelebrationCartoonRemote} from "../lib/morivoData";
@@ -12,7 +13,7 @@ import LinkifiedText from "./LinkifiedText";
 import {tx,txf} from "../lib/i18n";
 const icons={photo:"📸",video:"🎬",map:"🗺️",quiz:"✅",puzzle:"🧩",note:"✍️",story:"📖",reward:"🏆"};
 export default function ExperienceRoute({experience,people=[],media=[],answers=[],onMemory,onStudio,onTheme,onSwap,onSaveMission,lang}){
- const he=lang==="he",flow=experience.flow||[],theme=getExperienceTheme(experience);
+ const he=lang==="he",flow=coordination.journeyFlow(experience.flow||[]),theme=getExperienceTheme(experience);
  const [selected,setSelected]=useState(experience.flow?.[0]?.id||null),[saving,setSaving]=useState(false),[error,setError]=useState(""),[popupMission,setPopupMission]=useState(null);
  useEffect(()=>{if(!flow.some(m=>m.id===selected))setSelected(flow[0]?.id||null)},[flow,selected]);
  const [artStatus,setArtStatus]=useState("idle"),[artError,setArtError]=useState("");

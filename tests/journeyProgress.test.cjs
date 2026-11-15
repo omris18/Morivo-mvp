@@ -21,3 +21,12 @@ assert.equal(advanceProgress({},[{id:'zero',points:0}],'zero').points,0);
 assert.equal(advanceProgress({},flow,'m1',{awardedPoints:81}).points,81);
 assert.equal(advanceProgress({},flow,'m1',{awardedPoints:900}).points,100);
 console.log('25 progress migration, live swap, skipped/branch and duplicate-completion checks passed');
+
+// Logistics never block travel progress, affect mission numbering or earn points.
+const withPolls=[flow[0],{id:'hotel',type:'story',organizerDecides:true,points:0},flow[1],{id:'attractions',isAttractionsPoll:true},flow[2]];
+assert.equal(normalizeProgress({progressVersion:2,currentMissionId:'hotel',completedMissionIds:['m1']},withPolls).currentMissionId,'m2');
+assert.equal(normalizeProgress({currentMissionIndex:2,completedMissionIds:['m1']},withPolls).currentMissionIndex,1);
+assert.equal(advanceProgress({},withPolls,'m1').currentMissionId,'m2');
+assert.throws(()=>advanceProgress({},withPolls,'hotel'),/removed/);
+assert.equal(normalizeProgress({completedMissionIds:['m1','m2','m3']},withPolls).journeyEnded,true);
+console.log('Coordination is excluded; existing progress and stable mission IDs are retained');

@@ -210,6 +210,7 @@ async function askGeminiJSON(promptText, label, opts) {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(body),
+        ...(opts?.timeoutMs?{signal:AbortSignal.timeout(opts.timeoutMs)}:{}),
       });
       if (!res.ok) {
         console.error(`Gemini ${label} HTTP error (model ${model})`, res.status, await res.text());
@@ -1014,7 +1015,7 @@ exports.translateExperience = onCall({ secrets: [openaiApiKey], cors: true, time
   return result;
 });
 
-exports.generateMemoryStory = onCall({ secrets: [openaiApiKey], cors: true, timeoutSeconds: 60 }, async (request) => {
+exports.generateMemoryStory = onCall({ secrets: [openaiApiKey, geminiApiKey], cors: true, timeoutSeconds: 120 }, async (request) => {
   if (!request.auth) {
     throw new HttpsError("unauthenticated", "Sign in before generating a story.");
   }
@@ -1044,7 +1045,7 @@ exports.generateMemoryStory = onCall({ secrets: [openaiApiKey], cors: true, time
 
   const flow = experience.flow || [];
   const chapters = flow.map((m) => {
-    const photos = mediaSnap.docs.filter((d) => d.data().missionId === m.id);
+    const photos = mediaSnap.docs.filter((d) => !d.data().deleted && d.data().missionId === m.id);
     const quotes = answersSnap.docs.filter((d) => d.data().missionId === m.id);
     return {
       title: m.title,
@@ -1065,37 +1066,27 @@ exports.generateMemoryStory = onCall({ secrets: [openaiApiKey], cors: true, time
     (c.quotes.length ? `\n   Quotes: ${c.quotes.map((q) => `"${q.text}" — ${q.by || "a participant"}`).join(" | ")}` : "")
   ).join("\n");
 
-  const client = new OpenAI({ apiKey: openaiApiKey.value().trim() });
+  const client = new OpenAI({ apiKey: openaiApiKey.value().trim(), timeout:25000, maxRetries:0 });
   const prompt = `You write warm, specific retellings of real interactive experiences for an app called Morivo. Given the experience's name, its original intent, and what actually happened chapter by chapter (real photo/video counts, who captured them, and real quotes participants wrote), write a flowing 3 to 5 paragraph narrative retelling of the experience as it actually happened. Reference the real chapters, real quotes and real people by name where given - do not invent details the input doesn't support. Write in the same language as the text below (detect it automatically). Respond with STRICT JSON only, no markdown fencing, no commentary, matching exactly this shape: {"story": "the narrative text"}
 
 Experience name: ${experience.name || ""}
+Family: ${experience.families?.find(f=>f.id===familyId)?.name||""}
 Original intent: ${experience.story || ""}
 
 What happened, chapter by chapter:
 ${chaptersText}`;
 
-  let completion;
-  try {
-    completion = await client.chat.completions.create({
-      model: "gpt-4o-mini",
-      messages: [{ role: "user", content: prompt }],
-      response_format: { type: "json_object" },
-      temperature: 0.85,
-    });
-  } catch (err) {
-    console.error("OpenAI memory story request failed", err);
-    throw new HttpsError("unavailable", "The AI service failed to respond. Please try again.");
-  }
-
   let story;
-  try {
-    story = JSON.parse(completion.choices[0].message.content).story;
-  } catch (err) {
-    throw new HttpsError("internal", "The AI returned data in an unexpected format.");
+  const generated=await askGeminiJSON(prompt,"family memory story",{maxModels:2,timeoutMs:18000,validate:data=>typeof data?.story==="string"&&!!data.story.trim()});
+  story=typeof generated?.story==="string"?generated.story:null;
+  if(!story?.trim()){
+    try {
+      const completion=await client.chat.completions.create({model:"gpt-4o-mini",messages:[{role:"user",content:prompt}],response_format:{type:"json_object"},temperature:0.85});
+      const parsed=extractJson(completion.choices?.[0]?.message?.content||"");
+      story=typeof parsed?.story==="string"?parsed.story:null;
+    } catch(err){ console.error("Memory story providers unavailable",err?.status||err?.code||"unknown"); }
   }
-  if (!story || !String(story).trim()) {
-    throw new HttpsError("internal", "The AI didn't return a story.");
-  }
+  if(!story?.trim())throw new HttpsError("unavailable",experience.lang==="he"?"שירות כתיבת הסיפור אינו זמין כרגע. התמונות והזיכרונות נשמרו; נסו שוב מאוחר יותר.":"Story writing is temporarily unavailable. Your photos and memories are safe; please try later.");
 
   const finalStory = String(story).trim().slice(0, 4000);
   await bookRef.set({
