@@ -412,7 +412,7 @@ export default function Studio({ experience, setExperience, setView, t, lang, on
           <div className="tag">{s.tripDetailsTag}</div>
           <label>{tx(lang,"כותרת החוויה","Experience title")}<input value={titleDraft} maxLength={160} onChange={e=>setTitleDraft(e.target.value)}/></label>
           <button disabled={saving||!titleDraft.trim()||titleDraft.trim()===experience.name} onClick={()=>persist({...experience,name:titleDraft.trim()})}>{tx(lang,"שמירת הכותרת","Save title")}</button>
-          {experience.families?.length?<><FamilyEditor value={experience.families} lang={lang} disabled={!!experience.joinCode} onChange={families=>{const sum=familiesDomain.totals(families);persist({...experience,families,adultsCount:sum.adults,childrenCount:sum.children,people:sum.adults+sum.children})}}/><FamilyAccommodation experience={experience} lang={lang}/></>:<>
+          {experience.families?.length?<><FamilyEditor onManageFamily={onManageFamily} value={experience.families} lang={lang} disabled={!!experience.joinCode} onChange={families=>{const sum=familiesDomain.totals(families);persist({...experience,families,adultsCount:sum.adults,childrenCount:sum.children,people:sum.adults+sum.children})}}/><FamilyAccommodation experience={experience} lang={lang}/></>:<>
           <div className="fieldRow">
             <div>
               <label>{s.adultsLabel}</label>
