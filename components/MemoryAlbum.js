@@ -29,7 +29,7 @@ export default function MemoryAlbum({chapters,lang,seed="morivo",canEdit=false,o
    <div className={`${styles.photos} ${styles['count'+ch.photos.length]}`}>
     {ch.photos.map((photo,j)=>{const effect=layout.photos[j];return <figure key={photo.id} className={`${styles.photo} ${effect.tape?styles.tape:""}`} style={{"--angle":`${effect.angle}deg`}}>
      <div className={styles.paper} style={effect.torn?{clipPath:tearPolygon(`${selected}:${photo.id}`)}:undefined}>
-      {photo.contentType?.startsWith("video/")?<video controls preload="metadata" src={photo.downloadURL}/>:<a href={photo.downloadURL} target="_blank" rel="noopener noreferrer"><img loading={i===current?"eager":"lazy"} src={photo.downloadURL} alt={photo.missionTitle||ch.mission.title}/></a>}
+      {photo.contentType?.startsWith("video/")?<video controls preload="metadata" src={photo.downloadURL}/>:<a href={photo.downloadURL} target="_blank" rel="noopener noreferrer"><img loading="eager" src={photo.downloadURL} alt={photo.missionTitle||ch.mission.title}/></a>}
       {photo.participantName&&<figcaption>{photo.participantName}</figcaption>}
      </div></figure>})}
     {!ch.photos.length&&<div className={styles.textOnly}>{label("במילים שלנו","In our own words")}</div>}
