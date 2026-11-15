@@ -1046,7 +1046,7 @@ exports.generateMemoryStory = onCall({ secrets: [openaiApiKey, geminiApiKey], co
     (familyId?expRef.collection("answers").where("familyId","==",familyId):expRef.collection("answers")).get(),
   ]);
 
-  const flow = experience.flow || [];
+  const flow = require("./familyJourney").familyFlow(experience,familyId);
   const chapters = flow.map((m) => {
     const photos = mediaSnap.docs.filter((d) => !d.data().deleted && d.data().missionId === m.id);
     const quotes = answersSnap.docs.filter((d) => d.data().missionId === m.id);

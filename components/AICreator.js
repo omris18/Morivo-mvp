@@ -1,4 +1,5 @@
 "use client";
+import familyJourney from "../functions/familyJourney";
 import FamilyEditor from "./FamilyEditor";
 import familiesDomain from "../functions/families";
 import PhotoJourney from "./PhotoJourney";
@@ -126,7 +127,7 @@ export default function AICreator({setExperience,setView,setActiveId,user,lang,t
   // the UI visually flagged them as required) let a multi-day trip reach planning with no real
   // day count to build from, producing a malformed or single-day plan with no indication why.
   if(formStep===2&&isFamilyTrip){try{familiesDomain.normalizeFamilies(form.families)}catch(e){setStepError(tx(lang,"יש למלא שם, הרכב וגיל לכל ילד בכל משפחה.",e.message));return}}
-  if(formStep===2&&isMultiDayFamilyTrip&&(!form.startDate||!form.endDate)){setStepError(a.addDatesFirst);document.querySelector('.calendarTrigger')?.focus();return}
+  if(formStep===2&&isMultiDayFamilyTrip&&(!form.startDate||!form.endDate||form.startDate<familyJourney.dateKey())){setStepError(a.addDatesFirst);document.querySelector('.calendarTrigger')?.focus();return}
   setStepError("");
   setFormStep(s=>Math.min(TOTAL_STEPS,s+1));
  }
@@ -168,7 +169,7 @@ export default function AICreator({setExperience,setView,setActiveId,user,lang,t
  async function goPlan(){
   if(!form.prompt.trim())return showToast(a.describeFirst);
   if(isMultiDayFamilyTrip&&!form.destinations.length)return showToast(a.addDestinationFirst);
-  if(isMultiDayFamilyTrip&&(!form.startDate||!form.endDate))return showToast(a.addDatesFirst);
+  if(isMultiDayFamilyTrip&&(!form.startDate||!form.endDate||form.startDate<familyJourney.dateKey()))return showToast(a.addDatesFirst);
   if(!firebaseConfigured)return showToast(a.needsFirebase);
   setPhase("planning");setPlanError(null);
   try{
@@ -357,7 +358,7 @@ export default function AICreator({setExperience,setView,setActiveId,user,lang,t
 
    <div className={"aiFormStep "+(formStep===2?"active":"")} data-step="2">
     {isMultiDayFamilyTrip?
-     <div className="fieldRow"><div><label>{a.startDate}</label><CalendarField value={form.startDate} lang={lang} dir={dir} label={a.startDate} onChange={v=>setForm(f=>({...f,startDate:v,endDate:f.endDate&&f.endDate<v?"":f.endDate}))}/></div><div><label>{a.endDate}</label><CalendarField value={form.endDate} min={form.startDate||undefined} lang={lang} dir={dir} label={a.endDate} onChange={v=>setForm(f=>({...f,endDate:v}))}/></div></div>
+     <div className="fieldRow"><div><label>{a.startDate}</label><CalendarField min={familyJourney.dateKey()} value={form.startDate} lang={lang} dir={dir} label={a.startDate} onChange={v=>setForm(f=>({...f,startDate:v,endDate:f.endDate&&f.endDate<v?"":f.endDate}))}/></div><div><label>{a.endDate}</label><CalendarField value={form.endDate} min={form.startDate||undefined} lang={lang} dir={dir} label={a.endDate} onChange={v=>setForm(f=>({...f,endDate:v}))}/></div></div>
      :isSingleDayFamilyTrip?
      <div className="fieldRow"><div><label>{a.duration}</label><select value={form.duration} onChange={e=>setForm({...form,duration:e.target.value})}><option value=""></option>{DURATION_OPTIONS[lang].map(x=><option key={x} value={x}>{x}</option>)}</select></div></div>
      :<div className="fieldRow"><div><label>{a.duration}</label><select value={form.duration} onChange={e=>setForm({...form,duration:e.target.value})}><option value=""></option>{DURATION_OPTIONS[lang].map(x=><option key={x} value={x}>{x}</option>)}</select></div><div><label>{a.people}</label><input type="number" value={form.people} onChange={e=>setForm({...form,people:e.target.value})}/></div></div>}

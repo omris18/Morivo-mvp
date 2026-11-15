@@ -1,6 +1,5 @@
 "use client";
-import missionPresentation from "../functions/missionPresentation";
-import {useRef,useState} from "react";
+
 import {buildRouteGroups,dayRangeText} from "../lib/routeGroups";
 import {routeLabels} from "../lib/i18n";
 import {tx,txf} from "../lib/i18n";
@@ -11,8 +10,6 @@ const typeIcons={photo:"📸",video:"🎬",map:"🗺️",quiz:"✅",puzzle:"🧩
 export default function ParticipantJourneyMap({experience,flow,prog,idx,finished,lang,p,missionDayLocked,onOpenMission}){
  const he=lang==="he";
  const L=routeLabels(lang);
- const mapRef=useRef(null);
- const [popup,setPopup]=useState(null);
  const rawGroups=buildRouteGroups(experience,flow,lang);
  // The coordination group (hotel/attraction choice missions - see buildRouteGroups) isn't a
  // physical place, so it's kept out of the single/multi-destination counting below (a trip with
@@ -45,16 +42,8 @@ export default function ParticipantJourneyMap({experience,flow,prog,idx,finished
  const progress=groups.length<=1?(finished?1:0):Math.max(0,Math.min(1,(finished?groups.length-1:activeGroupIndex)/Math.max(1,groups.length-1)));
  const statusText=finished?p.journeyComplete:p.missionOf(idx+1,flow.length);
  const mapHeight=Math.max(560,150+groups.length*105);
- function showMission(event,m,i,isActive){
-  const map=mapRef.current?.getBoundingClientRect(),anchor=event.currentTarget.getBoundingClientRect();
-  if(!map)return;
-  const width=Math.min(270,map.width-20),half=width/2;
-  const left=Math.max(half+10,Math.min(map.width-half-10,anchor.left-map.left+anchor.width/2));
-  const below=anchor.bottom-map.top+10;
-  const top=below+175<map.height?below:Math.max(72,anchor.top-map.top-180);
-  setPopup({m,i,isActive,left,top,width});
- }
- return <div ref={mapRef} className="journeySvgMap" style={{minHeight:mapHeight}} onClick={e=>{if(e.target===e.currentTarget)setPopup(null)}}>
+ function showMission(event,m,i,isActive){onOpenMission(m,isActive)}
+ return <div className="journeySvgMap" style={{minHeight:mapHeight}}>
   <div className="mapTitle"><div><strong>{singleDestination?destinationLabel:L.movingBetweenStops}</strong><small>{statusText}</small></div><span>🗺️</span></div>
   <svg className="routeSvg" viewBox="0 0 600 820" preserveAspectRatio="none" aria-hidden="true">
    <defs><linearGradient id="participantProgressGradient" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stopColor="#7c3aed"/><stop offset="55%" stopColor="#ec4899"/><stop offset="100%" stopColor="#f97316"/></linearGradient></defs>
@@ -102,15 +91,7 @@ export default function ParticipantJourneyMap({experience,flow,prog,idx,finished
    })}
   </div>
   {points[activeGroupIndex]&&!finished&&<div className="mapPlane" style={{left:`${points[activeGroupIndex].x}%`,top:`${points[activeGroupIndex].y}%`}}>✈️</div>}
-  {popup&&<div className="participantMapMissionPopup" style={{left:popup.left,top:popup.top,width:popup.width}} role="dialog" aria-label={popup.m.title} onClick={e=>e.stopPropagation()}>
-   <button type="button" className="participantMapMissionClose" onClick={()=>setPopup(null)} aria-label={tx(lang,"סגירה","Close")}>×</button>
-   <div className="participantMapMissionMeta"><span>{typeIcons[popup.m.type]||"✨"}</span><small>{txf(lang,"משימה {0}","Mission {0}",popup.i+1)}</small></div>
-   <strong>{popup.m.title}</strong>
-   <p>{missionPresentation.missionSummary(popup.m,lang)}</p>
-   <div className={`participantMapMissionStatus ${completedIds.includes(popup.m.id)?"done":popup.isActive?"current":"locked"}`}>{completedIds.includes(popup.m.id)?`✓ ${p.missionDoneHint}`:popup.isActive?(tx(lang,"המשימה הנוכחית","Current mission")):`🔒 ${p.missionLockedHint}`}</div>
-   <button type="button" className="participantMapMissionOpen" onClick={()=>{setPopup(null);onOpenMission(popup.m,popup.isActive)}}>{popup.isActive?p.openMission:(tx(lang,"הצגת פרטי המשימה","View mission details"))}</button>
-  </div>}
   <div className="mapLegend"><span className="done"><i></i>{tx(lang,"הושלם","Done")}</span><span className="now"><i></i>{tx(lang,"עכשיו","Now")}</span><span className="next"><i></i>{tx(lang,"עתידי","Upcoming")}</span></div>
-  <style jsx>{`.participantMapMissionPopup{position:absolute;z-index:30;transform:translateX(-50%);padding:14px;border:1px solid rgba(82,123,109,.28);border-radius:20px;background:#fffdf7;color:#243f3a;box-shadow:0 20px 45px rgba(24,61,52,.3);text-align:start}.participantMapMissionPopup:before{content:"";position:absolute;top:-7px;left:calc(50% - 7px);width:14px;height:14px;transform:rotate(45deg);background:#fffdf7;border-left:1px solid rgba(82,123,109,.28);border-top:1px solid rgba(82,123,109,.28)}.participantMapMissionClose{position:absolute;top:5px;inset-inline-end:8px;border:0;background:transparent;color:#60746f;font-size:22px;line-height:1}.participantMapMissionMeta{display:flex;align-items:center;gap:7px;padding-inline-end:24px}.participantMapMissionMeta span{font-size:22px}.participantMapMissionMeta small{font-size:10px;font-weight:900;color:#df7137}.participantMapMissionPopup>strong{display:block;margin:6px 0 4px;font-size:14px}.participantMapMissionPopup p{display:-webkit-box;margin:0 0 9px;overflow:hidden;-webkit-box-orient:vertical;-webkit-line-clamp:3;font-size:11px;line-height:1.45}.participantMapMissionStatus{margin-bottom:9px;font-size:10px;font-weight:900}.participantMapMissionStatus.done{color:#238657}.participantMapMissionStatus.current{color:#d65f20}.participantMapMissionStatus.locked{color:#718079}.participantMapMissionOpen{width:100%;padding:8px 10px;border:0;border-radius:999px;background:#e8754e;color:#fff;font-size:11px;font-weight:900}`}</style>
+
  </div>;
 }

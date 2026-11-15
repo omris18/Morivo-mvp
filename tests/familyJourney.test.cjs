@@ -1,0 +1,16 @@
+const assert=require('node:assert/strict');
+const {familyFlow,bookReleased,dateKey}=require('../functions/familyJourney');
+const {advanceProgress}=require('../functions/journeyProgress');
+const trip={endDate:'2026-12-06',flow:[{id:'poll',isCoordination:true,title:'Shared decision'},{id:'one',type:'quiz',title:'Common',text:'original',options:['Athens','Rome'],answer:'Athens',points:100},{id:'two',type:'photo',title:'Next'}],familyMissionOverrides:{a:{poll:{title:'Forbidden override'},one:{id:'wrong',type:'photo',title:'For younger kids',text:'Take a photo',points:50}}}};
+const before=JSON.stringify(trip);
+const a=familyFlow(trip,'a'),b=familyFlow(trip,'b');
+assert.equal(a[0].title,'Shared decision');assert.equal(a[1].id,'one');assert.equal(a[1].type,'photo');assert.equal(b[1].type,'quiz');assert.equal(b[1].text,'original');assert.equal(JSON.stringify(trip),before);
+assert.equal(advanceProgress({currentMissionIndex:0,points:0},a,'one').points,50);
+assert.equal(advanceProgress({currentMissionIndex:0,points:0},b,'one').points,100);
+assert.equal(bookReleased(trip,[{journeyEnded:true}],new Date(2026,11,5)),false);
+assert.equal(bookReleased(trip,[{journeyEnded:true}],new Date(2026,11,6,23,59)),false);
+assert.equal(bookReleased(trip,[],new Date(2026,11,7)),true);
+assert.equal(bookReleased({},[]),false);assert.equal(bookReleased({},[{journeyEnded:false}]),false);assert.equal(bookReleased({},[{journeyEnded:true}]),true);
+assert.equal(bookReleased({endDate:'bad'},[{journeyEnded:true}]),false);
+assert.equal(dateKey(new Date(2026,11,6,0,1)),'2026-12-06');
+console.log('PASS: family isolation, stable IDs, common decisions, personalized progress points, book release boundaries');

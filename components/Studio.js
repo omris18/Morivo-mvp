@@ -1,4 +1,5 @@
 "use client";
+import familyJourney from "../functions/familyJourney";
 import missionPresentation from "../functions/missionPresentation";
 
 import { useEffect, useState, useRef } from "react";
@@ -23,7 +24,7 @@ import coordination from "../functions/coordination";
 import CalendarField from "./CalendarField";
 import {moveTripStart,setTripEnd,daysBetween} from "../lib/tripDates";
 
-export default function Studio({ experience, setExperience, setView, t, lang }) {
+export default function Studio({ experience, setExperience, setView, t, lang, onManageFamily }) {
   const he=lang==="he",labels=missionLabelsFor(lang);
   const [justPublished,setJustPublished]=useState(false);
   useEffect(()=>{if(justPublished)document.getElementById("experience-share")?.scrollIntoView({behavior:"smooth",block:"center"})},[justPublished]);
@@ -402,7 +403,7 @@ export default function Studio({ experience, setExperience, setView, t, lang }) 
   return (
     <section className="grid2 studioPage">
       <div className="panel studioWorkspace">
-        {justPublished&&<ExperienceShare experience={experience} lang={lang} setView={setView} afterPublish/>}
+        {justPublished&&<ExperienceShare onManageFamily={onManageFamily} experience={experience} lang={lang} setView={setView} afterPublish/>}
         <div className="studioHeader"><div><div className="tag">
           {s.savingTag} · {saving ? s.saving : saveError ? s.saveErrorTag : s.saved}
         </div><h2>{experience.name || s.untitled}</h2></div><div className={"savePill "+(saveError?"error":saving?"saving":"saved")}><i></i>{saving ? s.saving : saveError ? s.saveErrorTag : s.saved}</div></div>
@@ -428,7 +429,7 @@ export default function Studio({ experience, setExperience, setView, t, lang }) 
           <div className="fieldRow">
             <div>
               <label>{t.aiCreator.startDate}</label>
-              <CalendarField value={experience.startDate || ""} lang={lang} dir={getDir(lang)} label={t.aiCreator.startDate}
+              <CalendarField min={familyJourney.dateKey()} value={experience.startDate || ""} lang={lang} dir={getDir(lang)} label={t.aiCreator.startDate}
                 onChange={(v) => persist(moveTripStart(experience, v))} />
             </div>
             {(experience.endDate || flow.some((m) => Number(m.day) > 1)) && <div>

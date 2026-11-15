@@ -53,6 +53,7 @@ export default function CalendarField({value,onChange,min,lang,dir,label,placeho
  for(let d=1;d<=daysInMonth;d++)cells.push(new Date(viewDate.getFullYear(),viewDate.getMonth(),d));
 
  function pick(d){
+  if(minDate&&d<minDate)return;
   onChange(toISO(d));
   setOpen(false);
  }
