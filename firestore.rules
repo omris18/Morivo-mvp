@@ -18,6 +18,15 @@ service cloud.firestore {
         : request.auth.uid == participantId);
     }
 
+    function familyMode(eid) { return get(/databases/$(database)/documents/experiences/$(eid)).data.get('families', []).size() > 0; }
+    function familyMember(eid, fid) {
+      let path = /databases/$(database)/documents/experiences/$(eid)/participantSessions/$(request.auth.uid);
+      return signedIn() && fid is string && exists(path) && get(path).data.get('familyId', '') == fid;
+    }
+    function familyRead(eid) { return signedIn() && (isExperienceOwner(eid) || !familyMode(eid) || familyMember(eid, resource.data.get('familyId', null))); }
+    function familyCreate(eid) { return !familyMode(eid) || familyMember(eid, request.resource.data.get('familyId', null)); }
+    function stableFamily() { return !request.resource.data.diff(resource.data).affectedKeys().hasAny(['familyId', 'uid']); }
+
     match /users/{uid} {
       allow read, write: if signedIn() && request.auth.uid == uid;
     }
@@ -38,15 +47,23 @@ service cloud.firestore {
         resource.data.ownerUid == request.auth.uid ||
         exists(/databases/$(database)/documents/experiences/$(experienceId)/participants/$(request.auth.uid)) ||
         exists(/databases/$(database)/documents/experiences/$(experienceId)/participantSessions/$(request.auth.uid)) ||
-        resource.data.memoryPublic == true
+        (resource.data.get('memoryPublic', false) == true && resource.data.get('families', []).size() == 0)
       );
-      allow update: if signedIn() && (isMaster() || (resource.data.ownerUid == request.auth.uid
+      allow update: if (!resource.data.keys().hasAny(['joinCode']) || !request.resource.data.diff(resource.data).affectedKeys().hasAny(['families'])) && signedIn() && (isMaster() || (resource.data.ownerUid == request.auth.uid
         && request.resource.data.ownerUid == resource.data.ownerUid
         && !request.resource.data.diff(resource.data).affectedKeys().hasAny(['paid', 'paidAt', 'paidAmount', 'paymentSessionId', 'joinCode'])
         && (!request.resource.data.diff(resource.data).affectedKeys().hasAny(['status'])
           || request.resource.data.get('status', 'draft') != 'live')));
       allow delete: if signedIn() && (isMaster() || resource.data.ownerUid == request.auth.uid);
 
+      match /familyInvites/{fid} {
+        allow read: if isExperienceOwner(experienceId);
+        allow write: if false;
+      }
+      match /familyBooks/{fid} {
+        allow read: if isExperienceOwner(experienceId) || familyMember(experienceId, fid);
+        allow write: if isExperienceOwner(experienceId);
+      }
       match /participantSessions/{uid} {
         allow read: if signedIn() && request.auth.uid == uid;
         allow write: if false;
@@ -66,20 +83,20 @@ service cloud.firestore {
       }
 
       match /media/{mediaId} {
-        allow read: if signedIn();
-        allow create: if signedIn() && isParticipant(experienceId, request.resource.data.uid);
-        allow update: if signedIn() && (isParticipant(experienceId, resource.data.uid) || isMaster());
+        allow read: if familyRead(experienceId);
+        allow create: if familyCreate(experienceId) && signedIn() && isParticipant(experienceId, request.resource.data.uid);
+        allow update: if stableFamily() && signedIn() && (isParticipant(experienceId, resource.data.uid) || isMaster());
         allow delete: if signedIn() && (isParticipant(experienceId, resource.data.uid) || isExperienceOwner(experienceId));
       }
       match /progress/{uid} {
-        allow read: if signedIn();
-        allow create: if isParticipant(experienceId, uid)
+        allow read: if isParticipant(experienceId, uid) || familyRead(experienceId);
+        allow create: if familyCreate(experienceId) && isParticipant(experienceId, uid)
           && request.resource.data.points == 0
           && request.resource.data.completedMissionIds.size() == 0;
         // A participant can only ever move their own progress forward - points capped to a
         // sane per-write increase (max single mission is 200) and at most one mission marked
         // done per write - so a client can't just set points/completedMissionIds to anything.
-        allow update: if signedIn() && (
+        allow update: if stableFamily() && signedIn() && (
           isExperienceOwner(experienceId) ||
           (isParticipant(experienceId, uid)
             && request.resource.data.points is number
@@ -103,10 +120,10 @@ service cloud.firestore {
       }
 
       match /answers/{answerId} {
-        allow read: if signedIn();
-        allow create: if signedIn() && isParticipant(experienceId, request.resource.data.uid)
+        allow read: if familyRead(experienceId);
+        allow create: if familyCreate(experienceId) && signedIn() && isParticipant(experienceId, request.resource.data.uid)
           && request.resource.data.text is string && request.resource.data.text.size() <= 2000;
-        allow update: if signedIn() && isParticipant(experienceId, resource.data.uid)
+        allow update: if stableFamily() && signedIn() && isParticipant(experienceId, resource.data.uid)
           && request.resource.data.text is string && request.resource.data.text.size() <= 2000;
         allow delete: if signedIn() && (isParticipant(experienceId, resource.data.uid) || isExperienceOwner(experienceId));
       }
@@ -149,6 +166,8 @@ service cloud.firestore {
 
     // Pre-registered personal codes (one per named participant, meant for NFC tags) -
     // resolved on tap without needing the shared join code.
+    match /familyCodes/{code} { allow read, write: if false; }
+
     match /participantCodes/{code} {
       // Bearer links may be resolved only by the callable. Do not expose every
       // participant's resumable link to other participants through a collection query.

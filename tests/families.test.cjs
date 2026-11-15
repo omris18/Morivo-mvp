@@ -1,0 +1,10 @@
+const assert=require('node:assert/strict');
+const {normalizeFamilies,totals,withFamilyRequest,familyBookingUrl}=require('../functions/families');
+const families=normalizeFamilies([{id:'a',name:'שדה',adults:2,children:1,childrenAges:[7],rooms:1},{id:'b',name:'כהן',adults:4,children:4,childrenAges:[2,5,8,10],rooms:2}]);
+assert.deepEqual(totals(families),{adults:6,children:5,rooms:3,childrenAges:[7,2,5,8,10]});
+for(const patch of [{adults:0},{childrenAges:[]},{childrenAges:['']},{childrenAges:[18]},{rooms:0},{id:'../x'}])assert.throws(()=>normalizeFamilies([{...families[0],...patch}]));
+assert.throws(()=>normalizeFamilies([families[0],families[0]]));
+const request=withFamilyRequest({families,people:1,prompt:'חופשה',lang:'he'});assert.equal(request.people,11);assert.match(request.prompt,/שדה/);assert.match(request.prompt,/כהן/);
+const url=new URL(familyBookingUrl(families[0],'Athens','2027-01-01','2027-01-06'));
+assert.equal(url.searchParams.get('group_adults'),'2');assert.equal(url.searchParams.get('group_children'),'1');assert.deepEqual(url.searchParams.getAll('age'),['7']);assert.equal(url.searchParams.get('no_rooms'),'1');
+console.log('PASS: family totals, invalid composition, isolated room searches and AI household instructions');

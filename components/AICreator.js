@@ -1,4 +1,6 @@
 "use client";
+import FamilyEditor from "./FamilyEditor";
+import familiesDomain from "../functions/families";
 import PhotoJourney from "./PhotoJourney";
 import CelebrationPhotoPicker from "./CelebrationPhotoPicker";
 import CalendarField from "./CalendarField";
@@ -50,7 +52,7 @@ function daysBetween(start,end){
  return diff>0?diff:0;
 }
 function defaultForm(){
- return {prompt:"",type:"",location:"",duration:"",startDate:"",endDate:"",people:"",peopleDetails:"",hotelBooked:false,interests:[],adults:"2",children:"0",childrenAges:[],destinations:[]};
+ return {prompt:"",type:"",location:"",duration:"",startDate:"",endDate:"",people:"",peopleDetails:"",hotelBooked:false,interests:[],adults:"2",children:"0",childrenAges:[],families:[{id:"family-1",name:"משפחה 1",adults:2,children:0,childrenAges:[],rooms:1}],destinations:[]};
 }
 function generateDraft(f){
  const subject=f.prompt.trim()||"your experience";
@@ -79,7 +81,7 @@ export default function AICreator({setExperience,setView,setActiveId,user,lang,t
  const [savingDraft,setSavingDraft]=useState(false);
  const [draftSavedAt,setDraftSavedAt]=useState(null);
  const [portraitFile,setPortraitFile]=useState(null);
- const [form,setForm]=useState(()=>resumedDraft?.wizardForm?{...defaultForm(),...resumedDraft.wizardForm}:defaultForm());
+ const [form,setForm]=useState(()=>{const f=resumedDraft?.wizardForm?{...defaultForm(),...resumedDraft.wizardForm}:defaultForm();if(resumedDraft?.wizardForm&&!resumedDraft.wizardForm.families)f.families=[{id:"family-1",name:tx(lang,"משפחה 1","Family 1"),adults:Number(f.adults)||2,children:Number(f.children)||0,childrenAges:f.childrenAges||[],rooms:1}];return f});
  const [building,setBuilding]=useState(false),[step,setStep]=useState(0);
  const [destinationInput,setDestinationInput]=useState("");
  const dragFromIndexRef=useRef(null);
@@ -123,6 +125,7 @@ export default function AICreator({setExperience,setView,setActiveId,user,lang,t
   // Duration/day count is derived from these dates server-side - leaving them blank (nothing in
   // the UI visually flagged them as required) let a multi-day trip reach planning with no real
   // day count to build from, producing a malformed or single-day plan with no indication why.
+  if(formStep===2&&isFamilyTrip){try{familiesDomain.normalizeFamilies(form.families)}catch(e){setStepError(tx(lang,"יש למלא שם, הרכב וגיל לכל ילד בכל משפחה.",e.message));return}}
   if(formStep===2&&isMultiDayFamilyTrip&&(!form.startDate||!form.endDate)){setStepError(a.addDatesFirst);document.querySelector('.calendarTrigger')?.focus();return}
   setStepError("");
   setFormStep(s=>Math.min(TOTAL_STEPS,s+1));
@@ -160,7 +163,7 @@ export default function AICreator({setExperience,setView,setActiveId,user,lang,t
  useEffect(()=>{if(phase!=="planning"){setPlanningPct(0);return}const id=setInterval(()=>setPlanningPct(x=>x<92?x+Math.max(0.4,(92-x)*0.03):x),300);return()=>clearInterval(id)},[phase]);
  function baseFields(){
   const needsHotel=isMultiDayFamilyTrip&&!form.hotelBooked;
-  return {prompt:form.prompt,type:form.type,location:form.location,duration:isMultiDayFamilyTrip?(tripDays?`${tripDays} days`:""):form.duration,startDate:isMultiDayFamilyTrip?form.startDate:null,endDate:isMultiDayFamilyTrip?form.endDate:null,people:isFamilyTrip?String(Number(form.adults||0)+Number(form.children||0)):form.people,peopleDetails:form.peopleDetails,adults:isFamilyTrip?Number(form.adults||0):null,children:isFamilyTrip?Number(form.children||0):null,childrenAges:isFamilyTrip?form.childrenAges.map(Number).filter(Number.isFinite):[],lang,multiDay:isMultiDayFamilyTrip,needsHotel,interests:isFamilyTrip?form.interests:[],destinations:isMultiDayFamilyTrip?form.destinations:[]};
+  return {families:isFamilyTrip?familiesDomain.normalizeFamilies(form.families):[],prompt:form.prompt,type:form.type,location:form.location,duration:isMultiDayFamilyTrip?(tripDays?`${tripDays} days`:""):form.duration,startDate:isMultiDayFamilyTrip?form.startDate:null,endDate:isMultiDayFamilyTrip?form.endDate:null,people:isFamilyTrip?String(Number(form.adults||0)+Number(form.children||0)):form.people,peopleDetails:form.peopleDetails,adults:isFamilyTrip?Number(form.adults||0):null,children:isFamilyTrip?Number(form.children||0):null,childrenAges:isFamilyTrip?form.childrenAges.map(Number).filter(Number.isFinite):[],lang,multiDay:isMultiDayFamilyTrip,needsHotel,interests:isFamilyTrip?form.interests:[],destinations:isMultiDayFamilyTrip?form.destinations:[]};
  }
  async function goPlan(){
   if(!form.prompt.trim())return showToast(a.describeFirst);
@@ -250,7 +253,7 @@ export default function AICreator({setExperience,setView,setActiveId,user,lang,t
    name=form.prompt.trim().split(/[.!?\n]/)[0].slice(0,48)||"New Experience";
   }
   await minWait;
-  const data={name,type:form.type,location:form.location,people:isFamilyTrip?Number(form.adults||0)+Number(form.children||0):Number(form.people||0),story:form.prompt,flow,status:"draft",aiGenerated:usedAI,lang,...(isFamilyTrip?{adultsCount:Number(form.adults||0),childrenCount:Number(form.children||0),childrenAges:form.childrenAges.map(Number)}:{}),...(isFamilyTrip&&form.startDate?{startDate:form.startDate}:{}),...(isFamilyTrip&&form.endDate?{endDate:form.endDate}:{})};
+  const data={families:isFamilyTrip?familiesDomain.normalizeFamilies(form.families):[],name,type:form.type,location:form.location,people:isFamilyTrip?Number(form.adults||0)+Number(form.children||0):Number(form.people||0),story:form.prompt,flow,status:"draft",aiGenerated:usedAI,lang,...(isFamilyTrip?{adultsCount:Number(form.adults||0),childrenCount:Number(form.children||0),childrenAges:form.childrenAges.map(Number)}:{}),...(isFamilyTrip&&form.startDate?{startDate:form.startDate}:{}),...(isFamilyTrip&&form.endDate?{endDate:form.endDate}:{})};
   try{
    const u=user||await ensureUser();
    const portrait=/birthday|יום הולדת/i.test(form.type)?portraitFile:null;
@@ -359,7 +362,7 @@ export default function AICreator({setExperience,setView,setActiveId,user,lang,t
      <div className="fieldRow"><div><label>{a.duration}</label><select value={form.duration} onChange={e=>setForm({...form,duration:e.target.value})}><option value=""></option>{DURATION_OPTIONS[lang].map(x=><option key={x} value={x}>{x}</option>)}</select></div></div>
      :<div className="fieldRow"><div><label>{a.duration}</label><select value={form.duration} onChange={e=>setForm({...form,duration:e.target.value})}><option value=""></option>{DURATION_OPTIONS[lang].map(x=><option key={x} value={x}>{x}</option>)}</select></div><div><label>{a.people}</label><input type="number" value={form.people} onChange={e=>setForm({...form,people:e.target.value})}/></div></div>}
     {isMultiDayFamilyTrip&&<div className="fieldRow"><div><label>{a.days}</label><div className="tripLengthDisplay">{tripDays?a.tripLength(tripDays):"—"}</div></div></div>}
-    {isFamilyTrip&&<div className="hotelPartyBox"><div className="tag">{isMultiDayFamilyTrip?(tx(lang,"הרכב לאירוח","Stay party")):(tx(lang,"הרכב משפחתי","Family composition"))}</div><div className="fieldRow"><div><label>{tx(lang,"מבוגרים","Adults")}</label><input type="number" min="1" max="12" value={form.adults} onChange={e=>setForm({...form,adults:e.target.value})}/></div><div><label>{tx(lang,"ילדים","Children")}</label><input type="number" min="0" max="8" value={form.children} onChange={e=>setChildrenCount(e.target.value)}/></div></div>{Number(form.children)>0&&<div className="childrenAges"><label>{isMultiDayFamilyTrip?(tx(lang,"גילי הילדים — כדי למצוא חדר ומחיר מתאימים","Children ages — for accurate rooms and pricing")):(tx(lang,"גילי הילדים","Children ages"))}</label><div className="ageGrid">{form.childrenAges.map((age,i)=><input key={i} type="number" min="0" max="17" placeholder={(tx(lang,"ילד ","Child "))+(i+1)} value={age} onChange={e=>setChildAge(i,e.target.value)}/>)}</div></div>}</div>}
+    {isFamilyTrip&&<FamilyEditor lang={lang} value={form.families||[{id:"family-1",name:"משפחה 1",adults:Number(form.adults)||2,children:Number(form.children)||0,childrenAges:form.childrenAges||[],rooms:1}]} onChange={families=>{const sum=familiesDomain.totals(families);setForm({...form,families,adults:String(sum.adults),children:String(sum.children),childrenAges:sum.childrenAges})}}/>}
    </div>
 
    <div className={"aiFormStep "+(formStep===3?"active":"")} data-step="3">

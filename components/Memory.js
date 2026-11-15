@@ -3,7 +3,7 @@ import {useEffect,useMemo,useState} from "react";
 import { httpsCallable } from "firebase/functions";
 import { firebaseConfigured, functions } from "../lib/firebase";
 import { subscribeMedia } from "../lib/mediaData";
-import { subscribeAnswers, subscribeAllProgress, subscribeExperience, updateExperienceRemote, ensureUser } from "../lib/morivoData";
+import { subscribeFamilyBook, saveFamilyBook, subscribeAnswers, subscribeAllProgress, subscribeExperience, updateExperienceRemote, ensureUser } from "../lib/morivoData";
 import MemoryAlbum from "./MemoryAlbum";
 import DestinationBackdrop from "./DestinationBackdrop";
 import {getExperienceTheme,buildMemoryChapters,journeyFinished} from "../lib/experienceVisuals";
@@ -19,13 +19,13 @@ function MediaThumb({m}){
 
 const ICONS={photo:"📸",video:"🎥",quiz:"❓",puzzle:"🧩",note:"📝",map:"📍",story:"📖",reward:"🏆"};
 
-export default function Memory({experience,setExperience,setView,t,user,publicView,memoryId,dir,participantView=false,isMaster=false,lang}){
+export default function Memory({experience,setExperience,setView,t,user,publicView,memoryId,dir,participantView=false,isMaster=false,lang,familyId:participantFamilyId=null}){
  const m2=t.memory;
  const [writing,setWriting]=useState(false);
  const [sharing,setSharing]=useState(false);
  const [localExp,setLocalExp]=useState(null);
  const [publicLoaded,setPublicLoaded]=useState(false);
- const [media,setMedia]=useState([]),[answers,setAnswers]=useState([]),[progress,setProgress]=useState([]);
+ const [rawMedia,setMedia]=useState([]),[rawAnswers,setAnswers]=useState([]),[rawProgress,setProgress]=useState([]);
 
  useEffect(()=>{
   if(!publicView)return;
@@ -41,8 +41,22 @@ export default function Memory({experience,setExperience,setView,t,user,publicVi
  const exp=publicView?(localExp||{}):experience;
  const isOwner=!!(user?.uid&&exp.ownerUid&&(user.uid===exp.ownerUid||isMaster));
 
- useEffect(()=>{if(!firebaseConfigured||!exp.id||exp.id==="thailand-demo"){setMedia([]);setAnswers([]);setProgress([]);return}
-  const a=subscribeMedia(exp.id,setMedia),b=subscribeAnswers(exp.id,setAnswers),c=subscribeAllProgress(exp.id,setProgress);return()=>{a();b();c()}},[exp.id]);
+ const [selectedFamily,setSelectedFamily]=useState("");
+ const [familyBook,setFamilyBook]=useState({});
+ const grouped=!!exp.families?.length;
+ const familyId=grouped?(isOwner?(exp.families.find(f=>f.id===selectedFamily)?.id||exp.families[0].id):participantFamilyId):null;
+ const family=exp.families?.find(f=>f.id===familyId);
+ const book=grouped?(familyBook._familyId===familyId?familyBook:{}):exp;
+ const media=grouped?rawMedia.filter(m=>m.familyId===familyId):rawMedia;
+ const answers=grouped?rawAnswers.filter(m=>m.familyId===familyId):rawAnswers;
+ const progress=grouped?rawProgress.filter(m=>m.familyId===familyId):rawProgress;
+ useEffect(()=>{
+  setMedia([]);setAnswers([]);setProgress([]);setFamilyBook({});
+  if(!firebaseConfigured||!exp.id||exp.id==="thailand-demo"||(grouped&&!familyId))return;
+  const a=subscribeMedia(exp.id,setMedia,familyId),b=subscribeAnswers(exp.id,setAnswers,familyId),c=subscribeAllProgress(exp.id,setProgress,familyId);
+  const d=familyId?subscribeFamilyBook(exp.id,familyId,b=>setFamilyBook({...b,_familyId:familyId})):()=>{};
+  return()=>{a();b();c();d()};
+ },[exp.id,familyId,grouped]);
 
  const flow=exp.flow||[];
  const he=dir==="rtl";
@@ -51,11 +65,12 @@ export default function Memory({experience,setExperience,setView,t,user,publicVi
  const finishers=progress.filter(p=>journeyFinished(p,flow)).length;
  const allFinished=participantView||finishers>0;
  const canWriteStory=firebaseConfigured&&exp.id&&exp.id!=="thailand-demo"&&chapters.length>0&&isOwner;
- const canShare=firebaseConfigured&&exp.id&&exp.id!=="thailand-demo"&&isOwner;
+ const canShare=!grouped&&firebaseConfigured&&exp.id&&exp.id!=="thailand-demo"&&isOwner;
  const coverPhoto=media.find(m=>!m.contentType?.startsWith("video/"));
  const shareUrl=(typeof window!=="undefined"&&exp.id)?`${window.location.origin}${window.location.pathname}?memory=${exp.id}`:"";
 
  async function saveMemoryDesign(design){
+   if(familyId){await saveFamilyBook(exp.id,familyId,{memoryDesign:design});return}
    await updateExperienceRemote(exp.id,{memoryDesign:design});
    setExperience?.({...exp,memoryDesign:design});
  }
@@ -64,8 +79,8 @@ export default function Memory({experience,setExperience,setView,t,user,publicVi
    setWriting(true);
    try{
      const fn=httpsCallable(functions,"generateMemoryStory");
-     const result=await fn({experienceId:exp.id});
-     setExperience?.({...exp,memoryStory:result.data.story});
+     const result=await fn({experienceId:exp.id,...(familyId?{familyId}:{})});
+     if(familyId)setFamilyBook(b=>({...b,memoryStory:result.data.story}));else setExperience?.({...exp,memoryStory:result.data.story});
    }catch(e){showToast(e.message)}finally{setWriting(false)}
  }
 
@@ -87,6 +102,7 @@ export default function Memory({experience,setExperience,setView,t,user,publicVi
 
  return <div className="memoryPage" dir={dir}>
  <div className="mbToolbar">
+  {grouped&&isOwner&&<label>{tx(lang,"הספר של המשפחה","Family book")}<select value={familyId||""} onChange={e=>setSelectedFamily(e.target.value)}>{exp.families.map(f=><option key={f.id} value={f.id}>{f.name}</option>)}</select></label>}
   <span className="mbToolbarLabel">{m2.morivoMemoryBook}</span>
   <div className="actions mbActions">
    {!publicView&&!participantView&&<button onClick={()=>setView("runtime")}>{m2.backToRuntime}</button>}
@@ -103,7 +119,7 @@ export default function Memory({experience,setExperience,setView,t,user,publicVi
    <div className="mbCoverFrame"></div>
    <div className="mbCoverContent">
     <span className="mbEyebrow">{m2.morivoMemoryBook}</span>
-    <h1>{exp.name||t.studio.untitled}</h1>
+    <h1>{exp.name||t.studio.untitled}</h1>{family&&<h2>{family.name}</h2>}
     {exp.location&&<p className="mbSub">{exp.location}</p>}
    </div>
   </div>
@@ -129,19 +145,19 @@ export default function Memory({experience,setExperience,setView,t,user,publicVi
    <div className="statTileMB"><b>{flow.length}</b><small>{m2.missions}</small></div>
   </div>
 
-  {exp.familyPuzzle?.url&&<div className="mbSection mbPuzzleReveal">
+  {!grouped&&exp.familyPuzzle?.url&&<div className="mbSection mbPuzzleReveal">
    <div className="mbHeading">{m2.puzzleRevealTitle}</div>
    <div className="mbPuzzleImage" style={{backgroundImage:`url(${exp.familyPuzzle.url})`}}></div>
    <p className="mbPuzzleSub">{m2.puzzleRevealSub}</p>
   </div>}
 
-  <div className={"mbSection mbStory "+(!exp.memoryStory&&!exp.story?"mbStoryEmpty":"")}>
+  <div className={"mbSection mbStory "+(!book.memoryStory&&!book.story?"mbStoryEmpty":"")}>
    <div className="mbHeading">{m2.ourStory}</div>
-   <p className="mbStoryText"><LinkifiedText text={exp.memoryStory||m2.noStoryYet}/></p>
-   {canWriteStory&&<button className="mbWriteBtn" disabled={writing} onClick={writeStory}>{writing?m2.writing:exp.memoryStory?m2.rewriteWithAI:m2.writeWithAI}</button>}
+   <p className="mbStoryText"><LinkifiedText text={book.memoryStory||m2.noStoryYet}/></p>
+   {canWriteStory&&<button className="mbWriteBtn" disabled={writing} onClick={writeStory}>{writing?m2.writing:book.memoryStory?m2.rewriteWithAI:m2.writeWithAI}</button>}
   </div>
 
-  <MemoryAlbum key={exp.id} chapters={chapters} theme={theme} lang={lang} seed={exp.memoryDesign?.seed||exp.id||"morivo"} canEdit={isOwner&&firebaseConfigured} onSaveDesign={saveMemoryDesign}/>
+  <MemoryAlbum key={`${exp.id}:${familyId||"all"}`} chapters={chapters} theme={theme} lang={lang} seed={book.memoryDesign?.seed||`${exp.id}:${familyId||"all"}`} canEdit={isOwner&&firebaseConfigured} onSaveDesign={saveMemoryDesign}/>
 
   {canShare&&<div className="mbSection mbShareSection">
    <div className="mbShare">

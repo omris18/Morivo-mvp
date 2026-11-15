@@ -1,3 +1,4 @@
+const {normalizeFamilies,totals}=require("./families");
 const {onCall, HttpsError} = require("firebase-functions/v2/https");
 const {randomBytes} = require("crypto");
 const {canManageExperience, isMasterToken} = require("./masterAccess");
@@ -32,8 +33,19 @@ module.exports = (admin, {paymentsEnabled}) => onCall({cors: true, timeoutSecond
       joinCode = "M" + randomBytes(4).toString("hex").slice(0, 7).toUpperCase();
       publicRef = db.collection("publicExperiences").doc(joinCode);
     }
+    let families;try{families=normalizeFamilies(exp.families)}catch(e){throw new HttpsError("invalid-argument",e.message)}
+    const familyInvites=[];
+    for(const family of families){
+      const inviteRef=db.collection(`experiences/${id}/familyInvites`).doc(family.id);
+      const old=(await tx.get(inviteRef)).data();
+      familyInvites.push({family,inviteRef,code:old?.code||("F"+randomBytes(16).toString("hex").toUpperCase())});
+    }
     const updatedAt = admin.firestore.FieldValue.serverTimestamp();
-    tx.update(ref, {status: "live", joinCode, updatedAt});
+    for(const {family,inviteRef,code} of familyInvites){
+      const invite={experienceId:id,familyId:family.id,familyName:family.name,ownerUid:exp.ownerUid,code};
+      tx.set(inviteRef,invite);tx.set(db.collection("familyCodes").doc(code),invite);
+    }
+    tx.update(ref, {status: "live", joinCode, updatedAt,...(families.length?{families,adultsCount:totals(families).adults,childrenCount:totals(families).children,people:totals(families).adults+totals(families).children}:{})});
     tx.set(publicRef, {experienceId: id, ownerUid: exp.ownerUid, name: exp.name || "", status: "live", joinCode, updatedAt});
     return {joinCode};
   });

@@ -6,6 +6,9 @@ import QRCode from "qrcode";
 import { firebaseConfigured, functions } from "../lib/firebase";
 import { publishExperienceRemote, updateExperienceRemote, reorderExperienceRemote, uploadFamilyPhoto, removeFamilyPuzzle, reshuffleFamilyPuzzleLayout, createCheckoutSessionRemote } from "../lib/morivoData";
 import LinkifiedText from "./LinkifiedText";
+import FamilyEditor from "./FamilyEditor";
+import FamilyAccommodation from "./FamilyAccommodation";
+import familiesDomain from "../functions/families";
 import ExperienceShare from "./ExperienceShare";
 import {showToast} from "../lib/toast";
 import {missionLabels} from "../lib/experienceGuidance";
@@ -121,6 +124,7 @@ export default function Studio({ experience, setExperience, setView, t, lang }) 
           location: next.location,
           people: next.people,
           flights: next.flights || [],
+          ...(next.families?.length?{families:next.families}:{}),
           ...(next.startDate ? { startDate: next.startDate, endDate: next.endDate || "" } : {}),
           adultsCount: next.adultsCount || 0,
           childrenCount: next.childrenCount || 0,
@@ -396,6 +400,7 @@ export default function Studio({ experience, setExperience, setView, t, lang }) 
 
         <div className="tripDetails">
           <div className="tag">{s.tripDetailsTag}</div>
+          {experience.families?.length?<><FamilyEditor value={experience.families} lang={lang} disabled={!!experience.joinCode} onChange={families=>{const sum=familiesDomain.totals(families);persist({...experience,families,adultsCount:sum.adults,childrenCount:sum.children,people:sum.adults+sum.children})}}/><FamilyAccommodation experience={experience} lang={lang}/></>:<>
           <div className="fieldRow">
             <div>
               <label>{s.adultsLabel}</label>
@@ -408,6 +413,7 @@ export default function Studio({ experience, setExperience, setView, t, lang }) 
                 onChange={(e) => persist({ ...experience, childrenCount: Math.max(0, Number(e.target.value) || 0) })} />
             </div>
           </div>
+          </>}
           <div className="fieldRow">
             <div>
               <label>{t.aiCreator.startDate}</label>

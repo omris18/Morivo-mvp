@@ -1,3 +1,4 @@
+const familiesDomain = require("./families");
 const { onCall, HttpsError } = require("firebase-functions/v2/https");
 const { onDocumentCreated } = require("firebase-functions/v2/firestore");
 const { defineSecret } = require("firebase-functions/params");
@@ -81,7 +82,7 @@ function bookingSearchUrl(name, location, opts) {
   const adultCount = Math.max(1, Number(adults) || 2);
   const childCount = Math.max(0, Number(children) || 0);
   params.set("group_adults", String(adultCount));
-  params.set("no_rooms", String(Math.max(1, Number(rooms) || Math.ceil((adultCount + childCount) / 4))));
+  params.set("no_rooms", String(Math.max(1, (opts?.families?.length ? familiesDomain.totals(opts.families).rooms : Number(rooms)) || Math.ceil((adultCount + childCount) / 4))));
   params.set("group_children", String(childCount));
   if (childCount && Array.isArray(childrenAges)) {
     const ages = childrenAges.slice(0, childCount).map((age) => Math.max(0, Math.min(17, Number(age) || 0)));
@@ -359,7 +360,9 @@ function attractionsPollMission(selected, location, lang) {
 
 function hotelMissionFromSelection(selected, location, lang, opts, destinationLabel, candidates) {
   if (!selected) return null;
-  const text = optionsToMissionText([selected], 1, bookingSearchUrl, location, opts);
+  const baseText = optionsToMissionText([selected], 1, bookingSearchUrl, location, opts);
+  const familyLinks=(opts?.families||[]).map(f=>`${f.name} (${f.adults}+${f.children}, ${f.rooms} ${lang==="he"?"חדרים":"rooms"}): ${familiesDomain.familyBookingUrl(f,[selected.name,location].filter(Boolean).join(", "),opts.checkin,opts.checkout)}`).join("\n");
+  const text=baseText+(familyLinks?"\n\n"+familyLinks:"");
   if (!text) return null;
   // Even though the organizer already picked one hotel during planning, keep the other
   // suggestions they saw as poll options - participants can still vote for one of those, or
@@ -502,7 +505,7 @@ exports.proposeItinerary = onCall({ secrets: [openaiApiKey, geminiApiKey], cors:
     throw new HttpsError("unauthenticated", "Sign in (even anonymously) before planning an experience.");
   }
 
-  const { prompt, type, location, duration, people, peopleDetails, lang, multiDay, needsHotel, interests, startDate, endDate, adults, children, childrenAges, destinations } = request.data || {};
+  const { families = [], prompt, type, location, duration, people, peopleDetails, lang, multiDay, needsHotel, interests, startDate, endDate, adults, children, childrenAges, destinations } = (()=>{try{return familiesDomain.withFamilyRequest(request.data||{})}catch(e){throw new HttpsError("invalid-argument",e.message)}})();
 
   if (!prompt || !String(prompt).trim()) {
     throw new HttpsError("invalid-argument", "A description of the experience is required.");
@@ -617,7 +620,7 @@ exports.proposeItinerary = onCall({ secrets: [openaiApiKey, geminiApiKey], cors:
   const stayAdults = Math.max(1, Number(adults) || Number(people) || 2);
   const stayChildren = Math.max(0, Number(children) || 0);
   const rooms = Math.max(1, Math.ceil((stayAdults + stayChildren) / 4));
-  const hotelUrlOpts = { checkin: startDate, checkout: endDate, adults: stayAdults, children: stayChildren, childrenAges, rooms };
+  const hotelUrlOpts = { families, checkin: startDate, checkout: endDate, adults: stayAdults, children: stayChildren, childrenAges, rooms };
 
   return {
     name: String(data.name || prompt).slice(0, 120),
@@ -661,7 +664,7 @@ exports.generateExperience = onCall({ secrets: [openaiApiKey, geminiApiKey], cor
     throw new HttpsError("unauthenticated", "Sign in (even anonymously) before generating an experience.");
   }
 
-  const { prompt, type, location, duration, people, peopleDetails, adults, children, childrenAges, lang, multiDay, needsHotel, interests, startDate, endDate, approvedItinerary } = request.data || {};
+  const { families = [], prompt, type, location, duration, people, peopleDetails, adults, children, childrenAges, lang, multiDay, needsHotel, interests, startDate, endDate, approvedItinerary } = (()=>{try{return familiesDomain.withFamilyRequest(request.data||{})}catch(e){throw new HttpsError("invalid-argument",e.message)}})();
 
   if (!prompt || !String(prompt).trim()) {
     throw new HttpsError("invalid-argument", "A description of the experience is required.");
@@ -694,7 +697,7 @@ exports.generateExperience = onCall({ secrets: [openaiApiKey, geminiApiKey], cor
   // When the organizer already picked specific attractions/hotel in the planning-review step,
   // build those missions directly from that exact selection instead of asking the AI again -
   // what they approved is what they get, not a fresh re-roll.
-  const hotelUrlOpts = { checkin: startDate, checkout: endDate, adults: Math.max(1, Number(adults) || Number(people) || 2), children: Math.max(0, Number(children) || 0), childrenAges, rooms: Math.max(1, Math.ceil((Math.max(1, Number(adults) || Number(people) || 2) + Math.max(0, Number(children) || 0)) / 4)) };
+  const hotelUrlOpts = { families, checkin: startDate, checkout: endDate, adults: Math.max(1, Number(adults) || Number(people) || 2), children: Math.max(0, Number(children) || 0), childrenAges, rooms: Math.max(1, Math.ceil((Math.max(1, Number(adults) || Number(people) || 2) + Math.max(0, Number(children) || 0)) / 4)) };
   // A multi-destination trip approves one hotel choice per destination (selectedHotels) instead
   // of a single whole-trip hotel (selectedHotel) - each becomes its own "Where to Stay in X"
   // mission rather than one shared mission for the whole journey.
@@ -1016,7 +1019,7 @@ exports.generateMemoryStory = onCall({ secrets: [openaiApiKey], cors: true, time
     throw new HttpsError("unauthenticated", "Sign in before generating a story.");
   }
 
-  const { experienceId } = request.data || {};
+  const { experienceId, familyId } = request.data || {};
   if (!experienceId) {
     throw new HttpsError("invalid-argument", "experienceId is required.");
   }
@@ -1030,11 +1033,13 @@ exports.generateMemoryStory = onCall({ secrets: [openaiApiKey], cors: true, time
   if (!canManageExperience(request.auth,experience)) {
     throw new HttpsError("permission-denied", "Only the experience owner can generate its story.");
   }
+  if((experience.families?.length||familyId)&&!experience.families?.some(f=>f.id===familyId))throw new HttpsError("invalid-argument","Select a family.");
+  const bookRef=familyId?expRef.collection("familyBooks").doc(familyId):expRef;
   await consumeAiQuota(admin, request.auth, "story", experience.lang);
 
   const [mediaSnap, answersSnap] = await Promise.all([
-    expRef.collection("media").get(),
-    expRef.collection("answers").get(),
+    (familyId?expRef.collection("media").where("familyId","==",familyId):expRef.collection("media")).get(),
+    (familyId?expRef.collection("answers").where("familyId","==",familyId):expRef.collection("answers")).get(),
   ]);
 
   const flow = experience.flow || [];
@@ -1093,10 +1098,10 @@ ${chaptersText}`;
   }
 
   const finalStory = String(story).trim().slice(0, 4000);
-  await expRef.update({
+  await bookRef.set({
     memoryStory: finalStory,
     memoryStoryGeneratedAt: admin.firestore.FieldValue.serverTimestamp(),
-  });
+  }, {merge:true});
 
   return { story: finalStory };
 });
