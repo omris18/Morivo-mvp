@@ -55,6 +55,11 @@ export default function Memory({experience,setExperience,setView,t,user,publicVi
  const coverPhoto=media.find(m=>!m.contentType?.startsWith("video/"));
  const shareUrl=(typeof window!=="undefined"&&exp.id)?`${window.location.origin}${window.location.pathname}?memory=${exp.id}`:"";
 
+ async function saveMemoryDesign(design){
+   await updateExperienceRemote(exp.id,{memoryDesign:design});
+   setExperience?.({...exp,memoryDesign:design});
+ }
+
  async function writeStory(){
    setWriting(true);
    try{
@@ -132,11 +137,11 @@ export default function Memory({experience,setExperience,setView,t,user,publicVi
 
   <div className={"mbSection mbStory "+(!exp.memoryStory&&!exp.story?"mbStoryEmpty":"")}>
    <div className="mbHeading">{m2.ourStory}</div>
-   <p className="mbStoryText"><LinkifiedText text={exp.memoryStory||exp.story||m2.noStoryYet}/></p>
+   <p className="mbStoryText"><LinkifiedText text={exp.memoryStory||m2.noStoryYet}/></p>
    {canWriteStory&&<button className="mbWriteBtn" disabled={writing} onClick={writeStory}>{writing?m2.writing:exp.memoryStory?m2.rewriteWithAI:m2.writeWithAI}</button>}
   </div>
 
-  <MemoryAlbum chapters={chapters} theme={theme} lang={lang}/>
+  <MemoryAlbum key={exp.id} chapters={chapters} theme={theme} lang={lang} seed={exp.memoryDesign?.seed||exp.id||"morivo"} canEdit={isOwner&&firebaseConfigured} onSaveDesign={saveMemoryDesign}/>
 
   {canShare&&<div className="mbSection mbShareSection">
    <div className="mbShare">

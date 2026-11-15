@@ -1,0 +1,17 @@
+import {readFile} from 'node:fs/promises';
+import assert from 'node:assert/strict';
+const source=await readFile(new URL('../lib/memoryLayout.js',import.meta.url),'utf8');
+const {layoutFor,paginateAlbum,tearPolygon}=await import('data:text/javascript;base64,'+Buffer.from(source).toString('base64'));
+assert.deepEqual(layoutFor('a','chapter',0,4),layoutFor('a','chapter',0,4));
+assert.notDeepEqual(layoutFor('a','chapter',0,4),layoutFor('b','chapter',0,4));
+assert.equal(new Set([0,1,2,3].map(i=>layoutFor('a','c',i,4).variant)).size,4);
+for(let n=0;n<50;n++)assert.ok(layoutFor(n,'c',0,4).photos.every(p=>Math.abs(Number(p.angle))<=3));
+const text='זיכרון '.repeat(900),photos=Array.from({length:13},(_,i)=>({id:i}));
+const pages=paginateAlbum([{key:'c',photos,quotes:[{id:'q',text}]}]);
+assert.deepEqual(pages.flatMap(p=>p.photos),photos);
+assert.equal(pages.flatMap(p=>p.quotes).map(q=>q.text).join('').replace(/\s/g,''),text.replace(/\s/g,''));
+assert.ok(pages.every(p=>p.quotes.length<=2&&p.photos.length<=4));
+const unbroken='א'.repeat(1200);assert.equal(paginateAlbum([{key:'c',quotes:[{id:'q',text:unbroken}]}]).flatMap(p=>p.quotes).map(q=>q.text).join(''),unbroken);
+assert.equal(tearPolygon('a'),tearPolygon('a'));assert.notEqual(tearPolygon('a'),tearPolygon('b'));
+assert.deepEqual(paginateAlbum([]),[]);
+console.log('Stable designs, bounded rotations, diverse layouts and lossless text/media pagination passed');
