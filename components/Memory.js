@@ -158,8 +158,8 @@ export default function Memory({experience,setExperience,setView,t,user,publicVi
    {canWriteStory&&<button className="mbWriteBtn" disabled={writing} onClick={writeStory}>{writing?m2.writing:book.memoryStory?m2.rewriteWithAI:m2.writeWithAI}</button>}
   </div>
 
-  {isOwner&&<MemoryPhotoManager key={`${exp.id}:${familyId}`} experienceId={exp.id} photos={familyMedia} familyName={family?.name} lang={lang}/>}
-  <MemoryAlbum puzzle={puzzle} puzzlePieces={puzzlePieces} familyName={family?.name} key={`${exp.id}:${familyId||"all"}`} chapters={chapters} theme={theme} lang={lang} seed={book.memoryDesign?.seed||`${exp.id}:${familyId||"all"}`} canEdit={isOwner&&firebaseConfigured} onSaveDesign={saveMemoryDesign}/>
+  {isOwner&&<MemoryPhotoManager key={`photos:${exp.id}:${familyId}`} experienceId={exp.id} photos={familyMedia} familyName={family?.name} lang={lang}/>}
+  <MemoryAlbum puzzle={puzzle} puzzlePieces={puzzlePieces} familyName={family?.name} key={`album:${exp.id}:${familyId||"all"}`} chapters={chapters} theme={theme} lang={lang} seed={book.memoryDesign?.seed||`${exp.id}:${familyId||"all"}`} canEdit={isOwner&&firebaseConfigured} onSaveDesign={saveMemoryDesign}/>
 
   {canShare&&<div className="mbSection mbShareSection">
    <div className="mbShare">
