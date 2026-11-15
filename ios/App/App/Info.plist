@@ -6,6 +6,18 @@
 	<string>$(CAPACITOR_DEBUG)</string>
 	<key>CFBundleDevelopmentRegion</key>
 	<string>en</string>
+	<key>CFBundleLocalizations</key>
+	<array>
+		<string>en</string>
+		<string>he</string>
+		<string>de</string>
+		<string>pl</string>
+		<string>el</string>
+		<string>hu</string>
+		<string>ja</string>
+		<string>it</string>
+		<string>th</string>
+	</array>
 	<key>CFBundleDisplayName</key>
         <string>Morivo</string>
 	<key>CFBundleExecutable</key>

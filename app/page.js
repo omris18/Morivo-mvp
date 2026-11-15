@@ -18,7 +18,7 @@ import { firebaseConfigured, auth } from "../lib/firebase";
 import { onIdTokenChanged } from "firebase/auth";
 import { ensureUser, subscribeExperiences, subscribeExperience, completeGoogleRedirect } from "../lib/morivoData";
 import { listenForForegroundPush } from "../lib/push";
-import { STRINGS, getDir, COUNTRY_FLAGS } from "../lib/i18n";
+import { STRINGS, getDir, COUNTRY_FLAGS, detectInitialLang } from "../lib/i18n";
 
 const DEMO={
  id:"thailand-demo", name:"Thailand Family Adventure", type:"Family Trip",
@@ -67,20 +67,13 @@ export default function Home(){
      else{ const match=COUNTRY_FLAGS.find(f=>f.lang===saved); if(match) setCountry(match.country); }
      return;
    }
-   // No saved preference yet - this is a Hebrew-first product, but every visitor otherwise
-   // landed in English (the useState default above) until they noticed the small flag switcher
-   // and changed it themselves. Match the browser's own language instead, same as the flag
-   // switcher itself would pick for that language.
-   const browserLangs=(navigator.languages?.length?navigator.languages:[navigator.language]).filter(Boolean);
-   for(const bl of browserLangs){
-     const code=String(bl).toLowerCase().split("-")[0];
-     if(STRINGS[code]){
-       setLang(code);
-       const match=COUNTRY_FLAGS.find(f=>f.lang===code);
-       if(match) setCountry(match.country);
-       break;
-     }
-   }
+   // No saved preference yet: start in the device's own language (see detectInitialLang).
+   let timeZone="";
+   try{ timeZone=Intl.DateTimeFormat().resolvedOptions().timeZone||""; }catch{}
+   const code=detectInitialLang(navigator.languages?.length?navigator.languages:[navigator.language],timeZone);
+   setLang(code);
+   const match=COUNTRY_FLAGS.find(f=>f.lang===code);
+   if(match) setCountry(match.country);
  },[]);
  useEffect(()=>{
    try{ window.localStorage?.setItem("morivo_lang", lang); }catch{}
