@@ -1,5 +1,6 @@
 "use client";
 import { useEffect, useMemo, useState } from "react";
+import {BookingProvider} from "../components/BookingLink";
 import Sidebar from "../components/Sidebar";
 import ScreenGuidance from "../components/ScreenGuidance";
 import Dashboard from "../components/Dashboard";
@@ -182,7 +183,7 @@ export default function Home(){
        <FirebaseStatus t={t}/>
      </div>
      {isMaster&&activeId&&experience.ownerUid!==user?.uid&&["studio","runtime","memory"].includes(view)&&<div className="masterContext"><span>{tx(lang,"מצב מאסטר · ניהול חוויה של משתמש אחר","Master mode · managing another user's experience")}</span><button onClick={()=>setView("master")}>{tx(lang,"כל החוויות","All experiences")}</button></div>}
-     <div className="viewFade" key={view}><ScreenGuidance {...props} view={view}/>{(!["studio","runtime","memory"].includes(view)||experience.id)&&Screen}</div>
+     <div className="viewFade" key={view}><ScreenGuidance {...props} view={view}/>{(!["studio","runtime","memory"].includes(view)||experience.id)&&<BookingProvider experience={experience} familyId={view==="family"?managedFamily:null}>{Screen}</BookingProvider>}</div>
      <ToastContainer dir={dir}/>
    </main>
  </div>;

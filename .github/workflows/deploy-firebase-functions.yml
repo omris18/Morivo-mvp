@@ -46,6 +46,7 @@ jobs:
         run: |
           node tests/missionPresentation.test.cjs
           node tests/familyJourney.test.cjs
+          node tests/bookingLinks.test.cjs
           node tests/journeyProgress.test.cjs
           node tests/tripDates.test.mjs
           node tests/familyPuzzle.test.mjs
