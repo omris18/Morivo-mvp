@@ -4,6 +4,7 @@ import coordination from "../functions/coordination";
 import {useFamilyPuzzle} from "../lib/useFamilyPuzzle";
 import {localDateKey} from "../lib/tripDates";
 import FamilyAccommodation from "./FamilyAccommodation";
+import BookingLink,{BookingProvider} from "./BookingLink";
 import Memory from "./Memory";
 import familyJourney from "../functions/familyJourney";
 import {participantHint} from "../lib/experienceGuidance";
@@ -337,7 +338,7 @@ export default function Participant({experience,setExperience,setView,setActiveI
  const bookAvailable=familyJourney.bookReleased(experience,[prog]);
  const completedCount=(prog.completedMissionIds||[]).length;
  const progressPct=flow.length?Math.round((completedCount/flow.length)*100):0;
- const joinedContent=<>
+ const joinedContent=<BookingProvider experience={experience} familyId={familyId}>
  {personalCode&&<div className="participantPersonalLink"><p>{tx(lang,"זה הקישור האישי שלכם — רענון או פתיחה מחדש מחזירים לאותה התקדמות. הקישור זמין גם אצל המארגן לתג NFC. שמרו אותו לעצמכם.","This is your personal link. Refresh or reopen it to resume your progress. Your organizer has the same link for your NFC tag. Keep it private.")}</p><code>{personalCode}</code><button onClick={copyMyLink}>{linkCopied?(tx(lang,"הקישור הועתק","Link copied")):(tx(lang,"העתקת הקישור האישי","Copy my personal link"))}</button></div>}
 
  {familyId&&<FamilyAccommodation experience={experience} familyId={familyId} lang={lang}/>}
@@ -473,7 +474,7 @@ export default function Participant({experience,setExperience,setView,setActiveI
        const myVote=myVoteIds.includes(o.id);
        return <button key={o.id} type="button" className={"locationPollOption "+(myVote?"selected":"")} onClick={()=>voteLocation(o.id)}>
         <b>{o.name}</b>{o.why&&<span>{o.why}</span>}
-        <div className="locationPollOptionFooter">{o.url&&<a className="locationPollLink" href={o.url} target="_blank" rel="noopener noreferrer" onClick={e=>e.stopPropagation()}>🔗 {p.viewOption}</a>}<small>{p.votesCount(count)}</small></div>
+        <div className="locationPollOptionFooter">{o.url&&<BookingLink className="locationPollLink" href={o.url} target="_blank" rel="noopener noreferrer" onClick={e=>e.stopPropagation()}>🔗 {p.viewOption}</BookingLink>}<small>{p.votesCount(count)}</small></div>
        </button>;
       })}
       <p className="locationPollHint">{p.locationPollHint}</p>
@@ -490,7 +491,7 @@ export default function Participant({experience,setExperience,setView,setActiveI
       const myVote=myVoteIds.includes(o.id);
       return <button key={o.id} type="button" className={"locationPollOption "+(myVote?"selected":"")} onClick={()=>voteLocation(o.id,o.id.startsWith("custom-")?o:undefined)}>
        <b>{o.name}</b>{o.why&&<span>{o.why}</span>}
-       <div className="locationPollOptionFooter">{o.url&&<a className="locationPollLink" href={o.url} target="_blank" rel="noopener noreferrer" onClick={e=>e.stopPropagation()}>🔗 {p.viewOption}</a>}<small>{p.votesCount(count)}</small></div>
+       <div className="locationPollOptionFooter">{o.url&&<BookingLink className="locationPollLink" href={o.url} target="_blank" rel="noopener noreferrer" onClick={e=>e.stopPropagation()}>🔗 {p.viewOption}</BookingLink>}<small>{p.votesCount(count)}</small></div>
       </button>;
      })}
      <div className="locationPollSuggest">
@@ -515,7 +516,7 @@ export default function Participant({experience,setExperience,setView,setActiveI
   <small className="uploadLimitNote">{p.uploadLimitNote}</small>
  </div></div>,document.body)}
  {viewingMission&&typeof document!=="undefined"&&createPortal(<div className="missionPopupOverlay" role="presentation" onClick={()=>setViewingMission(null)}><div className="missionPopupCard" role="dialog" aria-modal="true" onClick={e=>e.stopPropagation()}><button type="button" className="missionPopupClose" aria-label={tx(lang,"סגירה","Close")} onClick={()=>setViewingMission(null)}>×</button>{viewingMission.day?<div className="missionPopupBadge">{viewingMission.day}</div>:null}{popupMeta(viewingMission,lang)&&<div className="missionPopupMeta">{popupMeta(viewingMission,lang)}</div>}<div className="missionType">{missionLabelsFor(lang)[viewingMission.type]||viewingMission.type}</div><h3>{viewingMission.title}</h3><p><LinkifiedText text={viewingMission.text}/></p>{viewingMission.hotel&&<div className="journeyStopHotel">🏨 {viewingMission.hotel}</div>}{navUrl(viewingMission)&&<a className="journeyNavigateBtn" href={navUrl(viewingMission)} target="_blank" rel="noopener noreferrer">🧭 {p.navigate}</a>}<div className={"missionPopupStatus "+((prog.completedMissionIds||[]).includes(viewingMission.id)?"done":"locked")}>{(prog.completedMissionIds||[]).includes(viewingMission.id)?`✓ ${p.missionDoneHint}`:`🔒 ${p.missionLockedHint}`}</div></div></div>,document.body)}
- </>;
+ </BookingProvider>;
 
  const joinForm=<div className="participantJoin"><div className="participantJoinMark" aria-hidden="true"><span></span><span></span><span></span></div><div className="participantJoinEyebrow">MORIVO · EXPERIENCE</div><h2>{p.joinTitle}</h2>{familyName&&<p>{familyName}</p>}<p className="joinInstructions">{code?tx(lang,"הקוד כבר מוכן. כתבו את השם שיופיע למארגן ולחצו על הצטרפות.","Your code is ready. Enter the name the organizer should see, then join."):tx(lang,"קיבלתם קישור או קוד מהמארגן? הזינו שם וקוד כדי להתחיל. אין צורך ליצור חשבון.","Enter your name and the code from your organizer to get started. No account is needed.")}</p><label htmlFor="participant-name">{p.yourName}</label><input id="participant-name" autoComplete="name" value={name} placeholder={p.namePlaceholder} onChange={e=>setName(e.target.value)}/><label htmlFor="participant-code">{p.joinCode}</label><input id="participant-code" autoCapitalize="characters" value={code} onChange={e=>setCode(e.target.value.toUpperCase())} onKeyDown={e=>e.key==="Enter"&&join()}/><div className="actions centerActions"><button className="primary" disabled={joining} onClick={join}>{joining?p.joining:p.joinBtn}</button></div></div>;
 

@@ -9,6 +9,7 @@ const code=transformSync(fs.readFileSync('components/CoordinationPanel.js','utf8
 const mod={exports:{}};
 new Function('require','module','exports',code)(id=>{
  if(id==='react'||id.startsWith('react/'))return rendererRequire(id);
+ if(id==='./BookingLink')return {__esModule:true,default:props=>React.createElement('a',props)};
  if(id==='react-dom')return {createPortal:node=>node};
  if(id==='../lib/morivoData')return {castLocationVote:async(...args)=>{calls.push(args);if(failure)throw new Error('Save failed');if(finish)await new Promise(resolve=>{finish=resolve})}};
  if(id==='../lib/i18n')return {tx:(lang,he,en)=>lang==='he'?he:en};
